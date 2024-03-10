@@ -1,3 +1,6 @@
 .empty/
 logs/
 checkpoints/
+paper-code/
+lottery_ticket/
+__pycache__/
