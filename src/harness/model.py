@@ -19,7 +19,7 @@ from tensorflow.keras.layers import Dense, Flatten, Conv2D, AveragePooling2D
 import src.harness.constants as C
 from src.harness.dataset import load_and_process_mnist
 from src.lottery_ticket.foundations.model_fc import ModelFc
-from src.lottery_ticket.foundations.paths import create_path, get_model_directory, initial, masks, trial, weights
+from src.lottery_ticket.foundations import paths
 from src.lottery_ticket.foundations.save_restore import restore_network, save_network
 from src.lottery_ticket.foundations import trainer
 
@@ -52,39 +52,44 @@ def load_model(model_index: int, pruning_step: int, untrained: bool = False) -> 
 
     :returns: Model object with weights loaded and callbacks to use when fitting the model.
     """
-    path: str = get_model_directory(model_index, C.MODEL_DIRECTORY)
+    path: str = paths.get_model_directory(model_index, C.MODEL_DIRECTORY)
     if untrained:
-        path = initial(path)
+        path = paths.initial(path)
     else:
-        path = trial(path, pruning_step)
+        path = paths.trial(path, pruning_step)
     X_train, Y_train, _, _ = load_and_process_mnist()
     model: LeNet300 = LeNet300(model_index, X_train, Y_train)
-    model._weights = restore_network(weights(path))
-    model._masks = restore_network(masks(path))
+    model._weights = restore_network(paths.weights(path))
+    model._masks = restore_network(paths.masks(path))
     return model
 
-def save_model(model: LeNet300, pruning_step: int, untrained: bool = False):
+def save_model(model: LeNet300, pruning_step: int, untrained: bool = False, final: bool = False):
     """
     Function to save a single trained model.
 
     :param model:        Model object being saved.
     :param pruning_step: Integer value for the number of pruning steps which had been completed for the model.
-    :param untrained:    Boolean for if it is the untrained version of a model.
+    :param untrained:    Boolean for if it is the untrained version of a model. Defaults to False.
+    :param final:        Boolean for if it is the final version of a model. Defaults to False.
     """
 
-    output_directory: str = get_model_directory(model.seed, C.MODEL_DIRECTORY)
+    output_directory: str = paths.get_model_directory(model.seed, C.MODEL_DIRECTORY)
     # Save the initial weights in an 'initial' directory in the top-level of the model directory
     if untrained:
-        untrained_directory: str = initial(output_directory)
+        untrained_directory: str = paths.initial(output_directory)
         initial_masks: dict[str: np.array] = {key: np.ones(layer.shape) for key, layer in model._weights.items()}
-        save_network(masks(untrained_directory), initial_masks)
-        save_network(weights(untrained_directory), model.weights)
+        save_network(paths.masks(untrained_directory), initial_masks)
+        save_network(paths.weights(untrained_directory), model.weights)
+    elif final:
+        final_directory: str = paths.final(output_directory)
+        save_network(paths.masks(final_directory), model.masks)
+        save_network(paths.weights(final_directory), model.weights)
     else:
         # Create a trial directory within the model directory
-        trial_directory: str = trial(output_directory, pruning_step)
+        trial_directory: str = paths.trial(output_directory, pruning_step)
         # Save model and weights to the trial directory
-        save_network(weights(trial_directory), model.weights)
-        save_network(masks(trial_directory), model.masks)
+        save_network(paths.weights(trial_directory), model.weights)
+        save_network(paths.masks(trial_directory), model.masks)
 
 def create_model(random_seed: int, X_train: np.array, Y_train: np.array) -> LeNet300:
     """
@@ -106,36 +111,3 @@ def create_model(random_seed: int, X_train: np.array, Y_train: np.array) -> LeNe
     model: LeNet300 = LeNet300(random_seed, X_train, Y_train)
     
     return model
-
-def train(model_index: int,
-          output_dir: str,
-          training_len: int = C.TRAINING_LENGTH,
-          pruning_steps: int = C.TRAINING_ITERATIONS,
-          presets=None,
-          permute_labels: bool = False):
-  """
-  Perform the lottery ticket experiment.
-
-  The output of each experiment will be stored in a directory called:
-  {models_dir}/{model_num}/{experiment_name} as defined in the
-  foundations.paths module.
-
-    :param model_index: Integer value for the model index (random seed).
-    :param training_len: How long to train on each iteration.
-    :param pruning_steps: How many iterative pruning steps to perform.
-    :param presets: The initial weights for the network, if any. 
-                    Presets can come in one of three forms:
-        * A dictionary of numpy arrays. Each dictionary key is the name of the
-            corresponding tensor that is to be initialized. Each value is a numpy
-            array containing the initializations.
-        * The string name of a directory containing one file for each
-            set of weights that is to be initialized (in the form of
-            foundations.save_restore).
-        * None, meaning the network should be randomly initialized.
-    :param permute_labels: Whether to permute the labels on the dataset.
-  """
-  # Define model and dataset functions.
-  make_dataset = load_and_process_mnist
-  make_model = functools.partial(create_model, 0)
-
-  
