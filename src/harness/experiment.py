@@ -23,6 +23,8 @@ Date: 3/17/24
 
 import numpy as np
 
+from src.harness.model import LeNet300, save_model
+
 def experiment(make_dataset: callable, 
                make_model: callable, 
                train_model: callable, 
@@ -54,10 +56,9 @@ def experiment(make_dataset: callable,
   # A helper function that trains the network once according to the behavior
   # determined internally by the+ train_model function.
   def train_once(pruning_step: int, presets=None, masks=None):
-    print(f'Training step {pruning_step}')
+    print(f'Pruning Step {pruning_step}')
     X_train, Y_train, _, _ = make_dataset()
-    model = make_model(X_train, Y_train, presets=presets, masks=masks)
-    print(f'Model Weights on Pruning Step {pruning_step}:\n{model.weights}')
+    model: LeNet300 = make_model(X_train, Y_train, presets=presets, masks=masks)
     return train_model(make_dataset, model, pruning_step)
 
   # Run once normally.
@@ -70,7 +71,6 @@ def experiment(make_dataset: callable,
 
   # Begin the training loop.
   for pruning_step in range(1, pruning_steps + 1):
-    print(f'Pruning Step: {pruning_step}')
     # Prune the network.
     masks = prune_masks(masks, final_weights)
     # Train the network again.

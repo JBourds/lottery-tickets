@@ -27,7 +27,7 @@ import tensorflow as tf
 from src.harness import constants as C
 from src.harness.model import LeNet300, save_model
 
-def train(make_dataset: callable, model: LeNet300, pruning_step: int = 0, optimizer: tf.keras.optimizers.Optimizer = C.OPTIMIZER(), iterations: int = C.TEST_TRAINING_ITERATIONS):
+def train(make_dataset: callable, model: LeNet300, pruning_step: int = 0, optimizer: tf.keras.optimizers.Optimizer = C.OPTIMIZER(), iterations: int = C.TRAINING_ITERATIONS):
     """
     Function to perform training for a model.
 
@@ -42,7 +42,8 @@ def train(make_dataset: callable, model: LeNet300, pruning_step: int = 0, optimi
 
     # Save network initial weights and masks
     initial_weights: dict[str: np.array] = model.get_current_weights()
-    save_model(model, pruning_step, untrained=True)
+    if pruning_step == 0:
+        save_model(model, pruning_step, untrained=True)
 
     def training_loop():
         """
@@ -76,8 +77,8 @@ def train(make_dataset: callable, model: LeNet300, pruning_step: int = 0, optimi
     # Run the training loop
     training_loop()
 
-    # Save network final weights and masks
-    save_model(model, pruning_step, final=True)
+    # Save network final weights and masks to its folder in the appropriate trial/final folder
+    save_model(model, pruning_step)
 
     # Return initial and final weights
     return initial_weights, model.get_current_weights()
