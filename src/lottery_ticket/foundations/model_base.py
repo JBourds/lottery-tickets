@@ -41,10 +41,6 @@ class ModelBase(object):
     """
     self._masks = masks if masks else {}
     self._presets = presets if presets else {}
-    if masks:
-       print('Masks Type:', type(masks['layer0']))
-    if presets:
-      print('Weights Type:', type(presets['layer0']))
     self._weights = {}
 
     self._train_summaries = None

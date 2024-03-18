@@ -44,10 +44,13 @@ def train(make_dataset: callable, model: LeNet300, pruning_step: int = 0, optimi
     initial_weights: dict[str: np.array] = model.get_current_weights()
     save_model(model, pruning_step, untrained=True)
 
-    def training_loop(model: LeNet300):
+    def training_loop():
         """
         Main training loop for the model.
         """
+        nonlocal model
+        nonlocal make_dataset
+
         iteration: int = 0
         # Extract input and target
         inputs, labels, _, _ = make_dataset()
@@ -55,7 +58,6 @@ def train(make_dataset: callable, model: LeNet300, pruning_step: int = 0, optimi
         while iteration < iterations:
             # Forward pass
             with tf.GradientTape() as tape:
-                print(type(model.get_current_weights()['layer0']))
                 # Create the new model using the previous model's weights/masks
                 # This will also compute the training loss/accuracy as part of the constructor
                 model = LeNet300(model.seed, inputs, labels, presets=model.get_current_weights(), masks=model.masks)
@@ -72,7 +74,7 @@ def train(make_dataset: callable, model: LeNet300, pruning_step: int = 0, optimi
             print(f"Iteration {iteration}/{iterations}, Loss: {model.loss.numpy()}")
 
     # Run the training loop
-    training_loop(model)
+    training_loop()
 
     # Save network final weights and masks
     save_model(model, pruning_step, final=True)

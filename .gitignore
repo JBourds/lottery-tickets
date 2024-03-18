@@ -4,5 +4,5 @@ checkpoints/
 paper-code/
 __pycache__/
 data/
-models/*/trial*
+models/
 *.egg-info/
