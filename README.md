@@ -5,6 +5,10 @@
 ### Preliminary:
 - Form specific hypotheses \[X]
     - What metrics are we examining? \[ ]
+        > Distribution of weights per layer
+        > Sign-based structural comparison metric
+            - Neural Network Sparse Topology Distance
+            - Modify to also include signs
     - What are we expecting to happen \[ ]
 - Write out procedure \[X]
     - Finding lottery tickets \[X]
@@ -127,6 +131,7 @@ We hypothesize there are structual similarities across winning lottery tickets f
 - [Google Drive](https://drive.google.com/drive/folders/1TV3oNUlDSi0IRF1knm-K9NLvfo4Xl9Lr?usp=share_link)
 
 ## References
+- [Dual Lottery Ticket Hypothesis Paper](https://arxiv.org/pdf/2203.04248.pdf)
 - [Lottery Ticket Hypothesis Paper + Code](https://paperswithcode.com/paper/the-lottery-ticket-hypothesis-finding-sparse)
 - [Lottery Ticket Hypothesis at Scale Paper](https://arxiv.org/abs/1903.01611v1)
 - [Elastic Lottery Ticket Hypothesis Paper](https://arxiv.org/abs/2103.16547)

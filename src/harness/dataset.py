@@ -5,8 +5,11 @@ File containing function(s)/classes for loading the dataset.
 """
 
 import numpy as np
+import os
 from tensorflow.keras import datasets
 from tensorflow.keras.utils import to_categorical
+
+import src.harness.constants as C
 
 def print_dataset_shape(X_train: np.array, Y_train: np.array, X_test: np.array, Y_test: np.array):
     """
@@ -27,10 +30,27 @@ def print_dataset_shape(X_train: np.array, Y_train: np.array, X_test: np.array, 
     print(X_test.shape[0], 'test samples')
     print(X_train[0].shape, 'image shape')
 
-def load_and_process_mnist() -> tuple[np.array, np.array, np.array, np.array]:
+def download_data(dataset_directory: str = C.MNIST_LOCATION):
+    """
+    Function to download the MNIST dataset.
+
+    :param dataset_directory: Name of the dataset's folder.
+    """
+    X_train, Y_train, X_test, Y_test = load_and_process_mnist()
+    os.makedirs(dataset_directory, exist_ok=True)
+    np.save(f'{dataset_directory}x_train.npy', X_train)
+    np.save(f'{dataset_directory}y_train.npy', Y_train)
+    np.save(f'{dataset_directory}x_test.npy', X_test)
+    np.save(f'{dataset_directory}y_test.npy', Y_test)
+
+
+
+def load_and_process_mnist(flatten: bool = True) -> tuple[np.array, np.array, np.array, np.array]:
     """
     Function to load and preprocess the MNIST dataset.
     Source: https://colab.research.google.com/github/maticvl/dataHacker/blob/master/CNN/LeNet_5_TensorFlow_2_0_datahacker.ipynb#scrollTo=UA2ehjxgF7bY
+
+    :param flatten: Boolean value for if the input data should be flattened.
 
     :returns X and Y training and test sets after preprocessing.
     """
@@ -39,6 +59,11 @@ def load_and_process_mnist() -> tuple[np.array, np.array, np.array, np.array]:
     # Add a new axis for use in training the model
     X_train: np.array = X_train[:, :, :, np.newaxis]
     X_test: np.array = X_test[:, :, :, np.newaxis]
+
+    # Flatten labels
+    if flatten:
+      X_train = X_train.reshape((X_train.shape[0], -1))
+      X_test = X_test.reshape((X_test.shape[0], -1))
 
     # Convert class vectors to binary class matrices.
     num_classes: int = 10

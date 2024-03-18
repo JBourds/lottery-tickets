@@ -8,12 +8,13 @@ import os
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 
-import src.constants as C
+import src.harness.constants as C
 
 # Aliases
 ConstantSparsity = tfmot.sparsity.keras.ConstantSparsity
 prune_low_magnitude = tfmot.sparsity.keras.prune_low_magnitude
 UpdatePruningStep = tfmot.sparsity.keras.UpdatePruningStep
+Callback = tf.keras.callbacks.Callback
 TensorBoard = tf.keras.callbacks.TensorBoard
 ModelCheckpoint = tf.keras.callbacks.ModelCheckpoint
 
@@ -52,28 +53,28 @@ def get_model_name(model_index: int, pruning_step: int = 0, trained: bool = True
     trained: str = 'trained' if trained else 'untrained'
     return f'{trained}_model_{model_index}_step_{pruning_step}.keras'
 
-def get_model_callbacks(model_index: int, pruning_step: int) -> list[tf.keras.callbacks]:
-    """
-    Function to return all associated callbacks with a model.
+# def get_model_callbacks(model_index: int, pruning_step: int) -> list[Callback]:
+#     """
+#     Function to return all associated callbacks with a model.
 
-    :param model_index:  Integer index for the model.
-    :param pruning_step: Step of model pruning
+#     :param model_index:  Integer index for the model.
+#     :param pruning_step: Step of model pruning
 
-    :returns: List of callbacks to use when fitting the model.
-    """
-    # Create the callbacks
-    model_name: str = get_model_name(model_index, pruning_step)
-    tensorboard_path: str = get_model_directory(model_index, C.FIT_DIRECTORY)
-    checkpoint_path: str = get_model_directory(model_index, C.CHECKPOINT_DIRECTORY)
+#     :returns: List of callbacks to use when fitting the model.
+#     """
+#     # Create the callbacks
+#     model_name: str = get_model_name(model_index, pruning_step)
+#     tensorboard_path: str = get_model_directory(model_index, C.FIT_DIRECTORY)
+#     checkpoint_path: str = get_model_directory(model_index, C.CHECKPOINT_DIRECTORY)
 
-    # Create the model checkpoint callback
-    callbacks: list[tf.keras.callbacks] = [
-        TensorBoard(log_dir=tensorboard_path, histogram_freq=1),
-        ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True),
-        UpdatePruningStep(),
-    ]
+#     # Create the model checkpoint callback
+#     callbacks: list[Callback] = [
+#         TensorBoard(log_dir=tensorboard_path, histogram_freq=1),
+#         ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True),
+#         UpdatePruningStep(),
+#     ]
 
-    return callbacks
+#     return callbacks
 
 def compare_pruned_unpruned_weights(unpruned_model: tf.keras.Model, pruned_model: tf.keras.Model):
     """

@@ -7,7 +7,7 @@ Code for performing model pruning.
 import numpy as np
 import tensorflow as tf
 
-from src.model import LeNet, load_model, save_model
+from src.harness.model import LeNet, load_model, save_model
 
 def iterative_magnitude_pruning(feature_shape: tuple[int, ...], num_classes: int, model_index: int, 
 X_train: np.array, Y_train: np.array, X_test: np.array, Y_test: np.array, 

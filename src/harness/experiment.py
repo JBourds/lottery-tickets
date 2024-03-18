@@ -6,8 +6,8 @@ Module containing code for actually running the lottery ticket hypothesis experi
 
 import numpy as np
 
-from src.model import create_models
-from src.pruning import iterative_magnitude_pruning
+from src.harness.model import create_models
+from src.harness.pruning import iterative_magnitude_pruning
 
 def create_lottery_tickets(X_train: np.array, Y_train: np.array, X_test: np.array, Y_test: np.array, total_pruning_percentage: float, pruning_steps: int, epochs_per_step: int, num_models: int):
     """

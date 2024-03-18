@@ -10,44 +10,38 @@ import os
 import random
 import tensorflow as tf
 from tensorflow.keras import Model
+from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.losses import categorical_crossentropy
 from tensorflow.keras.layers import Dense, Flatten, Conv2D, AveragePooling2D
 
-import src.constants as C
-from src.utils import create_path, get_model_callbacks, get_model_directory, get_model_name
+import src.harness.constants as C
+from src.harness.utils import create_path, get_model_directory, get_model_name
+from src.lottery_ticket.foundations.model_fc import ModelFc
+from src.lottery_ticket.foundations.save_restore import restore_network, save_network
 
-class LeNet(Sequential):
+class LeNet300(ModelFc):
+    def __init__(self, input_placeholder, label_placeholder, presets=None, masks=None):
+        # Define the hyperparameters for LeNet-300
+        hyperparameters = {
+            'layers': [
+                (300, tf.nn.relu),  # Fully Connected Layer with 300 units and ReLU activation
+                (100, tf.nn.relu),  # Fully Connected Layer with 100 units and ReLU activation
+                (10, None)          # Output Layer with 10 units (for 10 classes) and no activation
+            ]
+        }
+        
+        # Call parent constructor with LeNet-300 hyperparameters
+        super(LeNet300, self).__init__(hyperparameters=hyperparameters,
+                                        input_placeholder=input_placeholder,
+                                        label_placeholder=label_placeholder,
+                                        presets=presets,
+                                        masks=masks)
 
-    def __init__(self, input_shape: np.array, num_classes: int, **kwargs):
-        """
-        LeNet-5 model derived from this paper: http://vision.stanford.edu/cs598_spring07/papers/Lecun98.pdf
-
-        :param input_shape: Shape of the input instances.
-        :param num_classes: Number of classes in the dataset.
-        """
-        super().__init__()
-
-        # Convolutional layers  
-        self.add(Conv2D(6, kernel_size=(5, 5), strides=(1, 1), activation='tanh', input_shape=input_shape, padding="same"))
-        self.add(AveragePooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid'))
-        self.add(Conv2D(16, kernel_size=(5, 5), strides=(1, 1), activation='tanh', padding='valid'))
-        self.add(AveragePooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid'))
-        self.add(Flatten())
-
-        # Fully connected output layers
-        self.add(Dense(120, activation='tanh'))
-        self.add(Dense(84, activation='tanh'))
-        self.add(Dense(num_classes, activation='softmax'))
-
-        self.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-
-def load_model(feature_shape: tuple[int, ...], num_classes: int, model_index: int, pruning_step: int, trained) -> tuple[LeNet, list[tf.keras.callbacks]]:
+def load_model(model_index: int, pruning_step: int, trained) -> LeNet300:
     """
     Function used to load a single trained model.
 
-    :param feature_shape:     Tuple of integer dimensions for the feature shape.
-    :param num_classes:       Number of unique classes for the model.
     :param model_index:       Index of the model which was trained.
     :param pruning_step:      Integer value for the number of pruning steps which had been completed for the model.
     :param trained:           Boolean to get the trained or untrained version of a model.
@@ -55,13 +49,11 @@ def load_model(feature_shape: tuple[int, ...], num_classes: int, model_index: in
     :returns: Model object with weights loaded and callbacks to use when fitting the model.
     """
     path: str = get_model_directory(model_index, C.MODEL_DIRECTORY) + get_model_name(model_index, pruning_step, trained)
-    model: LeNet = LeNet(feature_shape, num_classes)
-    model.load_weights(path)
-    callbacks: list[tf.keras.callbacks] = get_model_callbacks(model_index, pruning_step)   
+    model: LeNet300 = LeNet300()
+    model.weights = restore_network(path)
+    return model
 
-    return model, callbacks
-
-def save_model(model: LeNet, model_index: int, pruning_step: int, trained: bool):
+def save_model(model: LeNet300, model_index: int, pruning_step: int, trained: bool):
     """
     Function to save a single trained model.
 
@@ -74,15 +66,15 @@ def save_model(model: LeNet, model_index: int, pruning_step: int, trained: bool)
     output_directory: str = get_model_directory(model_index, C.MODEL_DIRECTORY)
     create_path(output_directory)
     model_name: str = get_model_name(model_index, pruning_step, trained)
-    model.save(output_directory + model_name)
+    save_network(output_directory + model_name, model.weights)
 
-def create_model(feature_shape: tuple[int, ...], num_classes: int, random_seed: int) -> tuple[LeNet, list[tf.keras.callbacks]]:
+def create_model(random_seed: int, X_train: np.array, Y_train: np.array) -> LeNet300:
     """
     Method used for setting the random seed(s) and instantiating a model then saving its pretrained weights.
 
-    :param feature_shape:  Shape of the features.
-    :param num_classes:    Number of potential classes. 10 for MNIST.
-    :param random_seed:    Value used to ensure reproducability.
+    :param random_seed:  Value used to ensure reproducability.
+    :param X_train:      Numpy array for placeholder input.
+    :param Y_train:      Numpy array for placeholder labels.  
 
     :returns: Model and callbacks.
     """
@@ -93,13 +85,12 @@ def create_model(feature_shape: tuple[int, ...], num_classes: int, random_seed: 
     tf.random.set_seed(random_seed)
 
     # Initialize the model
-    model: LeNet = LeNet(feature_shape, num_classes)
-    callbacks: list[tf.keras.callbacks] = get_model_callbacks(random_seed, 0)
+    model: LeNet300 = LeNet300(X_train, Y_train)
 
     # Save the pretrained weights
     save_model(model, random_seed, 0, False)
     
-    return model, callbacks
+    return model
 
 def create_models(X_train: np.array, Y_train: np.array, X_test: np.array, Y_test: np.array, epochs: int, num_models: int):
     """
