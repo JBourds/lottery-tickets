@@ -75,7 +75,7 @@ class ModelBase(object):
   def weights(self):
     return self._weights
 
-  def get_current_weights(self, sess):
+  def get_current_weights(self):
     output = {}
     for k, v in self.weights.items():
         output[k] = v.numpy()  # Convert to numpy array

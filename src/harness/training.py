@@ -21,17 +21,28 @@ Modified By: Jordan Bourdeau
 Date: 3/17/24
 """
 
+import numpy as np
 import tensorflow as tf
 
-def train(make_dataset: callable, create_model: callable, optimizer: tf.keras.optimizers.Optimizer, epochs: int):
+from src.lottery_ticket.foundations.model_base import ModelBase
+
+def train(make_dataset: callable, model: ModelBase, optimizer: tf.keras.optimizers.Optimizer, epochs: int):
     """
     Function to perform training for a model.
 
     :param make_dataset: Function to produce the training/test sets.
-    :param create_model: Function to produce the model.
+    :param model:        Model to optimize.
     :param optimizer:    Optimizer to use during training.
     :param epochs:       Number of epochs to train for.
 
     :returns: A dictionary of the weights before and after training.
     """
-    pass
+    optimize = optimizer.minimize(model.loss)
+    initial_weights: dict[str: np.array] = model.get_current_weights()
+
+    # Get handles?
+
+    # Save summaries
+
+    # Save network initial weights and masks
+    

@@ -33,7 +33,7 @@ def experiment(make_dataset, make_model, train_model, prune_masks, iterations,
     :param make_dataset: A function that, when called with no arguments, will create the training and test sets.
     :param make_model: A function that, when called with four arguments (input_tensor,
                        label_tensor, presets, masks), creates a model object that descends from
-                        model_base. Presets and masks are optional.
+                       model_base. Presets and masks are optional.
     :param train_model: A function that, when called with three arguments (pruning iteration number, 
                         tuple with dataset training/test sets, model), trains the model using the
                         dataset and returns the model's initial and final weights as dictionaries.
@@ -53,7 +53,7 @@ def experiment(make_dataset, make_model, train_model, prune_masks, iterations,
   # determined internally by the train_model function.
   def train_once(iteration, presets=None, masks=None):
     dataset = make_dataset()
-    X_train, Y_train, X_test, Y_test = dataset
+    X_train, Y_train, _, _ = dataset
     model = make_model(X_train, Y_train, presets=presets, masks=masks)
     return train_model(iteration, make_dataset(), model)
 

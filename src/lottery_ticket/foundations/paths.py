@@ -12,7 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Utilities for building paths to store data."""
+"""
+foundations/paths.py
+
+Utilities for building paths to store data.
+
+Modified By: Jordan Bourdeau
+Date: 3/17/24
+"""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -56,6 +63,10 @@ def final(parent_directory):
 def masks(parent_directory):
   """The path where the pruning masks are stored."""
   return os.path.join(parent_directory, 'masks')
+
+def weights(parent_directory):
+  """The path where the weights are stored."""
+  return os.path.join(parent_directory, 'weights')
 
 
 def log(parent_directory, name):

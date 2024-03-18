@@ -19,12 +19,13 @@ from tensorflow.keras.layers import Dense, Flatten, Conv2D, AveragePooling2D
 import src.harness.constants as C
 from src.harness.dataset import load_and_process_mnist
 from src.lottery_ticket.foundations.model_fc import ModelFc
-from src.lottery_ticket.foundations.paths import create_path, get_model_directory, initial, trial
+from src.lottery_ticket.foundations.paths import create_path, get_model_directory, initial, masks, trial, weights
 from src.lottery_ticket.foundations.save_restore import restore_network, save_network
 from src.lottery_ticket.foundations import trainer
 
 class LeNet300(ModelFc):
-    def __init__(self, input_placeholder, label_placeholder, presets=None, masks=None):
+    def __init__(self, random_seed: int, input_placeholder: np.array, label_placeholder: np.array, presets=None, masks=None):
+        self.seed: int = random_seed
         # Define the hyperparameters for LeNet-300
         hyperparameters = {
             'layers': [
@@ -54,28 +55,36 @@ def load_model(model_index: int, pruning_step: int, untrained: bool = False) -> 
     path: str = get_model_directory(model_index, C.MODEL_DIRECTORY)
     if untrained:
         path = initial(path)
-    path = trial(path, pruning_step)
+    else:
+        path = trial(path, pruning_step)
     X_train, Y_train, _, _ = load_and_process_mnist()
-    model: LeNet300 = LeNet300(X_train, Y_train)
-    model._weights = restore_network(path)
+    model: LeNet300 = LeNet300(model_index, X_train, Y_train)
+    model._weights = restore_network(weights(path))
+    model._masks = restore_network(masks(path))
     return model
 
-def save_model(model: LeNet300, model_index: int, pruning_step: int, untrained: bool = False):
+def save_model(model: LeNet300, pruning_step: int, untrained: bool = False):
     """
     Function to save a single trained model.
 
     :param model:        Model object being saved.
-    :param model_index:  Index of the model which was trained.
     :param pruning_step: Integer value for the number of pruning steps which had been completed for the model.
     :param untrained:    Boolean for if it is the untrained version of a model.
     """
 
-    output_directory: str = get_model_directory(model_index, C.MODEL_DIRECTORY)
+    output_directory: str = get_model_directory(model.seed, C.MODEL_DIRECTORY)
+    # Save the initial weights in an 'initial' directory in the top-level of the model directory
     if untrained:
-       output_directory = initial(output_directory)
-    create_path(output_directory)
-    model_name: str = trial(output_directory, pruning_step)
-    save_network(model_name, model.weights)
+        untrained_directory: str = initial(output_directory)
+        initial_masks: dict[str: np.array] = {key: np.ones(layer.shape) for key, layer in model._weights.items()}
+        save_network(masks(untrained_directory), initial_masks)
+        save_network(weights(untrained_directory), model.weights)
+    else:
+        # Create a trial directory within the model directory
+        trial_directory: str = trial(output_directory, pruning_step)
+        # Save model and weights to the trial directory
+        save_network(weights(trial_directory), model.weights)
+        save_network(masks(trial_directory), model.masks)
 
 def create_model(random_seed: int, X_train: np.array, Y_train: np.array) -> LeNet300:
     """
@@ -94,10 +103,10 @@ def create_model(random_seed: int, X_train: np.array, Y_train: np.array) -> LeNe
     tf.random.set_seed(random_seed)
 
     # Initialize the model
-    model: LeNet300 = LeNet300(X_train, Y_train)
+    model: LeNet300 = LeNet300(random_seed, X_train, Y_train)
 
     # Save the untrained weights
-    save_model(model, random_seed, 0, True)
+    save_model(model, 0, True)
     
     return model
 
