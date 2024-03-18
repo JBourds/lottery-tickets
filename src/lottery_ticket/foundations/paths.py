@@ -20,6 +20,28 @@ from __future__ import print_function
 
 import os
 
+# Added
+def create_path(path: str):
+    """
+    Helper function to create a path and all its subdirectories.
+    :param path: String containing the target path.
+    """
+    if not os.path.exists(path):
+        os.makedirs(path)
+        print(f"Directory '{path}' created successfully.")
+    else:
+        print(f"Directory '{path}' already exists.")
+
+def get_model_directory(model_index: int, parent_directory: str = "") -> str:
+    """
+    Function to return the relative directory where a model would go.
+
+    :param parent_directory: Base directory to append model subdirectory to. Defaults to empty string.
+    :param model_index:      Integer for the index/random seed of the model.
+
+    :returns: Returns expected directory for the model.
+    """
+    return f'{parent_directory}model_{model_index}/'
 
 def initial(parent_directory):
   """The path where the weights at the beginning of training are stored."""
@@ -48,7 +70,7 @@ def summaries(parent_directory):
 
 def trial(parent_directory, trial_name):
   """The parent directory for a trial."""
-  return os.path.join(parent_directory, 'trial{}'.format(trial_name))
+  return os.path.join(parent_directory, f'trial{trial_name}')
 
 
 def run(parent_directory,
@@ -68,4 +90,4 @@ def run(parent_directory,
     The path in which data about this run should be stored.
   """
   return os.path.join(parent_directory, str(level),
-                      '{}{}'.format(experiment_name, run_id))
+                      f'{experiment_name}{run_id}')

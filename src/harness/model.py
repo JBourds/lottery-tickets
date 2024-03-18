@@ -5,6 +5,7 @@ Class definition for the LeNet network architecture.
 Source: https://colab.research.google.com/github/maticvl/dataHacker/blob/master/CNN/LeNet_5_TensorFlow_2_0_datahacker.ipynb#scrollTo=UA2ehjxgF7bY
 """
 
+import functools
 import numpy as np
 import os
 import random
@@ -16,9 +17,11 @@ from tensorflow.keras.losses import categorical_crossentropy
 from tensorflow.keras.layers import Dense, Flatten, Conv2D, AveragePooling2D
 
 import src.harness.constants as C
-from src.harness.utils import create_path, get_model_directory, get_model_name
+from src.harness.dataset import load_and_process_mnist
 from src.lottery_ticket.foundations.model_fc import ModelFc
+from src.lottery_ticket.foundations.paths import create_path, get_model_directory, initial, trial
 from src.lottery_ticket.foundations.save_restore import restore_network, save_network
+from src.lottery_ticket.foundations import trainer
 
 class LeNet300(ModelFc):
     def __init__(self, input_placeholder, label_placeholder, presets=None, masks=None):
@@ -38,35 +41,41 @@ class LeNet300(ModelFc):
                                         presets=presets,
                                         masks=masks)
 
-def load_model(model_index: int, pruning_step: int, trained) -> LeNet300:
+def load_model(model_index: int, pruning_step: int, untrained: bool = False) -> LeNet300:
     """
     Function used to load a single trained model.
 
-    :param model_index:       Index of the model which was trained.
-    :param pruning_step:      Integer value for the number of pruning steps which had been completed for the model.
-    :param trained:           Boolean to get the trained or untrained version of a model.
+    :param model_index:    Index of the model which was trained.
+    :param pruning_step:   Integer value for the number of pruning steps which had been completed for the model.
+    :param untrained:      Boolean to get the trained or untrained version of a model.
 
     :returns: Model object with weights loaded and callbacks to use when fitting the model.
     """
-    path: str = get_model_directory(model_index, C.MODEL_DIRECTORY) + get_model_name(model_index, pruning_step, trained)
-    model: LeNet300 = LeNet300()
-    model.weights = restore_network(path)
+    path: str = get_model_directory(model_index, C.MODEL_DIRECTORY)
+    if untrained:
+        path = initial(path)
+    path = trial(path, pruning_step)
+    X_train, Y_train, _, _ = load_and_process_mnist()
+    model: LeNet300 = LeNet300(X_train, Y_train)
+    model._weights = restore_network(path)
     return model
 
-def save_model(model: LeNet300, model_index: int, pruning_step: int, trained: bool):
+def save_model(model: LeNet300, model_index: int, pruning_step: int, untrained: bool = False):
     """
     Function to save a single trained model.
 
     :param model:        Model object being saved.
     :param model_index:  Index of the model which was trained.
     :param pruning_step: Integer value for the number of pruning steps which had been completed for the model.
-    :param trained:      Boolean to get the trained or untrained version of a model.
+    :param untrained:    Boolean for if it is the untrained version of a model.
     """
 
     output_directory: str = get_model_directory(model_index, C.MODEL_DIRECTORY)
+    if untrained:
+       output_directory = initial(output_directory)
     create_path(output_directory)
-    model_name: str = get_model_name(model_index, pruning_step, trained)
-    save_network(output_directory + model_name, model.weights)
+    model_name: str = trial(output_directory, pruning_step)
+    save_network(model_name, model.weights)
 
 def create_model(random_seed: int, X_train: np.array, Y_train: np.array) -> LeNet300:
     """
@@ -87,33 +96,40 @@ def create_model(random_seed: int, X_train: np.array, Y_train: np.array) -> LeNe
     # Initialize the model
     model: LeNet300 = LeNet300(X_train, Y_train)
 
-    # Save the pretrained weights
-    save_model(model, random_seed, 0, False)
+    # Save the untrained weights
+    save_model(model, random_seed, 0, True)
     
     return model
 
-def create_models(X_train: np.array, Y_train: np.array, X_test: np.array, Y_test: np.array, epochs: int, num_models: int):
-    """
-    Function responsible for training/saving the base, fully parametrized models.
+def train(model_index: int,
+          output_dir: str,
+          training_len: int = C.TRAINING_LENGTH,
+          pruning_steps: int = C.TRAINING_ITERATIONS,
+          presets=None,
+          permute_labels: bool = False):
+  """
+  Perform the lottery ticket experiment.
 
-    :param X_train:     Training instances.
-    :param X_test:      Testing instances.
-    :param Y_train:     Training labels.
-    :param Y_test:      Testing labels.
-    :param epochs:      Number of epochs to train the model for.
-    :param num_models:  Number of models to create.
-    """
-    assert X_train.shape[0] >= 1, 'Need at least one input to determine feature shape'
+  The output of each experiment will be stored in a directory called:
+  {models_dir}/{model_num}/{experiment_name} as defined in the
+  foundations.paths module.
 
-    # Extract shape of features and the number of classes
-    feature_shape: tuple[int, ...] = X_train[0].shape
-    num_classes: int = 10
+    :param model_index: Integer value for the model index (random seed).
+    :param training_len: How long to train on each iteration.
+    :param pruning_steps: How many iterative pruning steps to perform.
+    :param presets: The initial weights for the network, if any. 
+                    Presets can come in one of three forms:
+        * A dictionary of numpy arrays. Each dictionary key is the name of the
+            corresponding tensor that is to be initialized. Each value is a numpy
+            array containing the initializations.
+        * The string name of a directory containing one file for each
+            set of weights that is to be initialized (in the form of
+            foundations.save_restore).
+        * None, meaning the network should be randomly initialized.
+    :param permute_labels: Whether to permute the labels on the dataset.
+  """
+  # Define model and dataset functions.
+  make_dataset = load_and_process_mnist
+  make_model = functools.partial(create_model, 0)
 
-    # Use index as the random seed input
-    for i in range(num_models):
-        # Create the model if it does not already exist
-        if not os.path.exists(get_model_directory(i, C.MODEL_DIRECTORY) + get_model_name(i, 0)):
-            # Setup and train the model
-            model, callbacks = create_model(feature_shape, num_classes, random_seed=i)
-            model.fit(X_train, Y_train, epochs=epochs, validation_data=(X_test, Y_test), callbacks=callbacks, verbose=1, use_multiprocessing=True) 
-            save_model(model, i, 0, True)
+  

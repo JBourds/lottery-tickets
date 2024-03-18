@@ -1,7 +1,24 @@
+# Copyright (C) 2018 Google Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """
 experiment.py
 
 Module containing code for actually running the lottery ticket hypothesis experiemnts.
+
+Modified By: Jordan Bourdeau
+Date: 3/17/24
 """
 
 import numpy as np
@@ -9,30 +26,49 @@ import numpy as np
 from src.harness.model import create_models
 from src.harness.pruning import iterative_magnitude_pruning
 
-def create_lottery_tickets(X_train: np.array, Y_train: np.array, X_test: np.array, Y_test: np.array, total_pruning_percentage: float, pruning_steps: int, epochs_per_step: int, num_models: int):
-    """
-    Function to perform the lottery ticket hypothesis with iterative magnitude pruning.
-    Does not return anything, but saves all steps in training/pruning models
+def experiment(make_dataset, make_model, train_model, prune_masks, iterations,
+               presets=None):
+  """
+  Run the lottery ticket experiment for the specified number of iterations.
+    :param make_dataset: A function that, when called with no arguments, will create the training and test sets.
+    :param make_model: A function that, when called with four arguments (input_tensor,
+                       label_tensor, presets, masks), creates a model object that descends from
+                        model_base. Presets and masks are optional.
+    :param train_model: A function that, when called with three arguments (pruning iteration number, 
+                        tuple with dataset training/test sets, model), trains the model using the
+                        dataset and returns the model's initial and final weights as dictionaries.
+    :param prune_masks: A function that, when called with two arguments (dictionary of
+                        current masks, dictionary of final weights), returns a new dictionary of
+                        masks that have been pruned. Each dictionary key is the name of a tensor
+                        in the network; each value is a numpy array containing the values of the
+                        tensor (1/0 values for mask, weights for the dictionary of final weights).
+    :param iterations: The number of pruning iterations to perform.
+    :param presets: (optional) The presets to use for the first iteration of training.
+                    In the form of a dictionary where each key is the name of a tensor and
+                    each value is a numpy array of the values to which that tensor should
+                    be initialized.
+  """
 
-    :param X_train:                  Training instances.
-    :param X_test:                   Testing instances.
-    :param Y_train:                  Training labels.
-    :param Y_test:                   Testing labels.
-    :param total_pruning_percentage: The total percentage of weights to prune.
-    :param pruning_steps:            Number of pruning steps.
-    :param epochs_per_step:          Number of epochs to train each model for in each step.
-    :param num_models:               Number of models to create.
-    """
-    assert pruning_steps > 0, "Pruning steps should be greater than 0"
-    assert total_pruning_percentage > 0 and total_pruning_percentage <= 1, "Total pruning percentage should be between 0 and 1"
+  # A helper function that trains the network once according to the behavior
+  # determined internally by the train_model function.
+  def train_once(iteration, presets=None, masks=None):
+    dataset = make_dataset()
+    X_train, Y_train, X_test, Y_test = dataset
+    model = make_model(X_train, Y_train, presets=presets, masks=masks)
+    return train_model(iteration, make_dataset(), model)
 
-    # Create the original models if they don't already exist
-    create_models(X_train, Y_train, X_test, Y_test, epochs_per_step, num_models)
+  # Run once normally.
+  initial, final = train_once(0, presets=presets)
 
-    feature_shape: tuple[int, ...] = X_train[0].shape
-    num_classes: int = 10
+  # Create the initial masks with no weights pruned.
+  masks = {}
+  for k, v in initial.items():
+    masks[k] = np.ones(v.shape)
 
-    # Iterate over each model
-    for model_index in range(num_models):
-        iterative_magnitude_pruning(feature_shape, num_classes, model_index, X_train, Y_train, X_test, Y_test, epochs_per_step, total_pruning_percentage, pruning_steps)
+  # Begin the training loop.
+  for iteration in range(1, iterations + 1):
+    # Prune the network.
+    masks = prune_masks(masks, final)
 
+    # Train the network again.
+    _, final = train_once(iteration, presets=initial, masks=masks)

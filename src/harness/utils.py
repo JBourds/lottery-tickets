@@ -18,40 +18,6 @@ Callback = tf.keras.callbacks.Callback
 TensorBoard = tf.keras.callbacks.TensorBoard
 ModelCheckpoint = tf.keras.callbacks.ModelCheckpoint
 
-def create_path(path: str):
-    """
-    Helper function to create a path and all its subdirectories.
-    :param path: String containing the target path.
-    """
-    if not os.path.exists(path):
-        os.makedirs(path)
-        print(f"Directory '{path}' created successfully.")
-    else:
-        print(f"Directory '{path}' already exists.")
-
-def get_model_directory(model_index: int, base_directory: str = "") -> str:
-    """
-    Function to return the relative directory where a model would go.
-
-    :param base_directory: Base directory to append model subdirectory to. Defaults to empty string.
-    :param model_index: Integer for the index/random seed of the model.
-
-    :returns: Returns expected directory for the model.
-    """
-    return f'{base_directory}model_{model_index}/'
-
-def get_model_name(model_index: int, pruning_step: int = 0, trained: bool = True) -> str:
-    """
-    Function to return the expected name for a model based on its index and pruning step.
-
-    :param model_index:   Integer for the index/random seed of the model.
-    :param pruning_step:  Integer for the pruning iteration.
-    :param pretrained:    Boolean for if the model was trained (pretrained saves initial weights).
-
-    :returns: Returns expected name for the model.
-    """
-    trained: str = 'trained' if trained else 'untrained'
-    return f'{trained}_model_{model_index}_step_{pruning_step}.keras'
 
 # def get_model_callbacks(model_index: int, pruning_step: int) -> list[Callback]:
 #     """

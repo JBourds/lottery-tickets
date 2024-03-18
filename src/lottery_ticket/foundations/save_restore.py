@@ -19,12 +19,13 @@ from __future__ import division
 from __future__ import print_function
 
 import csv
+import numpy as np
 import os
+import six
+import shutil
+import tensorflow as tf
 
 from src.lottery_ticket.foundations import paths
-import numpy as np
-import six
-import tensorflow as tf
 
 
 def save_network(filename, weights_dict):
@@ -46,7 +47,6 @@ def save_network(filename, weights_dict):
       saved.
   """
   if os.path.exists(filename):
-      import shutil
       shutil.rmtree(filename)
   os.makedirs(filename)
 
@@ -75,16 +75,12 @@ def restore_network(filename):
   Raises:
     ValueError: If filename does not exist.
   """
-  if not tf.gfile.Exists(filename):
-    raise ValueError('Filename {} does not exist.'.format(filename))
-
   weights_dict = {}
 
-  for basename in tf.gfile.ListDirectory(filename):
+  for basename in os.listdir(filename):
     name = basename.split('.')[0]
-    with tf.gfile.FastGFile(os.path.join(filename, basename)) as fp:
+    with open(os.path.join(filename, basename), 'rb') as fp:
       weights_dict[name] = np.load(fp)
-
   return weights_dict
 
 
