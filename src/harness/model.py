@@ -104,9 +104,6 @@ def create_model(random_seed: int, X_train: np.array, Y_train: np.array) -> LeNe
 
     # Initialize the model
     model: LeNet300 = LeNet300(random_seed, X_train, Y_train)
-
-    # Save the untrained weights
-    save_model(model, 0, True)
     
     return model
 
