@@ -33,7 +33,13 @@ DIRECTORIES: list[str] = [
 ]
 
 # Training Parameters
+OPTIMIZER = functools.partial(tf.keras.optimizers.legacy.SGD, .1)
 MNIST_LOCATION: str = DATA_DIRECTORY + 'mnist/'
-TRAINING_LENGTH: int = 50_000
-TRAINING_ITERATIONS: int = 30
-OPTIMIZER = functools.partial(tf.keras.optimizers.SGD, .1)
+
+TRAINING_ITERATIONS: int = 1000
+PRUNING_STEPS: int = 45
+# Prune each layer by 10%
+PRUNING_PERCENTS: dict[int: float] = {f'layer{i}': 0.1 for i in range(3)}
+
+TEST_PRUNING_STEPS: int = 5
+TEST_TRAINING_ITERATIONS: int = 10

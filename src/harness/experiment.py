@@ -23,52 +23,55 @@ Date: 3/17/24
 
 import numpy as np
 
-from src.harness.model import create_models
-from src.harness.pruning import iterative_magnitude_pruning
-
-def experiment(make_dataset, make_model, train_model, prune_masks, iterations,
-               presets=None):
+def experiment(make_dataset: callable, 
+               make_model: callable, 
+               train_model: callable, 
+               prune_masks: callable, 
+               pruning_steps: int,
+               presets: dict[str: np.array] = None):
   """
   Run the lottery ticket experiment for the specified number of iterations.
-    :param make_dataset: A function that, when called with no arguments, will create the training and test sets.
-    :param make_model: A function that, when called with four arguments (input_tensor,
-                       label_tensor, presets, masks), creates a model object that descends from
-                       model_base. Presets and masks are optional.
-    :param train_model: A function that, when called with three arguments (pruning iteration number, 
+
+  :param make_dataset:  A function that, when called with no arguments, will create the training and test sets.
+  :param make_model:    A function that, when called with four arguments (input_tensor,
+                        label_tensor, presets, masks), creates a model object that descends from
+                        model_base. Presets and masks are optional.
+  :param train_model:   A function that, when called with three arguments (pruning iteration number, 
                         tuple with dataset training/test sets, model), trains the model using the
                         dataset and returns the model's initial and final weights as dictionaries.
-    :param prune_masks: A function that, when called with two arguments (dictionary of
+  :param prune_masks:   A function that, when called with two arguments (dictionary of
                         current masks, dictionary of final weights), returns a new dictionary of
                         masks that have been pruned. Each dictionary key is the name of a tensor
                         in the network; each value is a numpy array containing the values of the
                         tensor (1/0 values for mask, weights for the dictionary of final weights).
-    :param iterations: The number of pruning iterations to perform.
-    :param presets: (optional) The presets to use for the first iteration of training.
-                    In the form of a dictionary where each key is the name of a tensor and
-                    each value is a numpy array of the values to which that tensor should
-                    be initialized.
+  :param pruning_steps: The number of pruning iterations to perform.
+  :param presets:       (optional) The presets to use for the first iteration of training.
+                        In the form of a dictionary where each key is the name of a tensor and
+                        each value is a numpy array of the values to which that tensor should
+                        be initialized.
   """
 
   # A helper function that trains the network once according to the behavior
-  # determined internally by the train_model function.
-  def train_once(iteration, presets=None, masks=None):
-    dataset = make_dataset()
-    X_train, Y_train, _, _ = dataset
+  # determined internally by the+ train_model function.
+  def train_once(pruning_step: int, presets=None, masks=None):
+    print(f'Training step {pruning_step}')
+    X_train, Y_train, _, _ = make_dataset()
     model = make_model(X_train, Y_train, presets=presets, masks=masks)
-    return train_model(iteration, make_dataset(), model)
+    print(f'Model Weights on Pruning Step {pruning_step}:\n{model.weights}')
+    return train_model(make_dataset, model, pruning_step)
 
   # Run once normally.
-  initial, final = train_once(0, presets=presets)
+  initial_weights, final_weights = train_once(0, presets=presets)
 
   # Create the initial masks with no weights pruned.
   masks = {}
-  for k, v in initial.items():
+  for k, v in initial_weights.items():
     masks[k] = np.ones(v.shape)
 
   # Begin the training loop.
-  for iteration in range(1, iterations + 1):
+  for pruning_step in range(1, pruning_steps + 1):
+    print(f'Pruning Step: {pruning_step}')
     # Prune the network.
-    masks = prune_masks(masks, final)
-
+    masks = prune_masks(masks, final_weights)
     # Train the network again.
-    _, final = train_once(iteration, presets=initial, masks=masks)
+    _, final_weights = train_once(pruning_step, presets=initial_weights, masks=masks)

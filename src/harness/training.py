@@ -24,14 +24,16 @@ Date: 3/17/24
 import numpy as np
 import tensorflow as tf
 
+from src.harness import constants as C
 from src.harness.model import LeNet300, save_model
 
-def train(make_dataset: callable, model: LeNet300, optimizer: tf.keras.optimizers.Optimizer, iterations: int):
+def train(make_dataset: callable, model: LeNet300, pruning_step: int = 0, optimizer: tf.keras.optimizers.Optimizer = C.OPTIMIZER(), iterations: int = C.TEST_TRAINING_ITERATIONS):
     """
     Function to perform training for a model.
 
     :param make_dataset:     Function to produce the training/test sets.
     :param model:            Model to optimize.
+    :param pruning_step:     Integer value for the step in pruning. Defaults to 0.
     :param optimizer:        Optimizer to use during training.
     :param iterations:       Number of iterations to train for.
 
@@ -40,7 +42,7 @@ def train(make_dataset: callable, model: LeNet300, optimizer: tf.keras.optimizer
 
     # Save network initial weights and masks
     initial_weights: dict[str: np.array] = model.get_current_weights()
-    save_model(model, 0, untrained=True)
+    save_model(model, pruning_step, untrained=True)
 
     def training_loop(model: LeNet300):
         """
@@ -53,10 +55,12 @@ def train(make_dataset: callable, model: LeNet300, optimizer: tf.keras.optimizer
         while iteration < iterations:
             # Forward pass
             with tf.GradientTape() as tape:
+                print(type(model.get_current_weights()['layer0']))
                 # Create the new model using the previous model's weights/masks
+                # This will also compute the training loss/accuracy as part of the constructor
                 model = LeNet300(model.seed, inputs, labels, presets=model.get_current_weights(), masks=model.masks)
 
-                # Compute gradients
+                # Compute gradients based on the AutoDiff from the loss calculation
                 gradients = tape.gradient(model.loss, model.weights.values())
 
                 # Update weights
@@ -67,14 +71,11 @@ def train(make_dataset: callable, model: LeNet300, optimizer: tf.keras.optimizer
             # Print training progress
             print(f"Iteration {iteration}/{iterations}, Loss: {model.loss.numpy()}")
 
-            # Save model weights after each iteration
-            save_model(model, iteration, False)
-
     # Run the training loop
     training_loop(model)
 
     # Save network final weights and masks
-    save_model(model, 0, final=True)
+    save_model(model, pruning_step, final=True)
 
     # Return initial and final weights
     return initial_weights, model.get_current_weights()
