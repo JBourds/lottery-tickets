@@ -5,3 +5,5 @@ paper-code/
 __pycache__/
 data/
 *.egg-info/
+models/
+src/Lottery_Ticket_Hypothesis-TensorFlow_2/

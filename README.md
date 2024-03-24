@@ -131,6 +131,7 @@ We hypothesize there are structual similarities across winning lottery tickets f
 - [Google Drive](https://drive.google.com/drive/folders/1TV3oNUlDSi0IRF1knm-K9NLvfo4Xl9Lr?usp=share_link)
 
 ## References
+- [Reference Code](https://github.com/arjun-majumdar/Lottery_Ticket_Hypothesis-TensorFlow_2/blob/master/LTH-LeNet_300_100_10_MNIST_Unstructured_Pruning.ipynb)
 - [Dual Lottery Ticket Hypothesis Paper](https://arxiv.org/pdf/2203.04248.pdf)
 - [Lottery Ticket Hypothesis Paper + Code](https://paperswithcode.com/paper/the-lottery-ticket-hypothesis-finding-sparse)
 - [Lottery Ticket Hypothesis at Scale Paper](https://arxiv.org/abs/1903.01611v1)

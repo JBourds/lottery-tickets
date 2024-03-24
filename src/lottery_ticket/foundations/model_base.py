@@ -12,15 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A base class for all models to be used in lottery ticket experiments.
+"""
+A base class for all models to be used in lottery ticket experiments.
 
 Defines a base class for a model that will be used for the lottery ticket
 hypothesis experiment.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+import numpy as np
 
 import tensorflow as tf
 
@@ -50,6 +49,10 @@ class ModelBase(object):
   @property
   def loss(self):
     return self._loss
+  
+  @property
+  def accuracy(self):
+     return self._accuracy
 
   @property
   def train_summaries(self):
@@ -127,6 +130,20 @@ class ModelBase(object):
         return activation(output)
     else:
         return output
+    
+  def training_step(self, inputs: np.ndarray, labels: np.array, optimizer: tf.keras.optimizers.Optimizer):
+      """
+      Method for performing a single training step.
+      """
+      # Forward pass
+      self.create_loss_and_accuracy()
+      with tf.GradientTape() as tape:
+          # Compute gradients based on the AutoDiff from the loss calculation
+          gradients = tape.gradient(self.loss, self.weights.values())
+
+          # Update weights
+          optimizer.apply_gradients(zip(gradients, self.weights.values()))
+
 
   def create_loss_and_accuracy(self, label_placeholder, output_logits):
       """Creates loss and accuracy once a child class has created the network."""
@@ -136,17 +153,6 @@ class ModelBase(object):
       accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(label_placeholder, 1),
                                                   tf.argmax(tf.nn.softmax(output_logits), 1)),
                                         tf.float32))
-
-      # Create summaries for loss and accuracy.
-      self._train_summaries = [
-          tf.summary.scalar('train_loss', self._loss),
-          tf.summary.scalar('train_accuracy', accuracy)
-      ]
-      self._test_summaries = [
-          tf.summary.scalar('test_loss', self._loss),
-          tf.summary.scalar('test_accuracy', accuracy)
-      ]
-      self._validate_summaries = [
-          tf.summary.scalar('validate_loss', self._loss),
-          tf.summary.scalar('validate_accuracy', accuracy)
-      ]
+      
+      # Save accuracy
+      self._accuracy = accuracy

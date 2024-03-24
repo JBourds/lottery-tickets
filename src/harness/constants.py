@@ -19,31 +19,34 @@ File containing all constants and constant functions.
 import functools
 import tensorflow as tf
 
-# File Locations
-DATA_DIRECTORY: str = 'data/'
-MODEL_DIRECTORY: str = 'models/'
-CHECKPOINT_DIRECTORY: str = 'checkpoints/'
-FIT_DIRECTORY: str = 'logs/fit/'
+class Constants:
+    # File Locations
+    DATA_DIRECTORY: str = 'data/'
+    MODEL_DIRECTORY: str = 'models/'
+    CHECKPOINT_DIRECTORY: str = 'checkpoints/'
+    FIT_DIRECTORY: str = 'logs/fit/'
 
-DIRECTORIES: list[str] = [
-    MODEL_DIRECTORY,
-    CHECKPOINT_DIRECTORY,
-    FIT_DIRECTORY,
-    DATA_DIRECTORY,
-]
+    DIRECTORIES: list[str] = [
+        MODEL_DIRECTORY,
+        CHECKPOINT_DIRECTORY,
+        FIT_DIRECTORY,
+        DATA_DIRECTORY,
+    ]
 
-# Experiment Parameters
-NUM_MODELS: int = 1
+    # Training Parameters
+    MNIST_LOCATION: str = DATA_DIRECTORY + 'mnist/'
 
-# Training Parameters
-OPTIMIZER = functools.partial(tf.keras.optimizers.legacy.SGD, .1)
-MNIST_LOCATION: str = DATA_DIRECTORY + 'mnist/'
+    PATIENCE: int = 3
+    MINIMUM_DELTA: float = 0.01
+    LEARNING_RATE: float = 0.1
+    OPTIMIZER = functools.partial(tf.keras.optimizers.legacy.SGD, LEARNING_RATE)
 
-# This is small for now in order to perform testing, original paper used 60,000 iterations
-TRAINING_ITERATIONS: int = 1_000
-PRUNING_STEPS: int = 45
-# Prune each layer by 10%
-PRUNING_PERCENTS: dict[int: float] = {f'layer{i}': 0.1 for i in range(3)}
+    # Test Experiment Parameters
+    TEST_NUM_MODELS: int = 2
+    TEST_TRAINING_EPOCHS: int = 2
+    TEST_PRUNING_STEPS: int = 2
 
-TEST_PRUNING_STEPS: int = 5
-TEST_TRAINING_ITERATIONS: int = 10
+    # Real Experiment Parameters
+    NUM_MODELS: int = 100
+    TRAINING_EPOCHS: int = 30
+    PRUNING_STEPS: int = 45

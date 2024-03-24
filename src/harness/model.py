@@ -16,7 +16,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.losses import categorical_crossentropy
 from tensorflow.keras.layers import Dense, Flatten, Conv2D, AveragePooling2D
 
-import src.harness.constants as C
+from src.harness.constants import Constants as C
 from src.harness.dataset import load_and_process_mnist
 from src.lottery_ticket.foundations.model_fc import ModelFc
 from src.lottery_ticket.foundations import paths

@@ -8,7 +8,7 @@ import os
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 
-import src.harness.constants as C
+from src.harness.constants import Constants as C
 
 # Aliases
 ConstantSparsity = tfmot.sparsity.keras.ConstantSparsity

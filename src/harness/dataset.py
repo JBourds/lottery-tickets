@@ -21,7 +21,7 @@ import os
 from tensorflow.keras import datasets
 from tensorflow.keras.utils import to_categorical
 
-import src.harness.constants as C
+from src.harness.constants import Constants as C
 
 def print_dataset_shape(X_train: np.array, Y_train: np.array, X_test: np.array, Y_test: np.array):
     """
