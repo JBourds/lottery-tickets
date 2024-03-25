@@ -1,25 +1,13 @@
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 """
 dataset.py
 
 File containing function(s)/classes for loading the dataset.
+Note: There is a bug where this being 
 """
 
 import numpy as np
 import os
-from tensorflow.keras import datasets
-from tensorflow.keras.utils import to_categorical
+import tensorflow as tf
 
 from src.harness.constants import Constants as C
 
@@ -66,7 +54,7 @@ def load_and_process_mnist(flatten: bool = True) -> tuple[np.array, np.array, np
 
     :returns X and Y training and test sets after preprocessing.
     """
-    (X_train, Y_train), (X_test, Y_test) = datasets.mnist.load_data()
+    (X_train, Y_train), (X_test, Y_test) = tf.keras.datasets.mnist.load_data()
     
     # Add a new axis for use in training the model
     X_train: np.array = X_train[:, :, :, np.newaxis]
@@ -79,8 +67,8 @@ def load_and_process_mnist(flatten: bool = True) -> tuple[np.array, np.array, np
 
     # Convert class vectors to binary class matrices.
     num_classes: int = 10
-    Y_train: np.array = to_categorical(Y_train, num_classes)
-    Y_test: np.array = to_categorical(Y_test, num_classes)
+    Y_train: np.array = tf.keras.utils.to_categorical(Y_train, num_classes)
+    Y_test: np.array = tf.keras.utils.to_categorical(Y_test, num_classes)
 
     # Data normalization
     X_train = X_train.astype('float32')
