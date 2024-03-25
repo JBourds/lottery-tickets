@@ -45,7 +45,7 @@ def download_data(dataset_directory: str = C.MNIST_LOCATION):
 
 
 
-def load_and_process_mnist(flatten: bool = True) -> tuple[np.array, np.array, np.array, np.array]:
+def load_and_process_mnist() -> tuple[np.array, np.array, np.array, np.array]:
     """
     Function to load and preprocess the MNIST dataset.
     Source: https://colab.research.google.com/github/maticvl/dataHacker/blob/master/CNN/LeNet_5_TensorFlow_2_0_datahacker.ipynb#scrollTo=UA2ehjxgF7bY
@@ -60,10 +60,11 @@ def load_and_process_mnist(flatten: bool = True) -> tuple[np.array, np.array, np
     X_train: np.array = X_train[:, :, :, np.newaxis]
     X_test: np.array = X_test[:, :, :, np.newaxis]
 
-    # Flatten labels
-    if flatten:
-      X_train = X_train.reshape((X_train.shape[0], -1))
-      X_test = X_test.reshape((X_test.shape[0], -1))
+    # Reshape labels
+    X_train = X_train.reshape((X_train.shape[0], 1, -1))
+    X_test = X_test.reshape((X_test.shape[0], 1, -1))
+    Y_train = Y_train.reshape((Y_train.shape[0], 1, -1))
+    Y_test = Y_test.reshape((Y_test.shape[0], 1, -1))
 
     # Convert class vectors to binary class matrices.
     num_classes: int = 10

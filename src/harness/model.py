@@ -46,7 +46,7 @@ def create_lenet_300_100(random_seed: int) -> tf.keras.Model:
     """
     Simple hardcoded class definition for creating the sequential Keras equivalent to LeNet-300-100.
     """
-    input_shape: tuple[int, ...] = (784, )
+    input_shape: tuple[int, ...] = (784,)
     num_classes: int = 10
 
     # Set seeds for reproducability

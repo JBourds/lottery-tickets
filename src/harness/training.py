@@ -70,14 +70,20 @@ def train_one_step(model: tf.keras.Model,
                    mask_model: tf.keras.Model, 
                    inputs: tf.Tensor, 
                    labels: tf.Tensor,
-                   train_loss: tf.keras.metrics.Metric,
-                   train_accuracy: tf.keras.metrics.Metric,
-                   loss_fn: tf.keras.losses.Loss = tf.keras.losses.CategoricalCrossentropy(), 
-                   optimizer: tf.keras.optimizers.Optimizer = C.OPTIMIZER(), 
+                   make_train_test_loss_accuracy: callable,
+                   loss_fn: tf.keras.losses.Loss = None, 
+                   optimizer: tf.keras.optimizers.Optimizer = None, 
                    ):
     """
     Function to compute one step of gradient descent optimization
     """
+
+    # train_loss, train_accuracy, _, _ = make_train_test_loss_accuracy()
+
+    if loss_fn is None:
+        loss_fn = tf.keras.losses.CategoricalCrossentropy()
+    if optimizer is None:
+        optimizer = C.OPTIMIZER()
 
     with tf.GradientTape() as tape:
         # Make predictions using defined model-
@@ -100,8 +106,8 @@ def train_one_step(model: tf.keras.Model,
     # Apply computed gradients to model's weights and biases
     optimizer.apply_gradients(zip(grad_mask_mul, model.trainable_variables))
 
-    # Compute accuracy
-    return train_loss(loss), train_accuracy(labels, y_pred)
+    # # Compute accuracy
+    # return train_loss(loss), train_accuracy(labels, y_pred)
 
 @tf.function
 def test_step(model: tf.keras.Model, 
@@ -158,18 +164,18 @@ def training_loop(
             break
         
         # Update model parameters for each point in the training set
-        for x, y in zip(X_train, Y_train):
-            train_loss, train_accuracy = train_one_step(
+        for idx, (x, y) in enumerate(zip(X_train, Y_train)):
+            train_one_step(
                 model_stripped, 
                 mask_model_stripped, 
                 x, 
                 y, 
-                train_loss,
-                train_accuracy,
+                make_train_test_loss_accuracy,
                 optimizer=optimizer
             )
-            train_losses[idx] = train_loss
-            train_accuracies[idx] = train_accuracy
+            # print(f'Epoch {epoch + 1}, Iteration {idx + 1} Train Loss: {train_loss}, Train Accuracy: {train_accuracy}')
+            # train_losses[idx] = train_loss
+            # train_accuracies[idx] = train_accuracy
 
         # Evaluate model on each point in the test set
         for idx, (x_t, y_t) in enumerate(zip(X_test, Y_test)):
@@ -181,6 +187,8 @@ def training_loop(
                 test_loss,
                 test_accuracy,
             )
+            print(f'Epoch {epoch + 1}, Iteration {idx + 1} Test Loss: {train_loss}, Test Accuracy: {train_accuracy}')
+
             test_losses[idx] = test_loss
             test_accuracies[idx] = test_accuracy
 
@@ -241,6 +249,7 @@ def train(
         sparsity.strip_pruning(model), 
         sparsity.strip_pruning(mask_model), 
         make_dataset, 
+        make_train_test_loss_accuracy,
         num_epochs, 
         patience, 
         minimum_delta, 
