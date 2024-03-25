@@ -33,10 +33,11 @@ DIRECTORIES: list[str] = [
 ]
 
 # Experiment Parameters
-NUM_MODELS: int = 1
+NUM_MODELS: int = 2
 
 # Training Parameters
-OPTIMIZER = functools.partial(tf.keras.optimizers.legacy.SGD, .1)
+LEARNING_RATE: float = 0.1
+OPTIMIZER = functools.partial(tf.keras.optimizers.SGD, LEARNING_RATE)
 MNIST_LOCATION: str = DATA_DIRECTORY + 'mnist/'
 
 # This is small for now in order to perform testing, original paper used 60,000 iterations

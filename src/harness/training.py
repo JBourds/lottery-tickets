@@ -27,7 +27,7 @@ import tensorflow as tf
 from src.harness import constants as C
 from src.harness.model import LeNet300, save_model
 
-def train(make_dataset: callable, model: LeNet300, pruning_step: int = 0, optimizer: tf.keras.optimizers.Optimizer = C.OPTIMIZER(), iterations: int = C.TRAINING_ITERATIONS):
+def train(make_dataset: callable, model: LeNet300, pruning_step: int = 0, optimizer: tf.keras.optimizers.Optimizer = None, iterations: int = C.TRAINING_ITERATIONS):
     """
     Function to perform training for a model.
 
@@ -42,10 +42,12 @@ def train(make_dataset: callable, model: LeNet300, pruning_step: int = 0, optimi
 
     # Save network initial weights and masks
     initial_weights: dict[str: np.array] = model.get_current_weights()
+    if optimizer is None:
+        optimizer = C.OPTIMIZER
     if pruning_step == 0:
         save_model(model, pruning_step, untrained=True)
 
-    def training_loop():
+    def training_loop(optimizer: callable):
         """
         Main training loop for the model.
         """
@@ -67,7 +69,7 @@ def train(make_dataset: callable, model: LeNet300, pruning_step: int = 0, optimi
                 gradients = tape.gradient(model.loss, model.weights.values())
 
                 # Update weights
-                optimizer.apply_gradients(zip(gradients, model.weights.values()))
+                optimizer().apply_gradients(zip(gradients, model.weights.values()))
 
             iteration += 1
 
@@ -75,7 +77,7 @@ def train(make_dataset: callable, model: LeNet300, pruning_step: int = 0, optimi
             print(f"Iteration {iteration}/{iterations}, Loss: {model.loss.numpy()}")
 
     # Run the training loop
-    training_loop()
+    training_loop(optimizer)
 
     # Save network final weights and masks to its folder in the appropriate trial/final folder
     save_model(model, pruning_step)
