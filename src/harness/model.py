@@ -36,10 +36,10 @@ def save_model(model: tf.keras.Model, seed: int, pruning_step: int, masks: bool 
     :param masks:        Boolean for whether the model is a real model or only masks.
     """
 
-    target_directory: str = paths.get_model_path(seed, pruning_step, masks)
-    paths.create_path(target_directory)
+    filepath: str = paths.get_model_filepath(seed, pruning_step, masks)
+    paths.create_path(filepath)
     # Save the initial weights in an 'initial' directory in the top-level of the model directory
-    model.save(os.path.join(target_directory, 'model.keras'), overwrite=True)
+    model.save(filepath, overwrite=True)
 
 # Create a model with the same architecture using all Keras components to check its accuracy with the same parameters
 def create_lenet_300_100(random_seed: int) -> tf.keras.Model:
@@ -54,6 +54,7 @@ def create_lenet_300_100(random_seed: int) -> tf.keras.Model:
     random.seed(random_seed)
     np.random.seed(random_seed)
     tf.random.set_seed(random_seed)
+    
 # , kernel_initializer=tf.initializers.GlorotUniform()
     model = tf.keras.Sequential(name="LeNet-300-100")
     model.add(tf.keras.layers.Flatten(input_shape=input_shape))

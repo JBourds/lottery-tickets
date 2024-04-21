@@ -11,23 +11,35 @@ import numpy as np
 import tensorflow as tf
 from tensorflow_model_optimization.sparsity import keras as sparsity
 
-# Define pruning parameters and callback
-def create_pruning_parameters(target_sparsity: float, begin_Step: int, end_step: int, frequency: int) -> dict:
+def create_pruning_parameters(target_sparsity: float, begin_step: int, end_step: int, frequency: int) -> dict:
     """
     Create the dictionary of pruning parameters to be used.
+
+    :param target_sparsity: The target sparsity to achieve during pruning, a float value between 0 and 1.
+    :param begin_step:      The step at which pruning begins.
+    :param end_step:        The step at which pruning ends.
+    :param frequency:       The frequency with which pruning is applied, typically expressed in terms of epochs or steps.
+
+    :returns: A dictionary containing the pruning parameters.
     """
     return {
         'pruning_schedule': sparsity.ConstantSparsity(
             target_sparsity=target_sparsity, 
-            begin_step=begin_Step,
+            begin_step=begin_step,
             end_step=end_step, 
             frequency=frequency
         )
     }
 
-def create_pruning_callback(monitor: str, patience: int, minimum_delta: float) -> list:
+def create_pruning_callbacks(monitor: str = 'val_loss', patience: int = 3, minimum_delta: float = 0.001) -> list:
     """
     Create a callback to be performed during pruning.
+
+    :param monitor:       Metric to monitor for early stopping (e.g. 'val_loss').
+    :param patience:      Number of steps without an increase in performance before stopping.
+    :param minimum_delta: Minimum improvement required to be considered an improvement.
+
+    :returns: List of pruning callbacks.
     """
     return [
         sparsity.UpdatePruningStep(),

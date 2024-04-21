@@ -28,13 +28,13 @@ def get_model_filepath(seed: int, pruning_step: int, masks: bool = False) -> str
     """
     Function used to retrieve a model's file path
 
-    :param seed:           Random seed the model was trained using
-    :param pruning_step:   Integer value for the number of pruning steps which had been completed for the model.
-    :param masks:          Boolean for whether the model masks are being retrieved or not.
+    :param seed:         Random seed the model was trained using
+    :param pruning_step: Integer value for the number of pruning steps which had been completed for the model.
+    :param masks:        Boolean for whether the model masks are being retrieved or not.
 
     :returns: Model's filepath.
     """
-    return os.path.join(get_model_directory(seed, pruning_step, masks), 'model.keras')
+    return os.path.join(get_model_directory(seed), f'step_{pruning_step}{"_masks" if masks else ""}', 'model.keras')
 
 def create_path(path: str):
     """
@@ -47,7 +47,7 @@ def create_path(path: str):
     else:
         print(f"Directory '{path}' already exists.")
 
-def get_model_directory(model_index: int, parent_directory: str = "") -> str:
+def get_model_directory(model_index: int, parent_directory: str = "models") -> str:
     """
     Function to return the relative directory where a model would go.
 
@@ -56,7 +56,7 @@ def get_model_directory(model_index: int, parent_directory: str = "") -> str:
 
     :returns: Returns expected directory for the model.
     """
-    return f'{parent_directory}model_{model_index}/'
+    return os.path.join(parent_directory, f'model_{model_index}')
 
 def initial(parent_directory):
   """The path where the weights at the beginning of training are stored."""

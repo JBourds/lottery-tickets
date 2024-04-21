@@ -39,7 +39,7 @@ class Constants:
     PATIENCE: int = 3
     MINIMUM_DELTA: float = 0.01
     LEARNING_RATE: float = 0.1
-    OPTIMIZER = functools.partial(tf.keras.optimizers.SGD, LEARNING_RATE)
+    OPTIMIZER = functools.partial(tf.keras.optimizers.legacy.Adam, LEARNING_RATE)
 
     # Test Experiment Parameters
     TEST_NUM_MODELS: int = 2
