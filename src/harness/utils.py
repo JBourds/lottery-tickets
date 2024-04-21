@@ -5,26 +5,29 @@ File containing utility functions.
 """
 
 import numpy as np
+import os
+import random
 import tensorflow as tf
+from tensorflow import keras
 
 from src.harness.constants import Constants as C
 
-def count_nonzero_parameters(model: tf.keras.Model):
+def set_seed(random_seed: int):
     """
-    Print summary for the number of nonzero parameters in the model.
-    """
-    model_sum_params: int = 0
-    weights: list[np.ndarray] = model.trainable_weights
-    for idx in range(len(weights))[::2]:
-        layer_number: int = int(idx / 2)
-        synapses: np.ndarray = weights[idx]
-        nonzero_synapses: int = tf.math.count_nonzero(synapses, axis=None).numpy()
-        neurons: np.array = weights[idx + 1]
-        nonzero_neurons: int = tf.math.count_nonzero(neurons, axis=None).numpy()
+    Function to set random seed for reproducability.
 
-        print(f'Nonzero parameters in layer {layer_number} synapses:', nonzero_synapses)
-        print(f'Nonzero parameters in layer {layer_number} neurons:', nonzero_neurons)
-        
-        model_sum_params += nonzero_synapses + nonzero_neurons
-    
-    print(f'Total nonzero parameters: {model_sum_params}')
+    :param random_seed: Integer values for the random seed to set.
+    """
+    os.environ['PYTHONHASHSEED'] = str(random_seed)
+    random.seed(random_seed)
+    np.random.seed(random_seed)
+    tf.random.set_seed(random_seed)
+
+def count_params(model: keras.Model) -> tuple[int, int]:
+    """
+    Helper function to count the total number of parameters and number of nonzero parameters.
+    """
+    weights = model.get_weights()
+    total_weights = sum(tf.size(w).numpy() for w in weights)  # Calculate total weights
+    nonzero_weights = sum(tf.math.count_nonzero(w).numpy() for w in weights)  # Calculate non-zero weights
+    return total_weights, nonzero_weights

@@ -10,6 +10,7 @@ import os
 import tensorflow as tf
 
 from src.harness.constants import Constants as C
+from src.harness.utils import set_seed
 
 def print_dataset_shape(X_train: np.array, Y_train: np.array, X_test: np.array, Y_test: np.array):
     """
@@ -43,17 +44,16 @@ def download_data(dataset_directory: str = C.MNIST_LOCATION):
     np.save(f'{dataset_directory}x_test.npy', X_test)
     np.save(f'{dataset_directory}y_test.npy', Y_test)
 
-
-
-def load_and_process_mnist() -> tuple[np.array, np.array, np.array, np.array]:
+def load_and_process_mnist(random_seed: int = 0) -> tuple[np.array, np.array, np.array, np.array]:
     """
     Function to load and preprocess the MNIST dataset.
     Source: https://colab.research.google.com/github/maticvl/dataHacker/blob/master/CNN/LeNet_5_TensorFlow_2_0_datahacker.ipynb#scrollTo=UA2ehjxgF7bY
 
-    :param flatten: Boolean value for if the input data should be flattened.
+    :param random_seed: Random seed to set for dataset shuffling.
 
     :returns X and Y training and test sets after preprocessing.
     """
+    set_seed(random_seed)
     (X_train, Y_train), (X_test, Y_test) = tf.keras.datasets.mnist.load_data()
     
     # Add a new axis for use in training the model
@@ -77,4 +77,4 @@ def load_and_process_mnist() -> tuple[np.array, np.array, np.array, np.array]:
     X_train /= 255
     X_test /= 255
 
-    return X_train, Y_train, X_test, Y_test
+    return X_train, X_test, Y_train, Y_test

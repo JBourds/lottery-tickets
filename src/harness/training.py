@@ -28,7 +28,7 @@ from tensorflow_model_optimization.sparsity import keras as sparsity
 from src.harness.constants import Constants as C
 from src.harness.metrics import get_train_test_loss_accuracy
 from src.harness.model import save_model
-from src.harness.utils import count_nonzero_parameters
+from src.harness.utils import count_params
 
 
 class TrainingRound:
@@ -69,8 +69,8 @@ class TrainingRound:
 def train_one_step(
     model: tf.keras.Model, 
     mask_model: tf.keras.Model, 
-    inputs: np.ndarray, 
-    labels: np.array, 
+    inputs: tf.Tensor, 
+    labels: tf.Tensor, 
     loss_fn: tf.keras.losses.Loss, 
     optimizer: tf.keras.optimizers.Optimizer,
     ):
@@ -86,32 +86,38 @@ def train_one_step(
     :param optimizer:  Optimizer function being used,
     """
     with tf.GradientTape() as tape:
-        y_pred = model(inputs)
-        loss = loss_fn(labels, y_pred)
+        y_pred: tf.Tensor = model(inputs)
+        loss: tf.keras.losses.Loss = loss_fn(labels, y_pred)
         
-    gradients = tape.gradient(loss, model.trainable_variables)
+    gradients: tf.Tensor = tape.gradient(loss, model.trainable_variables)
 
-    grad_mask_mul = []
+    grad_mask_mul: list[tf.Tensor] = []
 
     for grad_layer, mask in zip(gradients, mask_model.trainable_weights):
         grad_mask_mul.append(tf.math.multiply(grad_layer, mask))
 
     optimizer.apply_gradients(zip(grad_mask_mul, model.trainable_variables))
 
-@tf.function
-def test_step(model: tf.keras.Model, 
-              data: tf.Tensor, 
-              labels: tf.Tensor,
-              test_loss: tf.keras.metrics.Metric,
-              test_accuracy: tf.keras.metrics.Metric,
-              loss_fn: tf.keras.losses.Loss = tf.keras.losses.CategoricalCrossentropy(),
-              ):
+@tf.function(experimental_relax_shapes=True)
+def test_step(
+    model: tf.keras.Model, 
+    inputs: tf.Tensor, 
+    labels: tf.Tensor,
+    test_loss: tf.keras.metrics.Metric,
+    test_accuracy: tf.keras.metrics.Metric,
+    ) -> tuple[float, float]:
     """
-    Function to test model performance on testing dataset
+    Function to test model performance on testing dataset.
+
+    :param model:      Keras model being tested.
+    :param inputs:     Testing inputs.
+    :param labels:     Testing labels.
+    :param loss_fn:    Loss function being used.
     """
-    predictions = model(data)
-    loss = loss_fn(labels, predictions)
-    return test_loss(loss), test_accuracy(predictions, labels)
+    predictions: tf.Tensor = model(inputs)
+    loss: float = test_loss(labels, predictions)
+    accuracy: float = test_accuracy(labels, predictions)
+    return loss, accuracy
 
 # Training function
 def training_loop(
@@ -182,8 +188,8 @@ def training_loop(
             test_accuracies[idx] = test_accuracy
 
         # Display output
-        print(f'Epoch {epoch + 1}, Train/Test Loss: {train_loss:.4f}/{test_loss:.4f}, Train/Test Accuracy: {train_accuracy:.4f}/{test_accuracy:.4f}')
-        print(f'Total number of trainable parameters = {np.sum(count_nonzero_parameters(model_stripped))}')
+        # print(f'Epoch {epoch + 1}, Train/Test Loss: {train_loss:.4f}/{test_loss:.4f}, Train/Test Accuracy: {train_accuracy:.4f}/{test_accuracy:.4f}')
+        # print(f'Total number of trainable parameters = {np.sum(count_params(model_stripped))}')
 
         # Check for early stopping criteria
         mean_test_loss: float = np.mean(test_losses)
