@@ -66,48 +66,37 @@ class TrainingRound:
         self.test_accuracies: np.array = test_accuracies
 
 @tf.function
-def train_one_step(model: tf.keras.Model,
-                   mask_model: tf.keras.Model, 
-                   inputs: tf.Tensor, 
-                   labels: tf.Tensor,
-                   make_train_test_loss_accuracy: callable,
-                   loss_fn: tf.keras.losses.Loss = None, 
-                   optimizer: tf.keras.optimizers.Optimizer = None, 
-                   ):
+def train_one_step(
+    model: tf.keras.Model, 
+    mask_model: tf.keras.Model, 
+    inputs: np.ndarray, 
+    labels: np.array, 
+    loss_fn: tf.keras.losses.Loss, 
+    optimizer: tf.keras.optimizers.Optimizer,
+    ):
     """
-    Function to compute one step of gradient descent optimization
+    Tensorflow function to performa a single step of gradient descent.
+
+    :param model:      Keras model being trained.
+    :param mask_model: Model which matches the model being trained but stores 1s and 0s for
+                       the mask being applied to the model getting trained.
+    :param inputs:     Batch inputs.
+    :param labels:     Batch labels.
+    :param loss_fn:    Loss function being used.
+    :param optimizer:  Optimizer function being used,
     """
-
-    # train_loss, train_accuracy, _, _ = make_train_test_loss_accuracy()
-
-    if loss_fn is None:
-        loss_fn = tf.keras.losses.CategoricalCrossentropy()
-    if optimizer is None:
-        optimizer = C.OPTIMIZER()
-
     with tf.GradientTape() as tape:
-        # Make predictions using defined model-
         y_pred = model(inputs)
-
-        # Compute loss
         loss = loss_fn(labels, y_pred)
-
-    # Compute gradients with respect to defined loss and weights and biases
+        
     gradients = tape.gradient(loss, model.trainable_variables)
 
-    # List to hold element-wise multiplication between
-    # computed gradient and masks
     grad_mask_mul = []
 
-    # Perform element-wise multiplication between computed gradients and masks
     for grad_layer, mask in zip(gradients, mask_model.trainable_weights):
         grad_mask_mul.append(tf.math.multiply(grad_layer, mask))
 
-    # Apply computed gradients to model's weights and biases
     optimizer.apply_gradients(zip(grad_mask_mul, model.trainable_variables))
-
-    # # Compute accuracy
-    # return train_loss(loss), train_accuracy(labels, y_pred)
 
 @tf.function
 def test_step(model: tf.keras.Model, 

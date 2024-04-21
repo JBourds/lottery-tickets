@@ -76,7 +76,8 @@ def get_pruning_percents(
         target_sparsity: float
         ) -> list[np.array]:
     """
-    Function to get arrays of model sparsity at each step of pruning.
+    Function to get arrays of model sparsity at each step of pruning based on a constant pruning %
+    applied to nonzer-parameters.
     """
 
     def total_sparsity(
