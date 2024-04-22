@@ -59,7 +59,6 @@ def save_model(model: tf.keras.Model, seed: int, pruning_step: int, masks: bool 
 def create_lenet_300_100(
     input_shape: tuple[int, ...], 
     num_classes: int, 
-    optimizer = C.OPTIMIZER,
     ) -> keras.Model:
     """
     Function for creating LeNet-300-100 model.
@@ -77,18 +76,12 @@ def create_lenet_300_100(
         Dense(num_classes, activation='softmax', kernel_initializer=tf.initializers.GlorotUniform()),
     ], name="LeNet-300-100")
 
-    model.compile(
-        loss=keras.losses.CategoricalCrossentropy(), 
-        optimizer=optimizer(), 
-        metrics=['accuracy'])
-
     return model
 
 def create_pruned_lenet(
     input_shape: tuple[int, ...], 
     num_classes: int, 
     pruning_parameters: dict,
-    optimizer = C.OPTIMIZER,
     ) -> keras.Model:
     """
     Function to define the architecture of a neural network model
@@ -108,11 +101,6 @@ def create_pruned_lenet(
         Dense(100, activation='relu', kernel_initializer=tf.initializers.GlorotUniform()),
         Dense(num_classes, activation='softmax', kernel_initializer=tf.initializers.GlorotUniform())
     ], name="Pruned_LeNet-300-100"), **pruning_parameters)
-
-    model.compile(
-        loss=keras.losses.CategoricalCrossentropy(), 
-        optimizer=optimizer(), 
-        metrics=['accuracy'])
     
     return model
 

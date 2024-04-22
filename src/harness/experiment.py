@@ -73,3 +73,11 @@ class ExperimentSummary:
         print(f'Pruning Step {idx}:')
         print(round)
 
+def run_experiment(
+    random_seed: int,
+    create_model: callable,
+    create_masked_model: callable,
+    pruning_percents: np.array,
+
+    ) -> ExperimentData:
+  pass

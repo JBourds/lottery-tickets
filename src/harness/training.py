@@ -28,7 +28,7 @@ from tensorflow_model_optimization.sparsity import keras as sparsity
 from src.harness.constants import Constants as C
 from src.harness.metrics import get_train_test_loss_accuracy
 from src.harness.model import save_model
-from src.harness.utils import count_params
+from src.harness.utils import count_params, set_seed
 
 
 class TrainingRound:
@@ -65,66 +65,78 @@ class TrainingRound:
         self.test_losses: np.array = test_losses
         self.test_accuracies: np.array = test_accuracies
 
-# @tf.function
-def train_one_step(
-    model: tf.keras.Model, 
-    mask_model: tf.keras.Model, 
-    inputs: tf.Tensor, 
-    labels: tf.Tensor, 
-    optimizer: tf.keras.optimizers.Optimizer,
-    loss_fn: tf.keras.metrics.Metric = C.LOSS_FUNCTION(),
-    accuracy: tf.keras.metrics.Metric = tf.keras.metrics.CategoricalAccuracy(),
+def get_train_one_step() -> callable:
+    @tf.function
+    def train_one_step(
+        model: tf.keras.Model, 
+        mask_model: tf.keras.Model, 
+        inputs: tf.Tensor, 
+        labels: tf.Tensor, 
+        optimizer: tf.keras.optimizers.Optimizer,
+        loss_fn: tf.keras.metrics.Metric = C.LOSS_FUNCTION(),
+        accuracy_metric: tf.keras.metrics.Metric = tf.keras.metrics.CategoricalAccuracy(),
     ):
-    """
-    Tensorflow function to performa a single step of gradient descent.
+        """
+        Tensorflow function to performa a single step of gradient descent.
 
-    :param model:      Keras model being trained.
-    :param mask_model: Model which matches the model being trained but stores 1s and 0s for
-                       the mask being applied to the model getting trained.
-    :param inputs:     Batch inputs.
-    :param labels:     Batch labels.
-    :param optimizer:  Optimizer function being used. 
-    :param loss_fn:    Loss function being used. Defaults to value in `constants.py`.
-    :param accuracy:   Accuracy metric to be used. Defaults to value in `constants.py`.
+        :param model:      Keras model being trained.
+        :param mask_model: Model which matches the model being trained but stores 1s and 0s for
+                           the mask being applied to the model getting trained.
+        :param inputs:     Batch inputs.
+        :param labels:     Batch labels.
+        :param optimizer:  Optimizer function being used. 
+        :param loss_fn:    Loss function being used. Defaults to value in `constants.py`.
+        :param accuracy_metric:   Accuracy metric to be used. Defaults to value in `constants.py`.
 
-    :returns: Loss and accuracy from data passed into the model.
-    """
-    with tf.GradientTape() as tape:
-        predictions: tf.Tensor = model(inputs)
-        loss: tf.keras.losses.Loss = loss_fn(labels, predictions)
-        
-    gradients: tf.Tensor = tape.gradient(loss, model.trainable_variables)
+        :returns: Loss and accuracy from data passed into the model.
+        """
+        with tf.GradientTape() as tape:
+            predictions: tf.Tensor = model(inputs)
+            loss: tf.keras.losses.Loss = loss_fn(labels, predictions)
+            
+        gradients: tf.Tensor = tape.gradient(loss, model.trainable_variables)
 
-    grad_mask_mul: list[tf.Tensor] = []
+        grad_mask_mul: list[tf.Tensor] = []
 
-    for grad_layer, mask in zip(gradients, mask_model.trainable_weights):
-        grad_mask_mul.append(tf.math.multiply(grad_layer, mask))
+        for grad_layer, mask in zip(gradients, mask_model.trainable_weights):
+            grad_mask_mul.append(tf.math.multiply(grad_layer, mask))
 
-    optimizer.apply_gradients(zip(grad_mask_mul, model.trainable_variables))
+        optimizer.apply_gradients(zip(grad_mask_mul, model.trainable_variables))
 
-    return loss, accuracy(labels, predictions)
+        accuracy: float = accuracy_metric(labels, predictions)
+        accuracy_metric.reset_states()
 
-# @tf.function(experimental_relax_shapes=True)
+        return loss, accuracy
+    
+    return train_one_step
+    
+
+@tf.function(experimental_relax_shapes=True)
 def test_step(
     model: tf.keras.Model, 
     inputs: tf.Tensor, 
     labels: tf.Tensor,
-    loss_fn: tf.keras.metrics.Metric = C.LOSS_FUNCTION(),
-    accuracy: tf.keras.metrics.Metric = tf.keras.metrics.CategoricalAccuracy(),
+    loss_fn: tf.keras.metrics.Metric,
+    accuracy_metric: tf.keras.metrics.Metric,
     ) -> tuple[float, float]:
     """
     Function to test model performance on testing dataset.
+    Note: Make sure you clear the loss function and metric between calls!
 
     :param model:      Keras model being tested.
     :param inputs:     Testing inputs.
     :param labels:     Testing labels.
     :param loss_fn:    Loss function being used. Defaults to value in `constants.py`.
-    :param accuracy:   Accuracy metric to be used. Defaults to value in `constants.py`.
+    :param accuracy_metric:   Accuracy metric to be used. Defaults to value in `constants.py`.
 
     :returns: Loss and accuracy from data passed into the model.
     """
+        
     predictions: tf.Tensor = model(inputs)
-    return loss_fn(labels, predictions), accuracy(labels, predictions)
+    loss: float = loss_fn(labels, predictions)
+    accuracy: float = accuracy_metric(labels, predictions)
+    accuracy_metric.reset_states()
+    return loss, accuracy
 
 # Training function
 def training_loop(
@@ -180,6 +192,9 @@ def training_loop(
     batch_losses: np.array = np.zeros(num_batches)
     batch_accuracies: np.array = np.zeros(num_batches)
 
+    train_one_step: callable = get_train_one_step()
+    accuracy_metric: tf.keras.metrics.Metric = tf.keras.metrics.CategoricalAccuracy()
+
     for epoch in range(num_epochs):
         for batch_index in range(num_batches):
             # Calculate the lower/upper index for batch (assume data is shuffled)
@@ -197,6 +212,7 @@ def training_loop(
                 Y_batch, 
                 optimizer,
                 loss_fn,
+                accuracy_metric,
             )
 
             # Keep track of all the losses/accuracies within the epoch's batches here
@@ -212,6 +228,8 @@ def training_loop(
             model, 
             X_test, 
             Y_test,
+            loss_fn,
+            accuracy_metric,
         )
 
         test_losses[epoch] = test_loss
@@ -274,11 +292,13 @@ def train(
     :returns: Model, masked model, and training round objects with the final trained model and the training summary/.
     """
 
+    set_seed(random_seed)
+
     # Run the training loop
     model, training_round = training_loop(
         pruning_step, 
-        sparsity.strip_pruning(model), 
-        sparsity.strip_pruning(mask_model), 
+        model, 
+        mask_model, 
         make_dataset, 
         num_epochs, 
         batch_size,

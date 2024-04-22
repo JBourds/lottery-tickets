@@ -36,9 +36,9 @@ class Constants:
     # Training Parameters
     MNIST_LOCATION: str = DATA_DIRECTORY + 'mnist/'
 
-    PATIENCE: int = 10
+    PATIENCE: int = 3
     MINIMUM_DELTA: float = 0.005
-    LEARNING_RATE: float = 0.1
+    LEARNING_RATE: float = 0.01
     OPTIMIZER = functools.partial(tf.keras.optimizers.legacy.Adam, LEARNING_RATE)
     LOSS_FUNCTION: tf.keras.losses.Loss = functools.partial(tf.keras.losses.CategoricalCrossentropy)
 
@@ -49,6 +49,6 @@ class Constants:
 
     # Real Experiment Parameters
     NUM_MODELS: int = 100
-    TRAINING_EPOCHS: int = 30
+    TRAINING_EPOCHS: int = 60
     BATCH_SIZE: int = 128
     PRUNING_STEPS: int = 45
