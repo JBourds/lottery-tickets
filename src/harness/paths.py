@@ -9,7 +9,9 @@ Date: 3/17/24
 
 import os
 
-def get_model_directory(seed: int, pruning_step: int, masks: bool = False) -> str:
+from src.harness.constants import Constants as C
+
+def get_model_directory(seed: int, pruning_step: int, masks: bool = False, parent_directory: str = C.MODEL_DIRECTORY) -> str:
     """
     Function used to retrieve a model's path.
 
@@ -19,9 +21,9 @@ def get_model_directory(seed: int, pruning_step: int, masks: bool = False) -> st
 
     :returns: Model directory.
     """
-    output_directory: str = get_model_directory(seed, C.MODEL_DIRECTORY)
-    trial_directory: str = trial(output_directory, pruning_step)
-    target_directory: str = masks(trial_directory) if masks else weights(trial_directory)
+    output_directory: str = os.path.join(parent_directory, f'model_{seed}')
+    trial_directory: str = trial_dir(output_directory, pruning_step)
+    target_directory: str = mask_dir(trial_directory) if masks else weights_dir(trial_directory)
     return target_directory
 
 def get_model_filepath(seed: int, pruning_step: int, masks: bool = False) -> str:
@@ -34,7 +36,7 @@ def get_model_filepath(seed: int, pruning_step: int, masks: bool = False) -> str
 
     :returns: Model's filepath.
     """
-    return os.path.join(get_model_directory(seed), f'step_{pruning_step}{"_masks" if masks else ""}', 'model.keras')
+    return os.path.join(get_model_directory(seed, pruning_step, masks), 'model.keras')
 
 def create_path(path: str):
     """
@@ -47,66 +49,30 @@ def create_path(path: str):
     else:
         print(f"Directory '{path}' already exists.")
 
-def get_model_directory(model_index: int, parent_directory: str = "models") -> str:
-    """
-    Function to return the relative directory where a model would go.
-
-    :param parent_directory: Base directory to append model subdirectory to. Defaults to empty string.
-    :param model_index:      Integer for the index/random seed of the model.
-
-    :returns: Returns expected directory for the model.
-    """
-    return os.path.join(parent_directory, f'model_{model_index}')
-
-def initial(parent_directory):
+def initial_dir(parent_directory):
   """The path where the weights at the beginning of training are stored."""
   return os.path.join(parent_directory, 'initial')
 
-
-def final(parent_directory):
+def final_dir(parent_directory):
   """The path where the weights at the end of training are stored."""
   return os.path.join(parent_directory, 'final')
 
-
-def masks(parent_directory):
+def mask_dir(parent_directory):
   """The path where the pruning masks are stored."""
   return os.path.join(parent_directory, 'masks')
 
-def weights(parent_directory):
+def weights_dir(parent_directory):
   """The path where the weights are stored."""
   return os.path.join(parent_directory, 'weights')
 
-
-def log(parent_directory, name):
+def log_dir(parent_directory, name):
   """The path where training/testing/validation logs are stored."""
   return os.path.join(parent_directory, '{}.log'.format(name))
 
-
-def summaries(parent_directory):
+def summaries_dir(parent_directory):
   """The path where tensorflow summaries are stored."""
   return os.path.join(parent_directory, 'summaries')
 
-
-def trial(parent_directory, trial_name):
+def trial_dir(parent_directory, trial_name):
   """The parent directory for a trial."""
   return os.path.join(parent_directory, f'trial{trial_name}')
-
-
-def run(parent_directory,
-        level,
-        experiment_name,
-        run_id=''):
-  """The name for a particular training run.
-
-  Args:
-    parent_directory: The directory in which this directory should be created.
-    level: The number of pruning iterations.
-    experiment_name: The name of this specific experiment.
-    run_id: (optional) The number of this run (if the same experiment is being
-      run more than once).
-
-  Returns:
-    The path in which data about this run should be stored.
-  """
-  return os.path.join(parent_directory, str(level),
-                      f'{experiment_name}{run_id}')

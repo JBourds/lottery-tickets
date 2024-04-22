@@ -248,22 +248,28 @@ def train(
     mask_model: tf.keras.Model,
     make_dataset: callable, 
     num_epochs: int = C.TRAINING_EPOCHS,
+    batch_size: int = C.BATCH_SIZE,
     patience: int = C.PATIENCE,
     minimum_delta: float = C.MINIMUM_DELTA,
+    loss_fn: tf.keras.losses.Loss = C.LOSS_FUNCTION(),
     optimizer: tf.keras.optimizers.Optimizer = C.OPTIMIZER(), 
+    allow_early_stopping: bool = True,
     ) -> tuple[tf.keras.Model, tf.keras.Model, TrainingRound]:
     """
     Function to perform training for a model.
 
     :param random_seed:   Random seed being used.
-    :param pruning_step:  Integer value for the step in pruning. Defaults to 0.
+    :param pruning_step:  Integer value for the step in pruning.
     :param model:         Model to optimize.
     :param mask_model:    Model whose weights correspond to masks being applied.
     :param make_dataset:  Function to produce the training/test sets.
-    :param num_epochs:    Number of epochs to train for.
-    :param patience:      Number of epochs which can be ran without improvement before calling early stopping.
-    :param minimum_delta: Minimum increase to be considered an improvement.s
-    :param optimizer:     Optimizer to use during training.
+    :param num_epochs:    Number of epochs to train for. Has a default value in `constants.py`.
+    :param batch_size:    Size of the batches to use during training. Has a default value in `constants.py`.
+    :param patience:      Number of epochs which can be ran without improvement before calling early stopping. Has a default value in `constants.py`.
+    :param minimum_delta: Minimum increase to be considered an improvement. Has a default value in `constants.py`.
+    :param loss_fn:       Loss function to use during training. Has a default value in `constants.py`.
+    :param optimizer:     Optimizer to use during training. Has a default value in `constants.py`.
+    :param allow_early_stopping: Boolean flag for whether early stopping is enabled.
 
     :returns: Model, masked model, and training round objects with the final trained model and the training summary/.
     """
@@ -274,11 +280,13 @@ def train(
         sparsity.strip_pruning(model), 
         sparsity.strip_pruning(mask_model), 
         make_dataset, 
-        make_train_test_loss_accuracy,
         num_epochs, 
+        batch_size,
         patience, 
         minimum_delta, 
+        loss_fn,
         optimizer,
+        allow_early_stopping,
     )
 
     # Save network final weights and masks to its folder in the appropriate trial folder
