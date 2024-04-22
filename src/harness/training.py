@@ -1,21 +1,9 @@
-# Copyright (C) 2018 Google Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 """
 training.py
 
-Module containing function to train a neural network.
+Module containing functions to train a neural network.
+This is necessary since we must use gradient type to mask updates to
+the neural network.
 
 Modified By: Jordan Bourdeau
 Date: 3/17/24
@@ -32,18 +20,19 @@ from src.harness.utils import count_params, set_seed
 
 
 class TrainingRound:
-    def __init__(self, 
-                 pruning_step: int,
-                 # Model parameters
-                 initial_weights: list[np.ndarray],
-                 final_weights: list[np.ndarray],
-                 masks: list[np.ndarray],
-                 # Metrics
-                 train_losses: np.array,
-                 train_accuracies: np.array,
-                 test_losses: np.array,
-                 test_accuracies: np.array,
-                 ):
+    def __init__(
+        self, 
+        pruning_step: int,
+        # Model parameters
+        initial_weights: list[np.ndarray],
+        final_weights: list[np.ndarray],
+        masks: list[np.ndarray],
+        # Metrics
+        train_losses: np.array,
+        train_accuracies: np.array,
+        test_losses: np.array,
+        test_accuracies: np.array,
+        ):
         """
         Class containing data from a single 
 

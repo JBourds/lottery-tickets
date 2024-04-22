@@ -52,23 +52,7 @@ def create_pruning_callbacks(monitor: str = 'val_loss', patience: int = 3, minim
     ]
 
 # For each layer, there are synaptic connections from the previous layer and the neurons
-def get_layer_weight_counts(model: tf.keras.Model) -> list[int]:
-    """
-    Function to return a list of integer values for the number of 
-    parameters in each layer.
-    """
-    def get_num_layer_weights(layer: tf.keras.layers.Layer) -> int:
-        layer_weight_count: int = 0
-        weights: list[np.array] = layer.get_weights()
 
-        for idx in range(len(weights))[::2]:
-            synapses: np.ndarray = weights[idx]
-            neurons: np.array = weights[idx + 1]
-            layer_weight_count += np.prod(synapses.shape) + np.prod(neurons.shape)
-
-        return layer_weight_count
-    
-    return list(map(get_num_layer_weights, model.layers))
 
 def get_pruning_percents(
         layer_weight_counts: list[int], 
