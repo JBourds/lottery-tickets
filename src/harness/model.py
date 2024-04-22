@@ -1,13 +1,28 @@
 """
 model.py
 
+Module containing definitions for functions/classes used to create/load/save models.
+
+Authors: Jordan Bourdeau, Casey Forey
+Data Created: 3/8/24
 """
 
+import functools
+from importlib import reload
 import numpy as np
 import os
 import random
 import tensorflow as tf
+import tensorflow_model_optimization as tfmot
+from tensorflow import keras
+from keras.callbacks import Callback
+from keras import backend as K
+from keras import Sequential
+from keras.layers import Dense, Input
+from keras.losses import CategoricalCrossentropy
+
 from tensorflow_model_optimization.sparsity import keras as sparsity
+from tensorflow_model_optimization.sparsity.keras import ConstantSparsity, PolynomialDecay, prune_low_magnitude
 
 from src.harness.constants import Constants as C
 from src.harness import paths
@@ -41,71 +56,90 @@ def save_model(model: tf.keras.Model, seed: int, pruning_step: int, masks: bool 
     # Save the initial weights in an 'initial' directory in the top-level of the model directory
     model.save(filepath, overwrite=True)
 
-# Create a model with the same architecture using all Keras components to check its accuracy with the same parameters
-def create_lenet_300_100(random_seed: int) -> tf.keras.Model:
+def create_lenet_300_100(
+    input_shape: tuple[int, ...], 
+    num_classes: int, 
+    optimizer = C.OPTIMIZER,
+    ) -> keras.Model:
     """
-    Simple hardcoded class definition for creating the sequential Keras equivalent to LeNet-300-100.
-    """
-    input_shape: tuple[int, ...] = (784,)
-    num_classes: int = 10
+    Function for creating LeNet-300-100 model.
 
-    # Set seeds for reproducability
-    os.environ['PYTHONHASHSEED'] = str(random_seed)
-    random.seed(random_seed)
-    np.random.seed(random_seed)
-    tf.random.set_seed(random_seed)
-    
-# , kernel_initializer=tf.initializers.GlorotUniform()
-    model = tf.keras.Sequential(name="LeNet-300-100")
-    model.add(tf.keras.layers.Flatten(input_shape=input_shape))
-    model.add(tf.keras.layers.Dense(300, activation='relu'))
-    model.add(tf.keras.layers.Dense(100, activation='relu'))
-    model.add(tf.keras.layers.Dense(num_classes, activation='softmax'))
+    :param input_shape: Expected input shape for images.
+    :param num_classes: Number of potential classes to predict.
+    :param optimizer:   Optimizer to use for training.
+
+    :returns: Compiled LeNet-300-100 architecture.
+    """
+    model = Sequential([
+        Input(input_shape),
+        Dense(300, activation='relu', kernel_initializer=tf.initializers.GlorotUniform()),
+        Dense(100, activation='relu', kernel_initializer=tf.initializers.GlorotUniform()),
+        Dense(num_classes, activation='softmax', kernel_initializer=tf.initializers.GlorotUniform()),
+    ], name="LeNet-300-100")
+
+    model.compile(
+        loss=keras.losses.CategoricalCrossentropy(), 
+        optimizer=optimizer(), 
+        metrics=['accuracy'])
+
     return model
 
-def pruned_nn(
-        random_seed: int, 
-        create_model: callable,
-        pruning_params: dict, 
-        loss: tf.keras.losses.Loss = tf.keras.losses.categorical_crossentropy, 
-        optimizer=C.OPTIMIZER()) -> tf.keras.Model:
+def create_pruned_lenet(
+    input_shape: tuple[int, ...], 
+    num_classes: int, 
+    pruning_parameters: dict,
+    optimizer = C.OPTIMIZER,
+    ) -> keras.Model:
     """
     Function to define the architecture of a neural network model
     following 300 100 architecture for MNIST dataset and using
     provided parameter which are used to prune the model.
     
-    Input: 'pruning_params' Python 3 dictionary containing parameters which are used for pruning
-    Output: Returns designed and compiled neural network model
-    """
-    # Set seeds for reproducability
-    os.environ['PYTHONHASHSEED'] = str(random_seed)
-    random.seed(random_seed)
-    np.random.seed(random_seed)
-    tf.random.set_seed(random_seed)
+    :param input_shape:        Expected input shape for images.
+    :param num_classes:        Number of potential classes to predict.
+    :param pruning_parameters: Dictionary to be unpacked for the pruning schedule.
+    :param optimizer:          Optimizer to use for training.
 
-    model = sparsity.prune_low_magnitude(create_model(random_seed), **pruning_params)
-    
-    # Compile pruned CNN-
+    :returns: Compiled LeNet-300-100 architecture with layerwise low magnitude pruning.
+    """
+    model = sparsity.prune_low_magnitude(Sequential([
+        Input(input_shape),
+        Dense(300, activation='relu', kernel_initializer=tf.initializers.GlorotUniform()),
+        Dense(100, activation='relu', kernel_initializer=tf.initializers.GlorotUniform()),
+        Dense(num_classes, activation='softmax', kernel_initializer=tf.initializers.GlorotUniform())
+    ], name="Pruned_LeNet-300-100"), **pruning_parameters)
+
     model.compile(
-        loss=loss,
-        optimizer=optimizer,
-        metrics=['accuracy']
-    )
+        loss=keras.losses.CategoricalCrossentropy(), 
+        optimizer=optimizer(), 
+        metrics=['accuracy'])
     
     return model
 
-def create_masked_nn(*args) -> tf.keras.Model:
+def initialize_mask_model(model: keras.Model):
     """
-    Create a masked neural network where all the weights are initialized to 1s.
+    Function which performs layerwise initialization of a keras model's weights to all 1s
+    as an initialization step for masking.
+
+    :param model: Keras model being set to all 1s.
     """
-    model: tf.keras.Model = pruned_nn(*args)
-    model_stripped = sparsity.strip_pruning(model)
-    # Assign all weights to 1 to start
-    for weights in model_stripped.trainable_weights:
+    for weights in model.trainable_weights:
         weights.assign(
             tf.ones_like(
-                input = weights,
-                dtype = tf.float32
+                input=weights,
+                dtype=tf.float32,
             )
         )
+
+def create_masked_nn(create_nn: callable, *args) -> tf.keras.Model:
+    """
+    Create a masked neural network where all the weights are initialized to 1s.
+
+    :param create_nn: Function which creates a neural network model.
+    :param args:      Arguments to be passed into the create_nn function.
+
+    :returns: Stripped model with masks initialized to all 1s.
+    """
+    model: tf.keras.Model = create_nn(*args)
+    initialize_mask_model(model)
     return model

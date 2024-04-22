@@ -65,7 +65,7 @@ class TrainingRound:
         self.test_losses: np.array = test_losses
         self.test_accuracies: np.array = test_accuracies
 
-@tf.function
+# @tf.function
 def train_one_step(
     model: tf.keras.Model, 
     mask_model: tf.keras.Model, 
@@ -104,7 +104,7 @@ def train_one_step(
 
     return loss, accuracy(labels, predictions)
 
-@tf.function(experimental_relax_shapes=True)
+# @tf.function(experimental_relax_shapes=True)
 def test_step(
     model: tf.keras.Model, 
     inputs: tf.Tensor, 
@@ -256,7 +256,7 @@ def train(
     allow_early_stopping: bool = True,
     ) -> tuple[tf.keras.Model, tf.keras.Model, TrainingRound]:
     """
-    Function to perform training for a model.
+    Function to perform a single round of training for a model.
 
     :param random_seed:   Random seed being used.
     :param pruning_step:  Integer value for the step in pruning.
