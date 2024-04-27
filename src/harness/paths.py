@@ -11,32 +11,35 @@ import os
 
 import src.harness.constants as C
 
-def get_model_directory(seed: int, pruning_step: int, masks: bool = False, parent_directory: str = C.MODEL_DIRECTORY) -> str:
+def get_model_directory(seed: int, pruning_step: int, masks: bool = False, initial: bool = False, parent_directory: str = C.MODEL_DIRECTORY) -> str:
     """
     Function used to retrieve a model's path.
 
-    :param seed:           Random seed the model was trained using
-    :param pruning_step:   Integer value for the number of pruning steps which had been completed for the model.
-    :param masks:          Boolean for whether the model masks are being retrieved or not.
-
+    :param seed:             Random seed the model was trained using
+    :param pruning_step:     Integer value for the number of pruning steps which had been completed for the model.
+    :param masks:            Boolean for whether the model masks are being retrieved or not. Default is False
+    :param initial:          Boolean for whether to use the initial directory. Default is False.
+    :param parent_directory: String for the parent directory of the model.
+  
     :returns: Model directory.
     """
     output_directory: str = os.path.join(parent_directory, f'model_{seed}')
-    trial_directory: str = trial_dir(output_directory, pruning_step)
+    trial_directory: str = initial_dir(output_directory) if initial else trial_dir(output_directory, pruning_step)
     target_directory: str = mask_dir(trial_directory) if masks else weights_dir(trial_directory)
     return target_directory
 
-def get_model_filepath(seed: int, pruning_step: int, masks: bool = False) -> str:
+def get_model_filepath(seed: int, pruning_step: int, masks: bool = False, initial: bool = False) -> str:
     """
     Function used to retrieve a model's file path
 
     :param seed:         Random seed the model was trained using
     :param pruning_step: Integer value for the number of pruning steps which had been completed for the model.
     :param masks:        Boolean for whether the model masks are being retrieved or not.
+    :param initial:      Boolean for whether to use the initial directory. Default is False.
 
     :returns: Model's filepath.
     """
-    return os.path.join(get_model_directory(seed, pruning_step, masks), 'model.keras')
+    return os.path.join(get_model_directory(seed, pruning_step, masks, initial), 'model.keras')
 
 def create_path(path: str):
     """

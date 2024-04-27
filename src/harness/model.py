@@ -42,7 +42,7 @@ def load_model(seed: int, pruning_step: int, masks: bool = False) -> tf.keras.Mo
     model: tf.keras.Model = tf.keras.models.load_model(filepath)
     return model
 
-def save_model(model: tf.keras.Model, seed: int, pruning_step: int, masks: bool = False):
+def save_model(model: tf.keras.Model, seed: int, pruning_step: int, masks: bool = False, initial: bool = False):
     """
     Function to save a single trained model.
 
@@ -50,10 +50,12 @@ def save_model(model: tf.keras.Model, seed: int, pruning_step: int, masks: bool 
     :param seed:         Random seed used in the model
     :param pruning_step: Integer value for the number of pruning steps which had been completed for the model.
     :param masks:        Boolean for whether the model is a real model or only masks.
+    :param initial:      Boolean flag for whether this is the initial randomly initialized weights.
     """
     directory: str = paths.get_model_directory(seed, pruning_step, masks)
     paths.create_path(directory)
-    filepath: str = paths.get_model_filepath(seed, pruning_step, masks)
+    filepath: str = paths.get_model_filepath(seed, pruning_step, masks, initial)
+        
     # Save the initial weights in an 'initial' directory in the top-level of the model directory
     model.save(filepath, overwrite=True)
 

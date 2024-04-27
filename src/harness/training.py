@@ -183,6 +183,7 @@ def training_loop(
     train_one_step: callable = get_train_one_step()
     accuracy_metric: tf.keras.metrics.Metric = tf.keras.metrics.CategoricalAccuracy()
 
+    print(f'Step {pruning_step} of Iterative Magnitude Pruning')
     for epoch in range(num_epochs):
         for batch_index in range(num_batches):
             # Calculate the lower/upper index for batch (assume data is shuffled)
