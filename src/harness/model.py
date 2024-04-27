@@ -18,14 +18,15 @@ from tensorflow import keras
 from keras.callbacks import Callback
 from keras import backend as K
 from keras import Sequential
-from keras.layers import Dense, Input
+from keras.layers import Dense, Flatten, Input
 from keras.losses import CategoricalCrossentropy
 
 from tensorflow_model_optimization.sparsity import keras as sparsity
 from tensorflow_model_optimization.sparsity.keras import ConstantSparsity, PolynomialDecay, prune_low_magnitude
 
-from src.harness.constants import Constants as C
+import src.harness.constants as C
 from src.harness import paths
+from src.harness import utils
 
 def load_model(seed: int, pruning_step: int, masks: bool = False) -> tf.keras.Model:
     """
@@ -69,40 +70,73 @@ def create_lenet_300_100(
 
     :returns: Compiled LeNet-300-100 architecture.
     """
-    model = Sequential([
+    model: keras.Model = Sequential([
         Input(input_shape),
         Dense(300, activation='relu', kernel_initializer=tf.initializers.GlorotUniform()),
         Dense(100, activation='relu', kernel_initializer=tf.initializers.GlorotUniform()),
         Dense(num_classes, activation='softmax', kernel_initializer=tf.initializers.GlorotUniform()),
     ], name="LeNet-300-100")
-
+    
+    # Explicitly build the model to initialize weights
+    model.build(input_shape=input_shape)
     return model
+
+def create_pruned_network(
+    create_nn: callable,
+    create_pruning_params: callable,
+    pruning_method: callable = sparsity.prune_low_magnitude,
+    global_pruning: bool = False,
+    ) -> keras.Model:
+    """
+
+    Args:
+        create_nn (callable): Function to create the base neural network.
+        create_pruning_params (callable): Function which generated the pruning parameters to be used.
+        pruning_method (callable): Function operating on a Keras model or layer to apply pruning.
+        global_pruning (bool, optional): Flag for whether to use global or layerwise pruning. Defaults to False (layerwise pruning).
+
+    Returns:
+        keras.Model: Model with the sparsity wrapper affixed to it.
+    """
+    
+    base_model: keras.Model = create_nn()
+    pruning_params: dict = create_pruning_params()
+    
+    # Apply pruning to the model
+    if global_pruning:
+        # Global pruning
+        pruned_model: keras.Model = pruning_method(base_model, **pruning_params)
+    else:
+        # Layerwise pruning
+        pruned_model = keras.Sequential([pruning_method(layer, **pruning_params) if utils.is_prunable(layer) else layer for layer in base_model.layers])
+        
+    pruned_model.build(input_shape=base_model.input_shape)
+
+    return pruned_model
+        
 
 def create_pruned_lenet(
     input_shape: tuple[int, ...], 
     num_classes: int, 
-    pruning_parameters: dict,
+    create_pruning_params: callable,
+    pruning_method: callable = sparsity.prune_low_magnitude,
+    global_pruning: bool = False,
     ) -> keras.Model:
     """
     Function to define the architecture of a neural network model
     following 300 100 architecture for MNIST dataset and using
     provided parameter which are used to prune the model.
     
-    :param input_shape:        Expected input shape for images.
-    :param num_classes:        Number of potential classes to predict.
-    :param pruning_parameters: Dictionary to be unpacked for the pruning schedule.
-    :param optimizer:          Optimizer to use for training.
+    :param input_shape:           Expected input shape for images.
+    :param num_classes:           Number of potential classes to predict.
+    :param create_pruning_params: Function which generates pruning parameters.
+    :param pruning_method:        Function operating on a Keras model or layer to apply pruning.
+    :param global_pruning:        Boolean flag for whether to use global or layerwise pruning.
 
     :returns: Compiled LeNet-300-100 architecture with layerwise low magnitude pruning.
     """
-    model = sparsity.prune_low_magnitude(Sequential([
-        Input(input_shape),
-        Dense(300, activation='relu', kernel_initializer=tf.initializers.GlorotUniform()),
-        Dense(100, activation='relu', kernel_initializer=tf.initializers.GlorotUniform()),
-        Dense(num_classes, activation='softmax', kernel_initializer=tf.initializers.GlorotUniform())
-    ], name="Pruned_LeNet-300-100"), **pruning_parameters)
-    
-    return model
+    create_lenet: callable = functools.partial(create_lenet_300_100, input_shape, num_classes)
+    return create_pruned_network(create_lenet, create_pruning_params, pruning_method, global_pruning)
 
 def initialize_mask_model(model: keras.Model):
     """
@@ -111,6 +145,7 @@ def initialize_mask_model(model: keras.Model):
 
     :param model: Keras model being set to all 1s.
     """
+        
     for weights in model.trainable_weights:
         weights.assign(
             tf.ones_like(

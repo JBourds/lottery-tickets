@@ -13,11 +13,10 @@ import numpy as np
 import tensorflow as tf
 from tensorflow_model_optimization.sparsity import keras as sparsity
 
-from src.harness.constants import Constants as C
+import src.harness.constants as C
 from src.harness.metrics import get_train_test_loss_accuracy
 from src.harness.model import save_model
 from src.harness.utils import count_params, set_seed
-
 
 class TrainingRound:
     def __init__(
@@ -220,6 +219,8 @@ def training_loop(
             loss_fn,
             accuracy_metric,
         )
+        
+        print(f'Epoch {epoch + 1} Train Loss: {train_losses[epoch]:.3f}, Train Accuracy: {train_accuracies[epoch]:.3f}, Test Loss: {test_loss:.3f}, Test Accuracy: {test_accuracy:.3f}')
 
         test_losses[epoch] = test_loss
         test_accuracies[epoch] = test_accuracy

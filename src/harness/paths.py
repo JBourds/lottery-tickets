@@ -9,7 +9,7 @@ Date: 3/17/24
 
 import os
 
-from src.harness.constants import Constants as C
+import src.harness.constants as C
 
 def get_model_directory(seed: int, pruning_step: int, masks: bool = False, parent_directory: str = C.MODEL_DIRECTORY) -> str:
     """

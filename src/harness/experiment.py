@@ -24,7 +24,7 @@ Date: 3/17/24
 import functools
 import numpy as np
 
-from src.harness.constants import Constants as C
+import src.harness.constants as C
 from src.harness.training import TrainingRound
 
 class ExperimentData:

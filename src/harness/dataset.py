@@ -9,7 +9,7 @@ import numpy as np
 import os
 import tensorflow as tf
 
-from src.harness.constants import Constants as C
+import src.harness.constants as C
 from src.harness.utils import set_seed
 
 def print_dataset_shape(X_train: np.array, Y_train: np.array, X_test: np.array, Y_test: np.array):

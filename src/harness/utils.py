@@ -9,8 +9,9 @@ import os
 import random
 import tensorflow as tf
 from tensorflow import keras
+import tensorflow_model_optimization as tfmot
 
-from src.harness.constants import Constants as C
+import src.harness.constants as C
 
 def set_seed(random_seed: int):
     """
@@ -22,6 +23,20 @@ def set_seed(random_seed: int):
     random.seed(random_seed)
     np.random.seed(random_seed)
     tf.random.set_seed(random_seed)
+    
+def is_prunable(layer: keras.layers.Layer) -> bool:
+    """
+    Function which checks if a given layer is prunable.
+
+    Args:
+        layer (keras.layers.Layer): Keras layer being examined.
+
+    Returns:
+        bool: True if the layer has weights, False otherwise.
+    """
+    prunable_types: list = [keras.layers.Conv2D, keras.layers.Conv1D, keras.layers.Dense]
+
+    return any(isinstance(layer, t) for t in prunable_types)
 
 def count_params(model: keras.Model) -> tuple[int, int]:
     """
