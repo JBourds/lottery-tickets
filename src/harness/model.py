@@ -12,6 +12,7 @@ import tensorflow as tf
 from tensorflow import keras
 from keras import Sequential
 from keras.layers import Dense, Flatten, Input
+from sys import platform
 
 from src.harness import constants as C
 from src.harness import paths
@@ -41,7 +42,8 @@ def save_model(model: tf.keras.Model, seed: int, pruning_step: int, masks: bool 
     :param masks:        Boolean for whether the model is a real model or only masks.
     :param initial:      Boolean flag for whether this is the initial randomly initialized weights.
     """
-    directory: str = paths.get_model_directory(seed, pruning_step, masks)
+    
+    directory: str = paths.get_model_directory(seed, pruning_step, masks, initial)
     paths.create_path(directory)
     filepath: str = paths.get_model_filepath(seed, pruning_step, masks, initial)
         
@@ -69,7 +71,9 @@ def create_lenet_300_100(
     ], name="LeNet-300-100")
     
     # Explicitly build the model to initialize weights
-    model.build(input_shape=input_shape)
+    if platform.lower() == 'darwin':
+        model.build(input_shape=input_shape)
+        
     return model
 
 def initialize_mask_model(model: keras.Model):

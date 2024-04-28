@@ -73,7 +73,6 @@ def run_experiments(
     
     # Object to keep track of experiment data
     experiment_summary: history.ExperimentSummary = history.ExperimentSummary()
-    
     # For each experiment, use a different random seed and keep track of all the data produced
     for seed in range(num_experiments):
         experiment_data: history.ExperimentData = experiment(
@@ -81,7 +80,6 @@ def run_experiments(
             *get_experiment_parameters()
         )
         experiment_summary.add_experiment(seed, experiment_data)
-    
     # Save pickled experiment summary
     experiment_summary_filepath: str = os.path.join(experiment_directory, 'experiment_summary')
     experiment_summary.save_to(experiment_summary_filepath)
@@ -150,9 +148,13 @@ def run_iterative_pruning_experiment(
     
     experiment_data: history.ExperimentData = history.ExperimentData()
 
+    initial_masks = (paths.get_model_directory(random_seed, 0, masks=True, initial=True))
+    initial_weights = (paths.get_model_directory(random_seed, 0, masks=False, initial=True))
     # Make models and save them
     model: keras.Model = create_model()
-    mask_model: keras.Model = mod.create_masked_nn(create_model)   
+    mask_model: keras.Model = mod.create_masked_nn(create_model)  
+
+    # TODO: Windows error here
     mod.save_model(model, random_seed, 0, initial=True)
     mod.save_model(mask_model, random_seed, 0, masks=True, initial=True)
 

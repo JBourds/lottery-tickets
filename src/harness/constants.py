@@ -6,27 +6,27 @@ File containing all constants and constant functions.
 
 import functools
 import tensorflow as tf
+from sys import platform
 
 # File Locations
-DATA_DIRECTORY: str = 'data/'
-MODEL_DIRECTORY: str = 'models/'
-CHECKPOINT_DIRECTORY: str = 'checkpoints/'
-FIT_DIRECTORY: str = 'logs/fit/'
+DATA_DIRECTORY: str = 'data'
+MODEL_DIRECTORY: str = 'models'
 
 DIRECTORIES: list[str] = [
     MODEL_DIRECTORY,
-    CHECKPOINT_DIRECTORY,
-    FIT_DIRECTORY,
     DATA_DIRECTORY,
 ]
 
 # Training Parameters
-MNIST_LOCATION: str = DATA_DIRECTORY + 'mnist/'
 
 PATIENCE: int = 3
 MINIMUM_DELTA: float = 0.0001
 LEARNING_RATE: float = 0.005
-OPTIMIZER = functools.partial(tf.keras.optimizers.legacy.Adam, LEARNING_RATE)
+if platform.lower() == 'darwin':
+    OOPTIMIZER = functools.partial(tf.keras.optimizers.legacy.Adam, LEARNING_RATE)
+else:
+    OPTIMIZER = functools.partial(tf.keras.optimizers.Adam, LEARNING_RATE)
+
 LOSS_FUNCTION: tf.keras.losses.Loss = functools.partial(tf.keras.losses.CategoricalCrossentropy)
 
 # Test Experiment Parameters
