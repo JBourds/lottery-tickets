@@ -6,6 +6,7 @@ File containing all constants and constant functions.
 
 import functools
 import tensorflow as tf
+from sys import platform
 
 # File Locations
 DATA_DIRECTORY: str = 'data'
@@ -32,3 +33,15 @@ NUM_MODELS: int = 100
 TRAINING_EPOCHS: int = 60
 BATCH_SIZE: int = 128
 PRUNING_STEPS: int = 45
+
+class OriginalParams:
+    """
+    Class acting as a namespace for original LTH paper parameters
+    by Frankle and Carbin.
+    """
+    
+    LEARNING_RATE: float = 0.0012
+    if platform == 'darwin':
+        OPTIMIZER: tf.keras.optimizers.Optimizer = functools.partial(tf.keras.optimizers.legacy.Adam, LEARNING_RATE)
+    else:
+        OPTIMIZER: tf.keras.optimizers.Optimizer = functools.partial(tf.keras.optimizers.Adam, LEARNING_RATE)

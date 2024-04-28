@@ -56,11 +56,11 @@ def get_train_one_step() -> callable:
 
         for grad_layer, mask in zip(gradients, mask_model.trainable_weights):
             grad_mask_mul.append(tf.math.multiply(grad_layer, mask))
-
+            
         optimizer.apply_gradients(zip(grad_mask_mul, model.trainable_variables))
 
         accuracy: float = accuracy_metric(labels, predictions)
-        accuracy_metric.reset_states()
+        accuracy_metric.reset_state()
         
         return loss, accuracy
     
@@ -90,7 +90,7 @@ def test_step(
     predictions: tf.Tensor = model(inputs)
     loss: float = loss_fn(labels, predictions)
     accuracy: float = accuracy_metric(labels, predictions)
-    accuracy_metric.reset_states()
+    accuracy_metric.reset_state()
     return loss, accuracy
 
 def training_loop(
@@ -133,8 +133,8 @@ def training_loop(
     # Extract input and target
     X_train, X_test, Y_train, Y_test = dataset.load()
 
-    initial_parameters: list[np.ndarray] = np.copy(model.get_weights())
-    masks: list[np.ndarray] = np.copy(mask_model.get_weights())
+    initial_parameters: list[np.ndarray] = [np.copy(weights) for weights in model.get_weights()]
+    masks: list[np.ndarray] = [np.copy(weights) for weights in mask_model.get_weights()]
 
     # Store the loss and accuracies at various points to use later in history.TrialData object
     train_losses: np.array = np.zeros(num_epochs)
@@ -154,6 +154,7 @@ def training_loop(
     if verbose:
         print(f'Step {pruning_step} of Iterative Magnitude Pruning')
     for epoch in range(num_epochs):
+        model_weights = np.copy(model.get_weights())
         for batch_index in range(num_batches):
             # Calculate the lower/upper index for batch (assume data is shuffled)
             low_index: int = batch_index * batch_size
@@ -212,12 +213,12 @@ def training_loop(
                 if verbose:
                     print(f'Early stopping initiated')
                 break
-
+        
     # Compile training round data
     trial_data: history.TrialData = history.TrialData(
         pruning_step, 
         initial_parameters, 
-        np.copy(model.get_weights()), 
+        [np.copy(weights) for weights in model.get_weights()], 
         masks, 
         train_losses, 
         train_accuracies, 
@@ -226,7 +227,6 @@ def training_loop(
     )
 
     return trial_data
-    
 
 def train(
     random_seed: int,

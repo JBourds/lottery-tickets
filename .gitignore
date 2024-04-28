@@ -9,3 +9,4 @@ models/
 src/Lottery_Ticket_Hypothesis-TensorFlow_2/
 testing_experiment/
 .DS_Store
+lottery-ticket/

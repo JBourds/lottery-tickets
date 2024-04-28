@@ -23,7 +23,8 @@ from src.harness import rewind
 from src.harness import training as train
 from src.harness import utils
 
-def get_mnist_lenet_300_100_experiment_parameters(
+def get_lenet_300_100_experiment_parameters(
+    dataset: ds.Datasets = ds.Datasets.MNIST,
     first_step_pruning: float = 0.20, 
     target_sparsity: float = 0.01, 
     ) -> tuple:
@@ -31,10 +32,15 @@ def get_mnist_lenet_300_100_experiment_parameters(
     Function which produces all the parameters for using the LeNet-300-100
     architecture with the MNIST dataset.
 
+    Args:
+        dataset (ds.Dataseta, optional): Dataset being used. Defaults to ds.Datasets.MNIST.
+        first_step_pruning (float, optional): % to use for first step of pruning. Defaults to 0.20.
+        target_sparsity (float, optional): Target sparsity to get below. Defaults to 0.01.
+
     Returns:
         tuple[...]: Positional arguments which will get passed into an experiment function.
     """
-    dataset: ds.Dataset = ds.Dataset(ds.Datasets.MNIST)
+    dataset: ds.Dataset = ds.Dataset(dataset)
     make_model: callable = functools.partial(
         mod.create_lenet_300_100, 
         dataset.input_shape,
