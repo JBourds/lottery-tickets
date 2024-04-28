@@ -8,20 +8,13 @@ import functools
 import tensorflow as tf
 
 # File Locations
-DATA_DIRECTORY: str = 'data/'
-MODEL_DIRECTORY: str = 'models/'
-CHECKPOINT_DIRECTORY: str = 'checkpoints/'
-FIT_DIRECTORY: str = 'logs/fit/'
+DATA_DIRECTORY: str = 'data'
+MODEL_DIRECTORY: str = 'models'
 
 DIRECTORIES: list[str] = [
     MODEL_DIRECTORY,
-    CHECKPOINT_DIRECTORY,
-    FIT_DIRECTORY,
     DATA_DIRECTORY,
 ]
-
-# Training Parameters
-MNIST_LOCATION: str = DATA_DIRECTORY + 'mnist/'
 
 PATIENCE: int = 3
 MINIMUM_DELTA: float = 0.0001

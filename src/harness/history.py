@@ -34,8 +34,7 @@ class TrialData(mixins.PickleMixin):
     train_accuracies: np.array
     test_losses: np.array
     test_accuracies: np.array
-
-        
+    
     def get_sparsity(self) -> float:
         """
         Calculate the sparsity of the model at this particular training round.

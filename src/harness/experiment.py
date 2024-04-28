@@ -83,8 +83,7 @@ def run_experiments(
         experiment_summary.add_experiment(seed, experiment_data)
     
     # Save pickled experiment summary
-    experiment_summary_filepath: str = os.path.join(experiment_directory, 'experiment_summary')
-    experiment_summary.save_to(experiment_summary_filepath)
+    experiment_summary.save_to(experiment_directory, 'experiment_summary.pkl')
     
     return experiment_summary      
 
