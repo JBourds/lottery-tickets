@@ -147,6 +147,18 @@ class ExperimentSummary(mixins.PickleMixin):
         
         return experiments_aggregated
 
+    def percent_weights_remaining(self, trial: TrialData):
+        return trial.get_sparsity() * 100
+
+    def early_stop(self,trial: TrialData):
+        return trial.get_early_stopping_step()
+    
+    def accuracy_at_stop(self,trial:TrialData):
+        return trial.test_accuracies[trial.get_early_stopping_step()]
+    
+    def iteration_at_50k(self,trial:TrialData):
+        return trial.test_accuracies[50000]
+
     def __str__(self) -> str:
       """
       String representation to create a summary of the experiment.
