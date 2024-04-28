@@ -9,7 +9,6 @@ import os
 import random
 import tensorflow as tf
 from tensorflow import keras
-import tensorflow_model_optimization as tfmot
 
 from src.harness import constants as C
 

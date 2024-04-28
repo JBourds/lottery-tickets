@@ -146,14 +146,10 @@ def run_iterative_pruning_experiment(
         rewind_rule = functools.partial(rewind.rewind_to_original_init, random_seed)
     
     experiment_data: history.ExperimentData = history.ExperimentData()
-
-    initial_masks = (paths.get_model_directory(random_seed, 0, masks=True, initial=True))
-    initial_weights = (paths.get_model_directory(random_seed, 0, masks=False, initial=True))
     # Make models and save them
     model: keras.Model = create_model()
     mask_model: keras.Model = mod.create_masked_nn(create_model)  
-
-    # TODO: Windows error here
+    
     mod.save_model(model, random_seed, 0, initial=True)
     mod.save_model(mask_model, random_seed, 0, masks=True, initial=True)
 

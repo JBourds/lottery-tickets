@@ -60,7 +60,7 @@ def get_train_one_step() -> callable:
         optimizer.apply_gradients(zip(grad_mask_mul, model.trainable_variables))
 
         accuracy: float = accuracy_metric(labels, predictions)
-        accuracy_metric.reset_states()
+        accuracy_metric.reset_state()
         
         return loss, accuracy
     
@@ -90,7 +90,7 @@ def test_step(
     predictions: tf.Tensor = model(inputs)
     loss: float = loss_fn(labels, predictions)
     accuracy: float = accuracy_metric(labels, predictions)
-    accuracy_metric.reset_states()
+    accuracy_metric.reset_state()
     return loss, accuracy
 
 def training_loop(
@@ -133,8 +133,8 @@ def training_loop(
     # Extract input and target
     X_train, X_test, Y_train, Y_test = dataset.load()
 
-    initial_parameters: list[np.ndarray] = np.copy(model.get_weights())
-    masks: list[np.ndarray] = np.copy(mask_model.get_weights())
+    initial_parameters: list[np.ndarray] = [np.copy(weight) for weight in model.get_weights()]
+    masks: list[np.ndarray] = [np.copy(weight) for weight in mask_model.get_weights()]
 
     # Store the loss and accuracies at various points to use later in history.TrialData object
     train_losses: np.array = np.zeros(num_epochs)
@@ -217,7 +217,7 @@ def training_loop(
     trial_data: history.TrialData = history.TrialData(
         pruning_step, 
         initial_parameters, 
-        np.copy(model.get_weights()), 
+        [np.copy(weight) for weight in model.get_weights()], 
         masks, 
         train_losses, 
         train_accuracies, 
