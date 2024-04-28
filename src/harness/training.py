@@ -12,9 +12,10 @@ Date: 3/17/24
 import numpy as np
 import tensorflow as tf
 
-import src.harness.constants as C
-from src.harness.model import save_model
-from src.harness.utils import count_total_and_nonzero_params, set_seed
+from src.harness import constants as C
+from src.harness import dataset as ds
+from src.harness import model as mod
+from src.harness import utils
 
 class TrainingRound:
     def __init__(
@@ -31,15 +32,13 @@ class TrainingRound:
         test_accuracies: np.array,
         ):
         """
-        Class containing data from a single 
+        Class containing data from a single round of training.
 
         Parameters:
-        :param pruning_step:                 (int) Integer for the step in pruning. 
-        :param initial_weights:              (list[np.ndarray]) Initial weights of the model.
-        :param final_weights:                (list[np.ndarray]) Final weights of the model.
-        :param masks:                        (list[np.ndarray]) List of mask model weights (binary mask).
-
-        ...
+        :param pruning_step:    (int) Integer for the step in pruning. 
+        :param initial_weights: (list[np.ndarray]) Initial weights of the model.
+        :param final_weights:   (list[np.ndarray]) Final weights of the model.
+        :param masks:            (list[np.ndarray]) List of mask model weights (binary mask).
         """
         self.pruning_step: int = pruning_step
         self.initial_weights: list[np.ndarray] = initial_weights
@@ -61,6 +60,7 @@ class TrainingRound:
     
 
 def get_train_one_step() -> callable:
+    
     @tf.function
     def train_one_step(
         model: tf.keras.Model, 
@@ -138,7 +138,7 @@ def training_loop(
         pruning_step: int,
         model: tf.keras.Model, 
         mask_model: tf.keras.Model,
-        make_dataset: callable,
+        dataset: ds.Dataset,
         num_epochs: int = C.TRAINING_EPOCHS, 
         batch_size: int = C.BATCH_SIZE,
         patience: int = C.PATIENCE,
@@ -155,7 +155,7 @@ def training_loop(
     :param pruning_step:  Integer for the # pruning step the model is on. Used for saving model weights.
     :param model:         Keras model with weights being trained for performance.  
     :param mask_model:    Keras model whose weights signify the masks to use on gradient updates. 
-    :param make_dataset:  Function which produces the inputs/labels.
+    :param dataset:       Python enum for the dataset being used.
     :param num_epochs:    Integer value for the number of epochs to run. Has a default value in `constants.py`.
     :param batch_size:    Size of batches to train on. Has a default value in `constants.py`.
     :param patience:      Number of rounds before a model is considered to no longer be improving for early stopping. 
@@ -173,7 +173,7 @@ def training_loop(
     best_test_loss: float = float('inf')
 
     # Extract input and target
-    X_train, X_test, Y_train, Y_test = make_dataset()
+    X_train, X_test, Y_train, Y_test = dataset.load()
 
     initial_parameters: list[np.ndarray] = np.copy(model.get_weights())
     masks: list[np.ndarray] = np.copy(mask_model.get_weights())
@@ -268,7 +268,7 @@ def train(
     pruning_step: int,
     model: tf.keras.Model, 
     mask_model: tf.keras.Model,
-    make_dataset: callable, 
+    dataset: ds.Dataset, 
     num_epochs: int = C.TRAINING_EPOCHS,
     batch_size: int = C.BATCH_SIZE,
     patience: int = C.PATIENCE,
@@ -285,7 +285,7 @@ def train(
     :param pruning_step:  Integer value for the step in pruning.
     :param model:         Model to optimize.
     :param mask_model:    Model whose weights correspond to masks being applied.
-    :param make_dataset:  Function to produce the training/test sets.
+    :param dataset:       Python enum for the dataset being used.
     :param num_epochs:    Number of epochs to train for. Has a default value in `constants.py`.
     :param batch_size:    Size of the batches to use during training. Has a default value in `constants.py`.
     :param patience:      Number of epochs which can be ran without improvement before calling early stopping. Has a default value in `constants.py`.
@@ -297,14 +297,14 @@ def train(
     :returns: Model, masked model, and training round objects with the final trained model and the training summary/.
     """
 
-    set_seed(random_seed)
+    utils.set_seed(random_seed)
 
     # Run the training loop
     training_round = training_loop(
         pruning_step, 
         model, 
         mask_model, 
-        make_dataset, 
+        dataset, 
         num_epochs, 
         batch_size,
         patience, 
@@ -315,7 +315,7 @@ def train(
     )
 
     # Save network final weights and masks to its folder in the appropriate trial folder
-    save_model(model, random_seed, pruning_step)
-    save_model(mask_model, random_seed, pruning_step, masks=True)
+    mod.save_model(model, random_seed, pruning_step)
+    mod.save_model(mask_model, random_seed, pruning_step, masks=True)
 
     return training_round

@@ -11,8 +11,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 
-import src.harness.model as mod
-import src.harness.utils as utils
+from src.harness import model as mod
+from src.harness import utils
 
 def rewind_model_weights(model: keras.Model, mask_model: keras.Model, rewind_rule: callable):
     """

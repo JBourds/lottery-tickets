@@ -7,26 +7,14 @@ Authors: Jordan Bourdeau, Casey Forey
 Data Created: 3/8/24
 """
 
-import functools
-from importlib import reload
 import numpy as np
-import os
-import random
 import tensorflow as tf
-import tensorflow_model_optimization as tfmot
 from tensorflow import keras
-from keras.callbacks import Callback
-from keras import backend as K
 from keras import Sequential
 from keras.layers import Dense, Flatten, Input
-from keras.losses import CategoricalCrossentropy
 
-from tensorflow_model_optimization.sparsity import keras as sparsity
-from tensorflow_model_optimization.sparsity.keras import ConstantSparsity, PolynomialDecay, prune_low_magnitude
-
-import src.harness.constants as C
+from src.harness import constants as C
 from src.harness import paths
-from src.harness import utils
 
 def load_model(seed: int, pruning_step: int = 0, masks: bool = False, initial: bool = False) -> tf.keras.Model:
     """

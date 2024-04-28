@@ -12,12 +12,13 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 
-import src.harness.constants as C
-import src.harness.model as mod
-import src.harness.pruning as pruning
-import src.harness.rewind as rewind
-import src.harness.training as train
-import src.harness.utils as utils
+from src.harness import constants as C
+from src.harness import dataset as ds
+from src.harness import model as mod
+from src.harness import pruning 
+from src.harness import rewind
+from src.harness import training as train
+from src.harness import utils
 
 class ExperimentData:
     def __init__(self):
@@ -64,11 +65,66 @@ class ExperimentSummary:
           for idx, round in enumerate(experiment.pruning_rounds):
               print(f'Pruning Step {idx}:')
               print(round)
+              
+def get_mnist_lenet_300_100_experiment_parameters(
+    first_step_pruning: float = 0.20, 
+    target_sparsity: float = 0.01, 
+    ) -> tuple:
+    """
+    Function which produces all the parameters for using the LeNet-300-100
+    architecture with the MNIST dataset.
+
+    Returns:
+        tuple[...]: Positional arguments which will get passed into an experiment function.
+    """
+    dataset: ds.Dataset = ds.Dataset(ds.Datasets.MNIST)
+    make_model: callable = functools.partial(
+        mod.create_lenet_300_100, 
+        dataset.input_shape,
+        dataset.num_classes
+    )
+    
+    # Pruning Parameters- Set parameters, make a reference model, and extract sparsities
+    model: keras.Model = make_model()
+    sparsities: list[float] = pruning.get_sparsity_percents(model, first_step_pruning, target_sparsity)
+    
+    return make_model, dataset, sparsities
+            
+def run_experiments(
+    num_experiments: int, 
+    get_experiment_parameters: callable, 
+    experiment: callable,
+    ) -> ExperimentSummary:
+    """
+    Function where experimental parameters are configured to run.
+
+    Args:
+        num_experiments (int): Number of experiments to run with the
+            specified configuration.
+        get_experiment_parameters (callable): Function which produces all the positional
+            and keyword arguments to get passed into the experiment being ran.
+        experiment (callable): Function to run the experiments.
+
+    Returns:
+        ExperimentSummary: Object containing information about all trained models.
+    """
+    
+    # Object to keep track of experiment data
+    experiment_summary: ExperimentSummary = ExperimentSummary()
+    
+    # For each experiment, use a different random seed and keep track of all the data produced
+    for seed in range(num_experiments):
+        experiment_data: ExperimentData = experiment(
+            seed,
+            *get_experiment_parameters()
+        )
+        experiment_summary.add_experiment(seed, experiment_data)
+    return experiment_summary      
 
 def run_iterative_pruning_experiment(
     random_seed: int, 
     create_model: callable, 
-    make_dataset: callable,
+    dataset: ds.Dataset,
     sparsities: list[float], 
     pruning_rule: callable = None,
     rewind_rule: callable = None,
@@ -89,16 +145,34 @@ def run_iterative_pruning_experiment(
     (e.g. Rewind to initial weights).
 
     Args:
-        random_seed (int): Random seed to use for reproducable results.
-        create_model (callable): Function used to produce/initialize the model.
-        sparsities (list[float]): List of perentages (0 to 1) for sparsities 
-            at each step of pruning.
-        verbose (bool): _description_
+        random_seed (int): Random seed for reproducability.
+        create_model (callable): Function which produces the model.
+        dataset (enum): Enum for the dataset being used.
+        sparsities (list[float]): List of sparsities for each step of training.
+        pruning_rule (callable, optional): Function used to prune model. 
+            Defaults to None - becomes low magnitude pruning.
+        rewind_rule (callable, optional): Function used for rewinding model weights. 
+            Defaults to None - becomes initial weights.
+        loss_function (callable, optional): Loss function for training. 
+            Defaults to None - becomes loss function specified in `constants.py`.
+        optimizer (tf.keras.optimizers.Optimizer, optional): Optimizer. 
+            Defaults to None - becomes optimizer specified in `constants.py`..
+        global_pruning (bool, optional): Boolean flag for whether pruning is done globally
+            or layerwise. Defaults to False.
+        num_epochs (int, optional): Number of epochs to train for. Defaults to C.TRAINING_EPOCHS.
+        batch_size (int, optional): Batch size to use. Defaults to C.BATCH_SIZE.
+        patience (int, optional): Number of epochs training will continue for without improvement
+            before implementing early stopping. Defaults to C.PATIENCE.
+        minimum_delta (float, optional): Minimum positive change required to count as an improvement. 
+            Defaults to C.MINIMUM_DELTA.
+        allow_early_stopping (bool, optional): Boolean flag for whether early stopping is enabled. 
+            Defaults to True.
+        verbose (bool, optional): Boolean flag for whether console output is displayed. Defaults to True.
 
     Returns:
-        ExperimentData: Class containing all the training round data in a list.
+        ExperimentData: Object containing information about all the training rounds produced in the experiment.
     """
-    # Set seet for reproducability
+    # Set seed for reproducability
     utils.set_seed(random_seed)
     
     # Handle outer loop default values
@@ -110,7 +184,7 @@ def run_iterative_pruning_experiment(
     experiment_data: ExperimentData = ExperimentData()
 
     # Make models and save them
-    model : keras.Model = create_model()
+    model: keras.Model = create_model()
     mask_model: keras.Model = mod.create_masked_nn(create_model)   
     mod.save_model(model, random_seed, 0, initial=True)
     mod.save_model(mask_model, random_seed, 0, masks=True, initial=True)
@@ -136,7 +210,7 @@ def run_iterative_pruning_experiment(
             pruning_step, 
             model, 
             mask_model, 
-            make_dataset, 
+            dataset, 
             num_epochs=num_epochs, 
             batch_size=batch_size, 
             patience=patience, 

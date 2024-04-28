@@ -3,25 +3,27 @@ paths.py
 
 Utilities for building paths to store data.
 
-Modified By: Jordan Bourdeau
+Created By: Jordan Bourdeau
 Date: 3/17/24
 """
 
 import os
 
-import src.harness.constants as C
+from src.harness import constants as C
 
 def get_model_directory(seed: int, pruning_step: int, masks: bool = False, initial: bool = False, parent_directory: str = C.MODEL_DIRECTORY) -> str:
     """
-    Function used to retrieve a model's path.
+    Function used to retrieve a model's directory.
 
-    :param seed:             Random seed the model was trained using
-    :param pruning_step:     Integer value for the number of pruning steps which had been completed for the model.
-    :param masks:            Boolean for whether the model masks are being retrieved or not. Default is False
-    :param initial:          Boolean for whether to use the initial directory. Default is False.
-    :param parent_directory: String for the parent directory of the model.
-  
-    :returns: Model directory.
+    Args:
+        seed (int): Random seed the model was trained using.
+        pruning_step (int): Integer value for the number of pruning steps which had been completed for the model.
+        masks (bool): Boolean for whether the model masks are being retrieved or not. Default is False.
+        initial (bool): Boolean for whether to use the initial directory. Default is False.
+        parent_directory (str): Parent directory of the model. Default is C.MODEL_DIRECTORY.
+
+    Returns:
+        str: Model directory.
     """
     output_directory: str = os.path.join(parent_directory, f'model_{seed}')
     trial_directory: str = initial_dir(output_directory) if initial else trial_dir(output_directory, pruning_step)
@@ -30,21 +32,25 @@ def get_model_directory(seed: int, pruning_step: int, masks: bool = False, initi
 
 def get_model_filepath(seed: int, pruning_step: int, masks: bool = False, initial: bool = False) -> str:
     """
-    Function used to retrieve a model's file path
+    Function used to retrieve a model's file path.
 
-    :param seed:         Random seed the model was trained using
-    :param pruning_step: Integer value for the number of pruning steps which had been completed for the model.
-    :param masks:        Boolean for whether the model masks are being retrieved or not.
-    :param initial:      Boolean for whether to use the initial directory. Default is False.
+    Args:
+        seed (int): Random seed the model was trained using.
+        pruning_step (int): Integer value for the number of pruning steps which had been completed for the model.
+        masks (bool): Boolean for whether the model masks are being retrieved or not.
+        initial (bool): Boolean for whether to use the initial directory. Default is False.
 
-    :returns: Model's filepath.
+    Returns:
+        str: Model's filepath.
     """
     return os.path.join(get_model_directory(seed, pruning_step, masks, initial), 'model.keras')
 
 def create_path(path: str):
     """
     Helper function to create a path and all its subdirectories.
-    :param path: String containing the target path.
+
+    Args:
+        path (str): String containing the target path.
     """
     if not os.path.exists(path):
         os.makedirs(path)
@@ -52,30 +58,88 @@ def create_path(path: str):
     else:
         print(f"Directory '{path}' already exists.")
 
-def initial_dir(parent_directory):
-  """The path where the weights at the beginning of training are stored."""
-  return os.path.join(parent_directory, 'initial')
+def initial_dir(parent_directory: str):
+    """
+    The path where the weights at the beginning of training are stored.
 
-def final_dir(parent_directory):
-  """The path where the weights at the end of training are stored."""
-  return os.path.join(parent_directory, 'final')
+    Args:
+        parent_directory (str): Parent directory where the initial weights directory will be created.
 
-def mask_dir(parent_directory):
-  """The path where the pruning masks are stored."""
-  return os.path.join(parent_directory, 'masks')
+    Returns:
+        str: Path to the initial weights directory.
+    """
+    return os.path.join(parent_directory, 'initial')
 
-def weights_dir(parent_directory):
-  """The path where the weights are stored."""
-  return os.path.join(parent_directory, 'weights')
+def final_dir(parent_directory: str):
+    """
+    The path where the weights at the end of training are stored.
 
-def log_dir(parent_directory, name):
-  """The path where training/testing/validation logs are stored."""
-  return os.path.join(parent_directory, '{}.log'.format(name))
+    Args:
+        parent_directory (str): Parent directory where the final weights directory will be created.
 
-def summaries_dir(parent_directory):
-  """The path where tensorflow summaries are stored."""
-  return os.path.join(parent_directory, 'summaries')
+    Returns:
+        str: Path to the final weights directory.
+    """
+    return os.path.join(parent_directory, 'final')
 
-def trial_dir(parent_directory, trial_name):
-  """The parent directory for a trial."""
-  return os.path.join(parent_directory, f'trial{trial_name}')
+def mask_dir(parent_directory: str):
+    """
+    The path where the pruning masks are stored.
+
+    Args:
+        parent_directory (str): Parent directory where the masks directory will be created.
+
+    Returns:
+        str: Path to the masks directory.
+    """
+    return os.path.join(parent_directory, 'masks')
+
+def weights_dir(parent_directory: str):
+    """
+    The path where the weights are stored.
+
+    Args:
+        parent_directory (str): Parent directory where the weights directory will be created.
+
+    Returns:
+        str: Path to the weights directory.
+    """
+    return os.path.join(parent_directory, 'weights')
+
+def log_dir(parent_directory: str, name: str):
+    """
+    The path where training/testing/validation logs are stored.
+
+    Args:
+        parent_directory (str): Parent directory where the log directory will be created.
+        name (str): Name of the log file.
+
+    Returns:
+        str: Path to the log file.
+    """
+    return os.path.join(parent_directory, '{}.log'.format(name))
+
+def summaries_dir(parent_directory: str):
+    """
+    The path where TensorFlow summaries are stored.
+
+    Args:
+        parent_directory (str): Parent directory where the summaries directory will be created.
+
+    Returns:
+        str: Path to the summaries directory.
+    """
+    return os.path.join(parent_directory, 'summaries')
+
+def trial_dir(parent_directory: str, trial_name: int):
+    """
+    The parent directory for a trial.
+
+    Args:
+        parent_directory (str): Directory the trial will go in.
+        trial_name (int): Trial number to use as an index.
+
+    Returns:
+        str: Directory.
+    """
+    return os.path.join(parent_directory, f'trial{trial_name}')

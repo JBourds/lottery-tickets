@@ -24,7 +24,7 @@ DIRECTORIES: list[str] = [
 MNIST_LOCATION: str = DATA_DIRECTORY + 'mnist/'
 
 PATIENCE: int = 3
-MINIMUM_DELTA: float = 0.001
+MINIMUM_DELTA: float = 0.0001
 LEARNING_RATE: float = 0.005
 OPTIMIZER = functools.partial(tf.keras.optimizers.legacy.Adam, LEARNING_RATE)
 LOSS_FUNCTION: tf.keras.losses.Loss = functools.partial(tf.keras.losses.CategoricalCrossentropy)

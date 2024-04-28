@@ -11,7 +11,7 @@ import tensorflow as tf
 from tensorflow import keras
 import tensorflow_model_optimization as tfmot
 
-import src.harness.constants as C
+from src.harness import constants as C
 
 def set_seed(random_seed: int):
     """

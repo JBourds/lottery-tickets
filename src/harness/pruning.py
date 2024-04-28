@@ -1,7 +1,19 @@
 """
 pruning.py
 
-Module containing function to prune model weights.
+Module containing functions to prune model weights.
+
+Interface:
+
+Function used to prune the model is `prune` but the pruning rule/strategy can be supplied
+within the method used to run the experiment. The only argument which will be passed to
+the pruning rule function within the training loop is the target sparsity.
+
+The requirements for any pruning rule method is as follows:
+    - First argument is the keras model being pruned
+    - All arguments other than the target sparsity for an iteration are initialized
+      beforehand (e.g. by using partial function application).
+    - The function has *args in its function definition.
 
 Create By: Jordan Bourdeau
 Date Created: 3/24/24
@@ -119,7 +131,7 @@ def prune(model: keras.Model, pruning_rule: callable, *pruning_rule_args, global
         for layer in layers_to_prune:
             pruning_rule([layer], *pruning_rule_args)
         
-def constant_value_pruning(layers: list[keras.layers.Layer], value: int = 0):
+def constant_value_pruning(layers: list[keras.layers.Layer], value: int = 0, *args):
     """
     Function which is used to prune weights to a constant value.
 

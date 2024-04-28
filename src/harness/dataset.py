@@ -5,12 +5,79 @@ File containing function(s)/classes for loading the dataset.
 Note: There is a bug where this being 
 """
 
+from enum import Enum
 import numpy as np
 import os
 import tensorflow as tf
 
-import src.harness.constants as C
-from src.harness.utils import set_seed
+from src.harness import constants as C
+from src.harness import utils
+
+class Datasets(Enum):
+    MNIST: tuple[int, int, int] = (28, 28, 1)  # MNIST images are grayscale, 28x28 pixels
+    CIFAR10: tuple[int, int, int] = (32, 32, 3)  # CIFAR10 images are color (RGB), 32x32 pixels
+    ImageNet: tuple[int, int, int] = (224, 224, 3)  # ImageNet images are color (RGB), typically 224x224 pixels
+
+class Dataset:
+    
+    def __init__(self, dataset: Datasets):
+        self.dataset: Datasets = dataset
+        match self.dataset:
+            case Datasets.MNIST:
+                self.loader: callable = load_and_process_mnist
+    
+    def get_input_shape(self, flatten: bool = True):
+        """
+        Method to get the input shape of a dataset.
+
+        Args:
+            flatten (bool, optional): Flag for whether the input should have its first 2 dimensions
+                flattened (image height and width). Defaults to True.
+
+        Returns:
+            tuple[int]: Shape of the dataset in length of each dimension.
+        """
+        shape: tuple[int] = self.dataset.value
+        if flatten:
+            return (shape[2], np.prod(shape[:2]))  # Flatten only the first two dimensions
+        else:
+            return shape
+        
+    @property
+    def input_shape(self):
+        """
+        Method to treat input shape as a property.
+
+        Returns:
+            tuple[int]: Shape of the dataset in length of each dimension.
+        """
+        return self.get_input_shape()
+
+    @property
+    def num_classes(self):
+        """
+        Method to get the number of classes in a dataset.
+
+        Returns:
+            int: Number of target classes in the dataset.
+        """
+        match self.dataset:
+            case Datasets.MNIST:
+                return 10
+            case Datasets.CIFAR10:
+                return 10
+            case Datasets.ImageNet:
+                return 1000
+            
+    def load(self):
+        """
+        Method to load the data for a given dataset.
+
+        Returns:
+            callable: Method to load the training/test data.
+        """
+        return self.loader()
+        
 
 def print_dataset_shape(X_train: np.array, Y_train: np.array, X_test: np.array, Y_test: np.array):
     """
@@ -53,7 +120,7 @@ def load_and_process_mnist(random_seed: int = 0) -> tuple[np.array, np.array, np
 
     :returns X and Y training and test sets after preprocessing.
     """
-    set_seed(random_seed)
+    utils.set_seed(random_seed)
     (X_train, Y_train), (X_test, Y_test) = tf.keras.datasets.mnist.load_data()
     
     # Add a new axis for use in training the model
