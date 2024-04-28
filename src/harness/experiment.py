@@ -9,63 +9,20 @@ Date: 3/17/24
 
 import functools
 import numpy as np
+import os
 import tensorflow as tf
 from tensorflow import keras
 
 from src.harness import constants as C
 from src.harness import dataset as ds
+from src.harness import history
 from src.harness import model as mod
+from src.harness import paths
 from src.harness import pruning 
 from src.harness import rewind
 from src.harness import training as train
 from src.harness import utils
 
-class ExperimentData:
-    def __init__(self):
-        """
-        Class which stores the data from an experiment 
-        (list of `TrainingRound` objects which is of length N, where N is the # of pruning steps).
-        """
-        self.pruning_rounds: list[train.TrainingRound] = []
-
-    def add_pruning_round(self, round: train.TrainingRound):
-        """
-        Method used to add a `TrainingRound` object to the internal representation.
-
-        :param round: `TrainingRound` object being added.
-        """
-        self.pruning_rounds.append(round)
-
-
-class ExperimentSummary:
-    def __init__(self):
-        """
-        Class which stores data from many experiments in a dictionary, where the key
-        is the random seed used for the experiment and the value is an `ExperimentData` object.
-        """
-        self.experiments: dict[int: ExperimentData] = {}
-
-    def add_experiment(self, seed: int, experiment: ExperimentData):
-        """
-        Method to add a new experiment to the internal dictionary.
-
-        :param seed:        Integer for the random seed used in the experiment.
-        :param experiment: `Experiment` object to store.
-        """
-        self.experiments[seed] = experiment
-
-    def __str__(self) -> str:
-      """
-      String representation to create a summary of the experiment.
-
-      :returns: String representation.
-      """
-      for seed, experiment in self.experiments.items():
-          print(f'\nSeed {seed}')
-          for idx, round in enumerate(experiment.pruning_rounds):
-              print(f'Pruning Step {idx}:')
-              print(round)
-              
 def get_mnist_lenet_300_100_experiment_parameters(
     first_step_pruning: float = 0.20, 
     target_sparsity: float = 0.01, 
@@ -92,33 +49,43 @@ def get_mnist_lenet_300_100_experiment_parameters(
             
 def run_experiments(
     num_experiments: int, 
+    experiment_directory: str,
     get_experiment_parameters: callable, 
     experiment: callable,
-    ) -> ExperimentSummary:
+    ) -> history.ExperimentSummary:
     """
     Function where experimental parameters are configured to run.
 
     Args:
         num_experiments (int): Number of experiments to run with the
             specified configuration.
+        experiment_directory (str): String directory for where to put the experiment results.
         get_experiment_parameters (callable): Function which produces all the positional
             and keyword arguments to get passed into the experiment being ran.
         experiment (callable): Function to run the experiments.
 
     Returns:
-        ExperimentSummary: Object containing information about all trained models.
+        history.ExperimentSummary: Object containing information about all trained models.
     """
     
+    # Make the path to store all the experiment data in
+    paths.create_path(experiment_directory)
+    
     # Object to keep track of experiment data
-    experiment_summary: ExperimentSummary = ExperimentSummary()
+    experiment_summary: history.ExperimentSummary = history.ExperimentSummary()
     
     # For each experiment, use a different random seed and keep track of all the data produced
     for seed in range(num_experiments):
-        experiment_data: ExperimentData = experiment(
+        experiment_data: history.ExperimentData = experiment(
             seed,
             *get_experiment_parameters()
         )
         experiment_summary.add_experiment(seed, experiment_data)
+    
+    # Save pickled experiment summary
+    experiment_summary_filepath: str = os.path.join(experiment_directory, 'experiment_summary')
+    experiment_summary.save_to(experiment_summary_filepath)
+    
     return experiment_summary      
 
 def run_iterative_pruning_experiment(
@@ -137,7 +104,7 @@ def run_iterative_pruning_experiment(
     minimum_delta: float = C.MINIMUM_DELTA,
     allow_early_stopping: bool = True,
     verbose: bool = True,
-    ) -> ExperimentData:
+    ) -> history.ExperimentData:
     """
     Function used to run the pruning experiements for a given random seed.
     Will perform iterative pruning given a specified pruning technique
@@ -170,7 +137,7 @@ def run_iterative_pruning_experiment(
         verbose (bool, optional): Boolean flag for whether console output is displayed. Defaults to True.
 
     Returns:
-        ExperimentData: Object containing information about all the training rounds produced in the experiment.
+        history.ExperimentData: Object containing information about all the training rounds produced in the experiment.
     """
     # Set seed for reproducability
     utils.set_seed(random_seed)
@@ -181,7 +148,7 @@ def run_iterative_pruning_experiment(
     if rewind_rule is None:
         rewind_rule = functools.partial(rewind.rewind_to_original_init, random_seed)
     
-    experiment_data: ExperimentData = ExperimentData()
+    experiment_data: history.ExperimentData = history.ExperimentData()
 
     # Make models and save them
     model: keras.Model = create_model()
@@ -205,7 +172,7 @@ def run_iterative_pruning_experiment(
             optimizer = C.OPTIMIZER()
         accuracy_metric: tf.keras.metrics.Metric = tf.keras.metrics.CategoricalAccuracy()
 
-        training_round: train.TrainingRound = train.train(
+        trial_data: train.TrialData = train.train(
             random_seed, 
             pruning_step, 
             model, 
@@ -219,10 +186,10 @@ def run_iterative_pruning_experiment(
             optimizer=optimizer,
             allow_early_stopping=allow_early_stopping,
         )
-        experiment_data.add_pruning_round(training_round)
+        experiment_data.add_pruning_round(trial_data)
 
         if verbose:
-            print(f'\nTook {np.sum(training_round.test_accuracies != 0)} / {C.TRAINING_EPOCHS} epochs')
-            print(f'Ended with a best training accuracy of {np.max(training_round.train_accuracies) * 100:.2f}% and test accuracy of training accuracy of {np.max(training_round.test_accuracies) * 100:.2f}%')
+            print(f'\nTook {np.sum(trial_data.test_accuracies != 0)} / {C.TRAINING_EPOCHS} epochs')
+            print(f'Ended with a best training accuracy of {np.max(trial_data.train_accuracies) * 100:.2f}% and test accuracy of training accuracy of {np.max(trial_data.test_accuracies) * 100:.2f}%')
             
     return experiment_data

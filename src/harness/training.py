@@ -10,54 +10,15 @@ Date: 3/17/24
 """
 
 import numpy as np
+import os
 import tensorflow as tf
 
 from src.harness import constants as C
 from src.harness import dataset as ds
+from src.harness import history
 from src.harness import model as mod
+from src.harness import paths as paths
 from src.harness import utils
-
-class TrainingRound:
-    def __init__(
-        self, 
-        pruning_step: int,
-        # Model parameters
-        initial_weights: list[np.ndarray],
-        final_weights: list[np.ndarray],
-        masks: list[np.ndarray],
-        # Metrics
-        train_losses: np.array,
-        train_accuracies: np.array,
-        test_losses: np.array,
-        test_accuracies: np.array,
-        ):
-        """
-        Class containing data from a single round of training.
-
-        Parameters:
-        :param pruning_step:    (int) Integer for the step in pruning. 
-        :param initial_weights: (list[np.ndarray]) Initial weights of the model.
-        :param final_weights:   (list[np.ndarray]) Final weights of the model.
-        :param masks:            (list[np.ndarray]) List of mask model weights (binary mask).
-        """
-        self.pruning_step: int = pruning_step
-        self.initial_weights: list[np.ndarray] = initial_weights
-        self.final_weights: list[np.ndarray] = final_weights
-        self.masks: list[np.ndarray] = masks
-
-        self.train_losses: np.array = train_losses
-        self.train_accuracies: np.array = train_accuracies
-        self.test_losses: np.array = test_losses
-        self.test_accuracies: np.array = test_accuracies
-        
-    def get_sparsity(self) -> float:
-        enabled_parameter_count: int = np.sum([np.sum(mask) for mask in self.masks])
-        total_parameter_count: int = np.sum([np.size(mask) for mask in self.masks])
-        return enabled_parameter_count / total_parameter_count
-    
-    def get_best_accuracy(self, use_test: bool = True) -> float:
-        return np.max(self.test_accuracies if use_test else self.train_accuracies)
-    
 
 def get_train_one_step() -> callable:
     
@@ -100,12 +61,11 @@ def get_train_one_step() -> callable:
 
         accuracy: float = accuracy_metric(labels, predictions)
         accuracy_metric.reset_states()
-
+        
         return loss, accuracy
     
     return train_one_step
     
-
 @tf.function(experimental_relax_shapes=True)
 def test_step(
     model: tf.keras.Model, 
@@ -133,24 +93,22 @@ def test_step(
     accuracy_metric.reset_states()
     return loss, accuracy
 
-# Training function
 def training_loop(
-        pruning_step: int,
-        model: tf.keras.Model, 
-        mask_model: tf.keras.Model,
-        dataset: ds.Dataset,
-        num_epochs: int = C.TRAINING_EPOCHS, 
-        batch_size: int = C.BATCH_SIZE,
-        patience: int = C.PATIENCE,
-        minimum_delta: float = C.MINIMUM_DELTA,
-        loss_fn: tf.keras.losses.Loss = C.LOSS_FUNCTION(),
-        optimizer: tf.keras.optimizers.Optimizer = C.OPTIMIZER(),
-        allow_early_stopping: bool = True,
-        verbose: bool = True,
-    ) -> tuple[tf.keras.Model, TrainingRound]:
+    pruning_step: int,
+    model: tf.keras.Model, 
+    mask_model: tf.keras.Model,
+    dataset: ds.Dataset,
+    num_epochs: int = C.TRAINING_EPOCHS, 
+    batch_size: int = C.BATCH_SIZE,
+    patience: int = C.PATIENCE,
+    minimum_delta: float = C.MINIMUM_DELTA,
+    loss_fn: tf.keras.losses.Loss = C.LOSS_FUNCTION(),
+    optimizer: tf.keras.optimizers.Optimizer = C.OPTIMIZER(),
+    allow_early_stopping: bool = True,
+    verbose: bool = True,
+    ) -> tuple[tf.keras.Model, history.TrialData]:
     """
     Main training loop for the model.
-    NOTE: Modifed `model` input's weights.
 
     :param pruning_step:  Integer for the # pruning step the model is on. Used for saving model weights.
     :param model:         Keras model with weights being trained for performance.  
@@ -178,7 +136,7 @@ def training_loop(
     initial_parameters: list[np.ndarray] = np.copy(model.get_weights())
     masks: list[np.ndarray] = np.copy(mask_model.get_weights())
 
-    # Store the loss and accuracies at various points to use later in TrainingRound object
+    # Store the loss and accuracies at various points to use later in history.TrialData object
     train_losses: np.array = np.zeros(num_epochs)
     train_accuracies: np.array = np.zeros(num_epochs)
     test_losses: np.array = np.zeros(num_epochs)
@@ -258,9 +216,18 @@ def training_loop(
     final_parameters: list[np.ndarray] = model.trainable_variables
 
     # Compile training round data
-    round_data: TrainingRound = TrainingRound(pruning_step, initial_parameters, np.copy(final_parameters), masks, train_losses, train_accuracies, test_losses, test_accuracies)
+    trial_data: history.TrialData = history.TrialData(
+        pruning_step, 
+        initial_parameters, 
+        np.copy(final_parameters), 
+        masks, 
+        train_losses, 
+        train_accuracies, 
+        test_losses, 
+        test_accuracies
+    )
 
-    return round_data
+    return trial_data
     
 
 def train(
@@ -276,7 +243,7 @@ def train(
     loss_function: tf.keras.losses.Loss = C.LOSS_FUNCTION(),
     optimizer: tf.keras.optimizers.Optimizer = C.OPTIMIZER(), 
     allow_early_stopping: bool = True,
-    ) -> tuple[tf.keras.Model, tf.keras.Model, TrainingRound]:
+    ) -> tuple[tf.keras.Model, tf.keras.Model, history.TrialData]:
     """
     Function to perform a single round of training for a model.
     NOTE: Modifed `model` input's weights.
@@ -300,7 +267,7 @@ def train(
     utils.set_seed(random_seed)
 
     # Run the training loop
-    training_round = training_loop(
+    trial_data = training_loop(
         pruning_step, 
         model, 
         mask_model, 
@@ -313,9 +280,13 @@ def train(
         optimizer,
         allow_early_stopping,
     )
+    
+    # Save the round data
+    trial_data_filepath: str = os.path.join(paths.get_model_directory(random_seed, pruning_step, trial_data=True), 'trial_data')
+    trial_data.save_to(trial_data_filepath)
 
     # Save network final weights and masks to its folder in the appropriate trial folder
     mod.save_model(model, random_seed, pruning_step)
     mod.save_model(mask_model, random_seed, pruning_step, masks=True)
 
-    return training_round
+    return trial_data

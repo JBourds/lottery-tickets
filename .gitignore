@@ -7,3 +7,4 @@ data/
 *.egg-info/
 models/
 src/Lottery_Ticket_Hypothesis-TensorFlow_2/
+testing_experiment/

@@ -77,39 +77,8 @@ class Dataset:
             callable: Method to load the training/test data.
         """
         return self.loader()
-        
-
-def print_dataset_shape(X_train: np.array, Y_train: np.array, X_test: np.array, Y_test: np.array):
-    """
-    Function to print the shape of the dataset.
-
-    :param X_train: Training data.
-    :param Y_train: Training labels.
-    :param X_test:  Testing data.
-    :param Y_test:  Testing labels.
-    """
-    print('x_train shape:', X_train.shape)
-    print(X_train.shape[0], 'train samples')
-    print(X_test.shape[0], 'test samples')
-    print(X_train[0].shape, 'image shape')
-
-    print('X_train shape:', X_train.shape)
-    print(X_train.shape[0], 'train samples')
-    print(X_test.shape[0], 'test samples')
-    print(X_train[0].shape, 'image shape')
-
-def download_data(dataset_directory: str = C.MNIST_LOCATION):
-    """
-    Function to download the MNIST dataset.
-
-    :param dataset_directory: Name of the dataset's folder.
-    """
-    X_train, Y_train, X_test, Y_test = load_and_process_mnist()
-    os.makedirs(dataset_directory, exist_ok=True)
-    np.save(f'{dataset_directory}x_train.npy', X_train)
-    np.save(f'{dataset_directory}y_train.npy', Y_train)
-    np.save(f'{dataset_directory}x_test.npy', X_test)
-    np.save(f'{dataset_directory}y_test.npy', Y_test)
+    
+# ---------------------- Data Loader Functions ----------------------
 
 def load_and_process_mnist(random_seed: int = 0) -> tuple[np.array, np.array, np.array, np.array]:
     """

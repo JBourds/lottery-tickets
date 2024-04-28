@@ -11,7 +11,15 @@ import os
 
 from src.harness import constants as C
 
-def get_model_directory(seed: int, pruning_step: int, masks: bool = False, initial: bool = False, parent_directory: str = C.MODEL_DIRECTORY) -> str:
+def get_model_directory(
+    seed: int, 
+    pruning_step: int, 
+    masks: bool = False, 
+    initial: bool = False, 
+    trial_data: bool = False, 
+    experiment_data: bool = False,
+    parent_directory: str = C.MODEL_DIRECTORY
+    ) -> str:
     """
     Function used to retrieve a model's directory.
 
@@ -20,14 +28,17 @@ def get_model_directory(seed: int, pruning_step: int, masks: bool = False, initi
         pruning_step (int): Integer value for the number of pruning steps which had been completed for the model.
         masks (bool): Boolean for whether the model masks are being retrieved or not. Default is False.
         initial (bool): Boolean for whether to use the initial directory. Default is False.
+        trial_data (bool): Boolean for whether to get the directory to put the round data in. Default is False.
+        experiment_data (bool): Boolean for whether to get the directory to put the experiment data in. Default is False.
         parent_directory (str): Parent directory of the model. Default is C.MODEL_DIRECTORY.
 
     Returns:
         str: Model directory.
     """
     output_directory: str = os.path.join(parent_directory, f'model_{seed}')
-    trial_directory: str = initial_dir(output_directory) if initial else trial_dir(output_directory, pruning_step)
-    target_directory: str = mask_dir(trial_directory) if masks else weights_dir(trial_directory)
+    if not experiment_data:
+        trial_directory: str = initial_dir(output_directory) if initial else trial_dir(output_directory, pruning_step)
+        target_directory: str = trial_directory if trial_data else mask_dir(trial_directory) if masks else weights_dir(trial_directory)
     return target_directory
 
 def get_model_filepath(seed: int, pruning_step: int, masks: bool = False, initial: bool = False) -> str:
