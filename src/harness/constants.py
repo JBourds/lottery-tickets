@@ -17,8 +17,6 @@ DIRECTORIES: list[str] = [
     DATA_DIRECTORY,
 ]
 
-# Training Parameters
-
 PATIENCE: int = 3
 MINIMUM_DELTA: float = 0.0001
 LEARNING_RATE: float = 0.005

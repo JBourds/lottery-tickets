@@ -172,7 +172,7 @@ def training_loop(
                 loss_fn,
                 accuracy_metric,
             )
-
+            
             # Keep track of all the losses/accuracies within the epoch's batches here
             batch_losses[batch_index] = loss
             batch_accuracies[batch_index] = accuracy
@@ -213,13 +213,11 @@ def training_loop(
                     print(f'Early stopping initiated')
                 break
 
-    final_parameters: list[np.ndarray] = model.trainable_variables
-
     # Compile training round data
     trial_data: history.TrialData = history.TrialData(
         pruning_step, 
         initial_parameters, 
-        np.copy(final_parameters), 
+        np.copy(model.get_weights()), 
         masks, 
         train_losses, 
         train_accuracies, 
@@ -282,8 +280,8 @@ def train(
     )
     
     # Save the round data
-    trial_data_filepath: str = os.path.join(paths.get_model_directory(random_seed, pruning_step, trial_data=True), 'trial_data')
-    trial_data.save_to(trial_data_filepath)
+    trial_data_directory: str = paths.get_model_directory(random_seed, pruning_step, trial_data=True)
+    trial_data.save_to(trial_data_directory, 'trial_data.pkl')
 
     # Save network final weights and masks to its folder in the appropriate trial folder
     mod.save_model(model, random_seed, pruning_step)

@@ -7,17 +7,22 @@ Author: Jordan Bourdeau
 Date Created: 4/28/24
 """
 
+import os
 import pickle
 
+from src.harness import paths
+
 class PickleMixin:
-    def save_to(self, filepath: str):
+    def save_to(self, directory: str, filename: str):
         """
         Save the object to a file using pickle.
 
         Args:
-            filepath (str): The path to save the object.
+            directory (str): The path to save the object.
+            path (str): The file name to use
         """
-        with open(filepath, 'wb') as file:
+        paths.create_path(directory)
+        with open(os.path.join(directory, filename), 'wb') as file:
             pickle.dump(self, file)
     
     @classmethod
