@@ -11,12 +11,10 @@ Date: 3/17/24
 
 import numpy as np
 import tensorflow as tf
-from tensorflow_model_optimization.sparsity import keras as sparsity
 
 import src.harness.constants as C
-from src.harness.metrics import get_train_test_loss_accuracy
 from src.harness.model import save_model
-from src.harness.utils import count_params, set_seed
+from src.harness.utils import count_total_and_nonzero_params, set_seed
 
 class TrainingRound:
     def __init__(
@@ -52,6 +50,15 @@ class TrainingRound:
         self.train_accuracies: np.array = train_accuracies
         self.test_losses: np.array = test_losses
         self.test_accuracies: np.array = test_accuracies
+        
+    def get_sparsity(self) -> float:
+        enabled_parameter_count: int = np.sum([np.sum(mask) for mask in self.masks])
+        total_parameter_count: int = np.sum([np.size(mask) for mask in self.masks])
+        return enabled_parameter_count / total_parameter_count
+    
+    def get_best_accuracy(self, use_test: bool = True) -> float:
+        return np.max(self.test_accuracies if use_test else self.train_accuracies)
+    
 
 def get_train_one_step() -> callable:
     @tf.function
@@ -139,9 +146,11 @@ def training_loop(
         loss_fn: tf.keras.losses.Loss = C.LOSS_FUNCTION(),
         optimizer: tf.keras.optimizers.Optimizer = C.OPTIMIZER(),
         allow_early_stopping: bool = True,
+        verbose: bool = True,
     ) -> tuple[tf.keras.Model, TrainingRound]:
     """
     Main training loop for the model.
+    NOTE: Modifed `model` input's weights.
 
     :param pruning_step:  Integer for the # pruning step the model is on. Used for saving model weights.
     :param model:         Keras model with weights being trained for performance.  
@@ -155,6 +164,7 @@ def training_loop(
                           Has a default value in `constants.py`.
     :param loss_fn:       Loss function being used. Has a default value in `constants.py`.
     :param optimizer:     Optimizer function being used to update model weights. Has a default value in `constants.py`.
+    :param verbose:       Whether console output is emitted or not.
 
     :returns: Model with updated weights as well as the training round data.
     """
@@ -165,8 +175,8 @@ def training_loop(
     # Extract input and target
     X_train, X_test, Y_train, Y_test = make_dataset()
 
-    initial_parameters: list[np.ndarray] = model.trainable_variables
-    masks: list[np.ndarray] = mask_model.trainable_variables
+    initial_parameters: list[np.ndarray] = np.copy(model.get_weights())
+    masks: list[np.ndarray] = np.copy(mask_model.get_weights())
 
     # Store the loss and accuracies at various points to use later in TrainingRound object
     train_losses: np.array = np.zeros(num_epochs)
@@ -183,7 +193,8 @@ def training_loop(
     train_one_step: callable = get_train_one_step()
     accuracy_metric: tf.keras.metrics.Metric = tf.keras.metrics.CategoricalAccuracy()
 
-    print(f'Step {pruning_step} of Iterative Magnitude Pruning')
+    if verbose:
+        print(f'Step {pruning_step} of Iterative Magnitude Pruning')
     for epoch in range(num_epochs):
         for batch_index in range(num_batches):
             # Calculate the lower/upper index for batch (assume data is shuffled)
@@ -221,7 +232,8 @@ def training_loop(
             accuracy_metric,
         )
         
-        print(f'Epoch {epoch + 1} Train Loss: {train_losses[epoch]:.3f}, Train Accuracy: {train_accuracies[epoch]:.3f}, Test Loss: {test_loss:.3f}, Test Accuracy: {test_accuracy:.3f}')
+        if verbose:
+            print(f'Epoch {epoch + 1} Train Loss: {train_losses[epoch]:.3f}, Train Accuracy: {train_accuracies[epoch]:.3f}, Test Loss: {test_loss:.3f}, Test Accuracy: {test_accuracy:.3f}')
 
         test_losses[epoch] = test_loss
         test_accuracies[epoch] = test_accuracy
@@ -239,15 +251,16 @@ def training_loop(
 
             # Exit early if there are `patience` epochs without improvement
             if local_patience >= patience:
-                print(f'Early stopping initiated')
+                if verbose:
+                    print(f'Early stopping initiated')
                 break
 
     final_parameters: list[np.ndarray] = model.trainable_variables
 
     # Compile training round data
-    round_data: TrainingRound = TrainingRound(pruning_step, initial_parameters, final_parameters, masks, train_losses, train_accuracies, test_losses, test_accuracies)
+    round_data: TrainingRound = TrainingRound(pruning_step, initial_parameters, np.copy(final_parameters), masks, train_losses, train_accuracies, test_losses, test_accuracies)
 
-    return model, round_data
+    return round_data
     
 
 def train(
@@ -260,12 +273,13 @@ def train(
     batch_size: int = C.BATCH_SIZE,
     patience: int = C.PATIENCE,
     minimum_delta: float = C.MINIMUM_DELTA,
-    loss_fn: tf.keras.losses.Loss = C.LOSS_FUNCTION(),
+    loss_function: tf.keras.losses.Loss = C.LOSS_FUNCTION(),
     optimizer: tf.keras.optimizers.Optimizer = C.OPTIMIZER(), 
     allow_early_stopping: bool = True,
     ) -> tuple[tf.keras.Model, tf.keras.Model, TrainingRound]:
     """
     Function to perform a single round of training for a model.
+    NOTE: Modifed `model` input's weights.
 
     :param random_seed:   Random seed being used.
     :param pruning_step:  Integer value for the step in pruning.
@@ -276,7 +290,7 @@ def train(
     :param batch_size:    Size of the batches to use during training. Has a default value in `constants.py`.
     :param patience:      Number of epochs which can be ran without improvement before calling early stopping. Has a default value in `constants.py`.
     :param minimum_delta: Minimum increase to be considered an improvement. Has a default value in `constants.py`.
-    :param loss_fn:       Loss function to use during training. Has a default value in `constants.py`.
+    :param loss_function: Loss function to use during training. Has a default value in `constants.py`.
     :param optimizer:     Optimizer to use during training. Has a default value in `constants.py`.
     :param allow_early_stopping: Boolean flag for whether early stopping is enabled.
 
@@ -286,7 +300,7 @@ def train(
     set_seed(random_seed)
 
     # Run the training loop
-    model, training_round = training_loop(
+    training_round = training_loop(
         pruning_step, 
         model, 
         mask_model, 
@@ -295,7 +309,7 @@ def train(
         batch_size,
         patience, 
         minimum_delta, 
-        loss_fn,
+        loss_function,
         optimizer,
         allow_early_stopping,
     )
@@ -304,4 +318,4 @@ def train(
     save_model(model, random_seed, pruning_step)
     save_model(mask_model, random_seed, pruning_step, masks=True)
 
-    return model, mask_model, training_round
+    return training_round

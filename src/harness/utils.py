@@ -38,7 +38,7 @@ def is_prunable(layer: keras.layers.Layer) -> bool:
 
     return any(isinstance(layer, t) for t in prunable_types)
 
-def count_params(model: keras.Model) -> tuple[int, int]:
+def count_total_and_nonzero_params(model: keras.Model) -> tuple[int, int]:
     """
     Helper function to count the total number of parameters and number of nonzero parameters.
 

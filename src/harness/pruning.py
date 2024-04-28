@@ -13,7 +13,7 @@ from tensorflow import keras
 
 from src.harness import utils
 
-def get_pruning_percents(
+def get_sparsity_percents(
     model: keras.Model,
     first_step_pruning_percent: float,
     target_sparsity: float
@@ -73,7 +73,7 @@ def get_pruning_percents(
         return np.round(np.mean(sparsities), decimals=5)
     
     layer_weight_counts: list[int] = utils.get_layer_weight_counts(model)
-    sparsities: list[float] = [1]   # First iteration will start at 100% parameters
+    sparsities: list[float] = [0]   # First iteration will start at 100% parameters
     
     # Elementwise copy
     current_weight_counts: list[int] = [weight_count for weight_count in layer_weight_counts]
@@ -147,7 +147,7 @@ def low_magnitude_pruning(layers: list[keras.layers.Layer], target_sparsity: flo
 
     # Calculate the number of weights to prune for each layer
     total_params: int = sum(np.prod(layer.get_weights()[0].shape) + np.prod(layer.get_weights()[1].shape) for layer in layers)
-    num_params_to_prune: int = int(total_params * (1 - target_sparsity))
+    num_params_to_prune: int = int(total_params * target_sparsity)
 
     # Flatten and sort the weights and biases across all layers
     all_weights_biases: list[np.ndarray] = [np.concatenate([layer.get_weights()[0].flatten(), layer.get_weights()[1].flatten()]) for layer in layers]
