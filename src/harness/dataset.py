@@ -1,27 +1,83 @@
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 """
 dataset.py
 
 File containing function(s)/classes for loading the dataset.
+Note: There is a bug where this being 
 """
 
+from enum import Enum
 import numpy as np
 import os
-from tensorflow.keras import datasets
-from tensorflow.keras.utils import to_categorical
+import tensorflow as tf
 
-import src.harness.constants as C
+from src.harness import constants as C
+from src.harness import utils
+
+class Datasets(Enum):
+    MNIST: tuple[int, int, int] = (28, 28, 1)  # MNIST images are grayscale, 28x28 pixels
+    CIFAR10: tuple[int, int, int] = (32, 32, 3)  # CIFAR10 images are color (RGB), 32x32 pixels
+    ImageNet: tuple[int, int, int] = (224, 224, 3)  # ImageNet images are color (RGB), typically 224x224 pixels
+
+class Dataset:
+    
+    def __init__(self, dataset: Datasets):
+        self.dataset: Datasets = dataset
+        match self.dataset:
+            case Datasets.MNIST:
+                self.loader: callable = load_and_process_mnist
+    
+    def get_input_shape(self, flatten: bool = True):
+        """
+        Method to get the input shape of a dataset.
+
+        Args:
+            flatten (bool, optional): Flag for whether the input should have its first 2 dimensions
+                flattened (image height and width). Defaults to True.
+
+        Returns:
+            tuple[int]: Shape of the dataset in length of each dimension.
+        """
+        shape: tuple[int] = self.dataset.value
+        if flatten:
+            return (shape[2], np.prod(shape[:2]))  # Flatten only the first two dimensions
+        else:
+            return shape
+        
+    @property
+    def input_shape(self):
+        """
+        Method to treat input shape as a property.
+
+        Returns:
+            tuple[int]: Shape of the dataset in length of each dimension.
+        """
+        return self.get_input_shape()
+
+    @property
+    def num_classes(self):
+        """
+        Method to get the number of classes in a dataset.
+
+        Returns:
+            int: Number of target classes in the dataset.
+        """
+        match self.dataset:
+            case Datasets.MNIST:
+                return 10
+            case Datasets.CIFAR10:
+                return 10
+            case Datasets.ImageNet:
+                return 1000
+            
+    def load(self):
+        """
+        Method to load the data for a given dataset.
+
+        Returns:
+            callable: Method to load the training/test data.
+        """
+        return self.loader()
+        
 
 def print_dataset_shape(X_train: np.array, Y_train: np.array, X_test: np.array, Y_test: np.array):
     """
@@ -55,32 +111,32 @@ def download_data(dataset_directory: str = C.MNIST_LOCATION):
     np.save(f'{dataset_directory}x_test.npy', X_test)
     np.save(f'{dataset_directory}y_test.npy', Y_test)
 
-
-
-def load_and_process_mnist(flatten: bool = True) -> tuple[np.array, np.array, np.array, np.array]:
+def load_and_process_mnist(random_seed: int = 0) -> tuple[np.array, np.array, np.array, np.array]:
     """
     Function to load and preprocess the MNIST dataset.
     Source: https://colab.research.google.com/github/maticvl/dataHacker/blob/master/CNN/LeNet_5_TensorFlow_2_0_datahacker.ipynb#scrollTo=UA2ehjxgF7bY
 
-    :param flatten: Boolean value for if the input data should be flattened.
+    :param random_seed: Random seed to set for dataset shuffling.
 
     :returns X and Y training and test sets after preprocessing.
     """
-    (X_train, Y_train), (X_test, Y_test) = datasets.mnist.load_data()
+    utils.set_seed(random_seed)
+    (X_train, Y_train), (X_test, Y_test) = tf.keras.datasets.mnist.load_data()
     
     # Add a new axis for use in training the model
     X_train: np.array = X_train[:, :, :, np.newaxis]
     X_test: np.array = X_test[:, :, :, np.newaxis]
 
-    # Flatten labels
-    if flatten:
-      X_train = X_train.reshape((X_train.shape[0], -1))
-      X_test = X_test.reshape((X_test.shape[0], -1))
+    # Reshape labels
+    X_train = X_train.reshape((X_train.shape[0], 1, -1))
+    X_test = X_test.reshape((X_test.shape[0], 1, -1))
+    Y_train = Y_train.reshape((Y_train.shape[0], 1, -1))
+    Y_test = Y_test.reshape((Y_test.shape[0], 1, -1))
 
     # Convert class vectors to binary class matrices.
     num_classes: int = 10
-    Y_train: np.array = to_categorical(Y_train, num_classes)
-    Y_test: np.array = to_categorical(Y_test, num_classes)
+    Y_train: np.array = tf.keras.utils.to_categorical(Y_train, num_classes)
+    Y_test: np.array = tf.keras.utils.to_categorical(Y_test, num_classes)
 
     # Data normalization
     X_train = X_train.astype('float32')
@@ -88,4 +144,4 @@ def load_and_process_mnist(flatten: bool = True) -> tuple[np.array, np.array, np
     X_train /= 255
     X_test /= 255
 
-    return X_train, Y_train, X_test, Y_test
+    return X_train, X_test, Y_train, Y_test

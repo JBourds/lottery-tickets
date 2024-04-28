@@ -4,60 +4,67 @@ utils.py
 File containing utility functions.
 """
 
+import numpy as np
 import os
+import random
 import tensorflow as tf
+from tensorflow import keras
 import tensorflow_model_optimization as tfmot
 
-import src.harness.constants as C
+from src.harness import constants as C
 
-# Aliases
-ConstantSparsity = tfmot.sparsity.keras.ConstantSparsity
-prune_low_magnitude = tfmot.sparsity.keras.prune_low_magnitude
-UpdatePruningStep = tfmot.sparsity.keras.UpdatePruningStep
-Callback = tf.keras.callbacks.Callback
-TensorBoard = tf.keras.callbacks.TensorBoard
-ModelCheckpoint = tf.keras.callbacks.ModelCheckpoint
-
-
-# def get_model_callbacks(model_index: int, pruning_step: int) -> list[Callback]:
-#     """
-#     Function to return all associated callbacks with a model.
-
-#     :param model_index:  Integer index for the model.
-#     :param pruning_step: Step of model pruning
-
-#     :returns: List of callbacks to use when fitting the model.
-#     """
-#     # Create the callbacks
-#     model_name: str = get_model_name(model_index, pruning_step)
-#     tensorboard_path: str = get_model_directory(model_index, C.FIT_DIRECTORY)
-#     checkpoint_path: str = get_model_directory(model_index, C.CHECKPOINT_DIRECTORY)
-
-#     # Create the model checkpoint callback
-#     callbacks: list[Callback] = [
-#         TensorBoard(log_dir=tensorboard_path, histogram_freq=1),
-#         ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True),
-#         UpdatePruningStep(),
-#     ]
-
-#     return callbacks
-
-def compare_pruned_unpruned_weights(unpruned_model: tf.keras.Model, pruned_model: tf.keras.Model):
+def set_seed(random_seed: int):
     """
-    Function to check the differnce in the pruned vs. unpruned weights.
+    Function to set random seed for reproducability.
 
-    :param unpruned_model: Unpruned version of a model.
-    :param pruned_model:   Pruned version of a model.
+    :param random_seed: Integer values for the random seed to set.
     """
-    unpruned_weights = unpruned_model.get_weights()
-    pruned_weights = pruned_model.get_weights()
+    os.environ['PYTHONHASHSEED'] = str(random_seed)
+    random.seed(random_seed)
+    np.random.seed(random_seed)
+    tf.random.set_seed(random_seed)
+    
+def is_prunable(layer: keras.layers.Layer) -> bool:
+    """
+    Function which checks if a given layer is prunable.
 
-    print(unpruned_weights)
-    print(pruned_weights)
+    Args:
+        layer (keras.layers.Layer): Keras layer being examined.
 
-    # Calculate percentage of weights set to 0
-    total_params = sum(w.size for w in unpruned_weights)
-    pruned_params = sum((w == 0).sum() for w in pruned_weights)
-    pruned_percentage = pruned_params / total_params * 100
+    Returns:
+        bool: True if the layer has weights, False otherwise.
+    """
+    prunable_types: list = [keras.layers.Conv2D, keras.layers.Conv1D, keras.layers.Dense]
 
-    print(f"Percentage of weights set to 0 after pruning: {pruned_percentage:.2f}%")
+    return any(isinstance(layer, t) for t in prunable_types)
+
+def count_total_and_nonzero_params(model: keras.Model) -> tuple[int, int]:
+    """
+    Helper function to count the total number of parameters and number of nonzero parameters.
+
+    :param model: Keras model to count the parameters for.
+
+    :returns: Total number of weights and total number of nonzero weights.
+    """
+    weights = model.get_weights()
+    total_weights = sum(tf.size(w).numpy() for w in weights)  # Calculate total weights
+    nonzero_weights = sum(tf.math.count_nonzero(w).numpy() for w in weights)  # Calculate non-zero weights
+    return total_weights, nonzero_weights
+
+def get_layer_weight_counts(model: tf.keras.Model) -> list[int]:
+    """
+    Function to return a list of integer values for the number of 
+    parameters in each layer.
+    """
+    def get_num_layer_weights(layer: tf.keras.layers.Layer) -> int:
+        layer_weight_count: int = 0
+        weights: list[np.array] = layer.get_weights()
+
+        for idx in range(len(weights))[::2]:
+            synapses: np.ndarray = weights[idx]
+            neurons: np.array = weights[idx + 1]
+            layer_weight_count += np.prod(synapses.shape) + np.prod(neurons.shape)
+
+        return layer_weight_count
+    
+    return list(map(get_num_layer_weights, model.layers))

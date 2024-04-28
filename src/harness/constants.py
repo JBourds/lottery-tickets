@@ -1,15 +1,3 @@
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 """
 constants.py
 
@@ -32,19 +20,22 @@ DIRECTORIES: list[str] = [
     DATA_DIRECTORY,
 ]
 
-# Experiment Parameters
-NUM_MODELS: int = 2
-
 # Training Parameters
-LEARNING_RATE: float = 0.1
-OPTIMIZER = functools.partial(tf.keras.optimizers.SGD, LEARNING_RATE)
 MNIST_LOCATION: str = DATA_DIRECTORY + 'mnist/'
 
-# This is small for now in order to perform testing, original paper used 60,000 iterations
-TRAINING_ITERATIONS: int = 1_000
-PRUNING_STEPS: int = 45
-# Prune each layer by 10%
-PRUNING_PERCENTS: dict[int: float] = {f'layer{i}': 0.1 for i in range(3)}
+PATIENCE: int = 3
+MINIMUM_DELTA: float = 0.0001
+LEARNING_RATE: float = 0.005
+OPTIMIZER = functools.partial(tf.keras.optimizers.legacy.Adam, LEARNING_RATE)
+LOSS_FUNCTION: tf.keras.losses.Loss = functools.partial(tf.keras.losses.CategoricalCrossentropy)
 
-TEST_PRUNING_STEPS: int = 5
-TEST_TRAINING_ITERATIONS: int = 10
+# Test Experiment Parameters
+TEST_NUM_MODELS: int = 2
+TEST_TRAINING_EPOCHS: int = 2
+TEST_PRUNING_STEPS: int = 2
+
+# Real Experiment Parameters
+NUM_MODELS: int = 100
+TRAINING_EPOCHS: int = 60
+BATCH_SIZE: int = 128
+PRUNING_STEPS: int = 45
