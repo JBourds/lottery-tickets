@@ -161,23 +161,20 @@ def run_iterative_pruning_experiment(
     # Make models and save them
     model: keras.Model = create_model()
     mask_model: keras.Model = mod.create_masked_nn(create_model)   
+    
     mod.save_model(model, random_seed, 0, initial=True)
     mod.save_model(mask_model, random_seed, 0, masks=True, initial=True)
     
     for pruning_step, sparsity in enumerate(sparsities):
-        # Prune the model to the new sparsity
-        pruning.prune(model, pruning_rule, sparsity, global_pruning=global_pruning)
-        
-        # Update mask model
-        pruning.update_masks(model, mask_model)
-        
+        # Prune the model to the new sparsity and update the mask model
+        pruning.prune(model, mask_model, pruning_rule, sparsity, global_pruning=global_pruning)
+
         # Reset unpruned weights to original values.
         rewind.rewind_model_weights(model, mask_model, rewind_rule)
         
-        if loss_function is None:
-            loss_function = C.LOSS_FUNCTION()
-        if optimizer is None:
-            optimizer = C.OPTIMIZER()
+        # Handle default initialization
+        loss_fn: tf.losses.Loss = C.LOSS_FUNCTION() if loss_function is None else loss_function()
+        opt: tf.optimizers.Optimizer = C.OPTIMIZER() if optimizer is None else optimizer()
 
         trial_data: train.TrialData = train.train(
             random_seed, 
@@ -189,10 +186,10 @@ def run_iterative_pruning_experiment(
             batch_size=batch_size, 
             patience=patience, 
             minimum_delta=minimum_delta,
-            loss_function=loss_function,
-            optimizer=optimizer,
+            loss_function=loss_fn,
+            optimizer=opt,
             allow_early_stopping=allow_early_stopping,
-            verbose=False,
+            verbose=verbose,
         )
 
         experiment_data.add_pruning_round(trial_data)
@@ -203,5 +200,5 @@ def run_iterative_pruning_experiment(
             print(f'Took {iteration_count} iterations')
             print(f'Ended on epoch {np.ceil(iteration_count * batch_size / X_train.shape[0])} out of {num_epochs}')
             print(f'Ended with a best training accuracy of {np.max(trial_data.train_accuracies) * 100:.2f}% and test accuracy of {np.max(trial_data.test_accuracies) * 100:.2f}%')
-    
+        
     return experiment_data

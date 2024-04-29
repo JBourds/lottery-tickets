@@ -95,70 +95,59 @@ def get_sparsity_percents(
 
     return sparsities
 
-def update_masks(pruned_model: keras.Model, mask_model: keras.Model):
-    """
-    Function responsible for updating the mask model to reflect the pruned model.
-
-    Args:
-        pruned_model (keras.Model): Model which has had parameters pruned.
-        mask_model (keras.Model): Model whose weights correspond to masks.
-    """
-    for pruned_layer, mask_layer in zip(pruned_model.layers, mask_model.layers):
-        weights, biases = pruned_layer.get_weights()
-        mask: tf.Tensor = tf.where(tf.equal(weights, 0), tf.zeros_like(weights), tf.ones_like(weights))
-        # Update the weights, but always keep the bias masks to 1
-        mask_layer.set_weights([mask, tf.ones_like(biases)])
-
 def prune(
     model: keras.Model, 
+    mask_model: keras.Model,
     pruning_rule: callable, 
     target_sparsity: float, 
-    global_pruning: bool = False):
+    global_pruning: bool = False) -> list[np.ndarray]:
     """
     Method which prunes a model's parameters according to some rule 
     (e.g. lowest N% magnitudes) and sets their values to 0.
+    
+    Also responsible for updating the mask model.
 
     Args:
-        model (Model): Keras model being pruned.
+        model (keras.Model): Keras model being pruned.
+        model (keras.Model): Keras model containing masks to be updated.
         pruning_rule (callable): Function which takes a list of layers as input and prunes them
             according to a predetermined rule.
         target_sparsity (float): Target sparsity for the pruning method.
         global_pruning (bool): Boolean flag for if the pruning should be performed globally
             or layerwise.
+            
+    Returns:
+        List of Numpy arrays with indices of pruned weights.
     """
-    # Get all the trainable layers of the model
-    layers_to_prune = [layer for layer in model.layers if utils.is_prunable(layer)]
+    # Get all the trainable layers of the model and the corresponding mask layers
+    layers_to_prune: list[keras.layers.Layer] = [layer for layer in model.layers if utils.is_prunable(layer)]
+    mask_layers: list[keras.layers.Layer] = [layer for layer in mask_model.layers if utils.is_prunable(layer)]
 
     if global_pruning:
-        pruning_rule(layers_to_prune, target_sparsity)
+        return pruning_rule(layers_to_prune, mask_layers, target_sparsity)
     else:
         # Prune all the layers until the last one normally
-        for layer in layers_to_prune[:-1]:
-            pruning_rule([layer], target_sparsity)
+        for layer, masks in zip(layers_to_prune[:-1], mask_layers[:-1]):
+            pruning_rule([layer], [masks], target_sparsity)
+            
         # Last layer is pruned at half the rate of other layers
         last_layer_sparsity: float = (1 + target_sparsity) / 2
-        pruning_rule([layers_to_prune[-1]], last_layer_sparsity)
-        
-def constant_value_pruning(layers: list[keras.layers.Layer], value: int = 0, *args):
+        pruning_rule([layers_to_prune[-1]], [mask_layers[-1]], last_layer_sparsity)
+
+def low_magnitude_pruning(
+    layers: list[keras.layers.Layer], 
+    mask_layers: list[keras.layers.Layer],
+    target_sparsity: float) -> list[np.ndarray]:
     """
-    Function which is used to prune weights to a constant value.
+    Function which performs low magnitude pruning based on a specified target sparsity
+    and updates the corresponding mask layers.
 
     Args:
         layers (list[keras.layers.Layer]): List of layers to act on.
-        value (int, optional): Value to set pruned weights to. Defaults to 0.
-    """
-    for layer in layers:
-        layer.set_weights([weights * 0 for weights in layer.get_weights()])
-        
-def low_magnitude_pruning(layers: list[keras.layers.Layer], target_sparsity: float):
-    """
-    Function which performs low magnitude pruning based on a specified target sparsity.
-
-    Args:
-        layers (list[keras.layers.Layer]): List of layers to act on.
+        mask_layers (list[keras.layers.Layer]): List of masked layers to update with pruning.
         pruning_percentage (float): Target sparsity of the model (% of nonzero weights remaining).
     """
-    
+
     # Skip if we don't actually need to prune
     if target_sparsity == 1:
         return
@@ -171,17 +160,25 @@ def low_magnitude_pruning(layers: list[keras.layers.Layer], target_sparsity: flo
 
     # Flatten and sort the weights and biases across all layers
     all_weights_biases: list[np.ndarray] = [np.concatenate([layer.get_weights()[0].flatten(), layer.get_weights()[1].flatten()]) for layer in layers]
-    all_weights_biases = np.concatenate(all_weights_biases)
-    sorted_weights_biases: np.ndarray = np.sort(np.abs(all_weights_biases))
+    all_weights_biases: np.array = np.concatenate(all_weights_biases)
+    sorted_weights_biases: np.array = np.sort(np.abs(all_weights_biases))
 
     # Find the threshold weight value for pruning
-    threshold_weight_bias = sorted_weights_biases[num_params_to_prune]
+    threshold_weight_bias: float = sorted_weights_biases[num_params_to_prune]
 
     # Apply pruning by setting low magnitude weights to zero
-    for layer in layers:
-        weights = layer.get_weights()[0]
-        biases = layer.get_weights()[1]
-        pruned_weights = np.where(np.abs(weights) < threshold_weight_bias, 0.0, weights)
-        pruned_biases = np.where(np.abs(biases) < threshold_weight_bias, 0.0, biases)
-        layer.set_weights([pruned_weights, pruned_biases])
+    for layer, mask in zip(layers, mask_layers):
+        weights: np.ndarray = layer.get_weights()[0]
+        biases: np.ndarray = layer.get_weights()[1]
         
+        # Get pruned model weights/biases
+        pruned_weights: np.ndarray = np.where(np.abs(weights) < threshold_weight_bias, 0, weights)
+        pruned_biases: np.ndarray = np.where(np.abs(biases) < threshold_weight_bias, 0, biases)
+        
+        # Get new masks after model pruning
+        weights_mask: np.ndarray = np.where(np.abs(weights) < threshold_weight_bias, 0, 1)
+        biases_mask: np.ndarray = np.where(np.abs(biases) < threshold_weight_bias, 0, 1)
+        
+        # Update pruned layer weights and masks
+        layer.set_weights([pruned_weights, pruned_biases])
+        mask.set_weights([weights_mask, biases_mask])

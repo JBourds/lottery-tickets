@@ -9,6 +9,7 @@ Modified By: Jordan Bourdeau
 Date: 3/17/24
 """
 
+import copy
 import numpy as np
 import os
 import tensorflow as tf
@@ -54,7 +55,7 @@ def get_train_one_step() -> callable:
 
         grad_mask_mul: list[tf.Tensor] = []
 
-        for grad_layer, mask in zip(gradients, mask_model.trainable_weights):
+        for grad_layer, mask in zip(gradients, mask_model.trainable_variables):
             grad_mask_mul.append(tf.math.multiply(grad_layer, mask))
             
         optimizer.apply_gradients(zip(grad_mask_mul, model.trainable_variables))
@@ -136,8 +137,8 @@ def training_loop(
     # Extract input and target
     X_train, X_test, Y_train, Y_test = dataset.load()
 
-    initial_parameters: list[np.ndarray] = [np.copy(weights) for weights in model.get_weights()]
-    masks: list[np.ndarray] = [np.copy(weights) for weights in mask_model.get_weights()]
+    initial_parameters: list[np.ndarray] = copy.deepcopy(model.trainable_variables)
+    masks: list[np.ndarray] = copy.deepcopy(mask_model.trainable_variables)
     
     # Calculate the number of batches and create arrays to keep track of batch
     # loss/accuracies while iterating over batches before it goes into training loss/accuracies
@@ -167,7 +168,7 @@ def training_loop(
             # Extract data to use for the batch
             X_batch: np.ndarray = X_train[low_index:high_index]
             Y_batch: np.ndarray = Y_train[low_index:high_index]
-
+            
             # Update model parameters for each point in the training set
             loss, accuracy = train_one_step(
                 model, 
@@ -226,7 +227,7 @@ def training_loop(
             continue
         break
             
-    final_parameters: list[np.ndarray] = [np.copy(weights) for weights in model.get_weights()]
+    final_parameters: list[np.ndarray] = copy.deepcopy(model.trainable_variables)
             
     # Compile training round data
     trial_data: history.TrialData = history.TrialData(
