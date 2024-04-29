@@ -109,7 +109,11 @@ def update_masks(pruned_model: keras.Model, mask_model: keras.Model):
         # Update the weights, but always keep the bias masks to 1
         mask_layer.set_weights([mask, tf.ones_like(biases)])
 
-def prune(model: keras.Model, pruning_rule: callable, *pruning_rule_args, global_pruning: bool = False):
+def prune(
+    model: keras.Model, 
+    pruning_rule: callable, 
+    target_sparsity: float, 
+    global_pruning: bool = False):
     """
     Method which prunes a model's parameters according to some rule 
     (e.g. lowest N% magnitudes) and sets their values to 0.
@@ -118,7 +122,7 @@ def prune(model: keras.Model, pruning_rule: callable, *pruning_rule_args, global
         model (Model): Keras model being pruned.
         pruning_rule (callable): Function which takes a list of layers as input and prunes them
             according to a predetermined rule.
-        *pruning_rule_args: Arguments to be passed into the pruning rule.
+        target_sparsity (float): Target sparsity for the pruning method.
         global_pruning (bool): Boolean flag for if the pruning should be performed globally
             or layerwise.
     """
@@ -126,10 +130,14 @@ def prune(model: keras.Model, pruning_rule: callable, *pruning_rule_args, global
     layers_to_prune = [layer for layer in model.layers if utils.is_prunable(layer)]
 
     if global_pruning:
-        pruning_rule(layers_to_prune, *pruning_rule_args)
+        pruning_rule(layers_to_prune, target_sparsity)
     else:
-        for layer in layers_to_prune:
-            pruning_rule([layer], *pruning_rule_args)
+        # Prune all the layers until the last one normally
+        for layer in layers_to_prune[:-1]:
+            pruning_rule([layer], target_sparsity)
+        # Last layer is pruned at half the rate of other layers
+        last_layer_sparsity: float = (1 + target_sparsity) / 2
+        pruning_rule([layers_to_prune[-1]], last_layer_sparsity)
         
 def constant_value_pruning(layers: list[keras.layers.Layer], value: int = 0, *args):
     """

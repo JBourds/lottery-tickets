@@ -4,6 +4,7 @@ constants.py
 File containing all constants and constant functions.
 """
 
+from enum import Enum
 import functools
 import tensorflow as tf
 from sys import platform
@@ -34,10 +35,12 @@ TRAINING_EPOCHS: int = 60
 BATCH_SIZE: int = 128
 PRUNING_STEPS: int = 45
 
-class OriginalParams:
+class OriginalParams(Enum):
     """
     Class acting as a namespace for original LTH paper parameters
     by Frankle and Carbin.
+    
+    Taken largely from figure 2.
     """
     
     LEARNING_RATE: float = 0.0012
@@ -45,3 +48,11 @@ class OriginalParams:
         OPTIMIZER: tf.keras.optimizers.Optimizer = functools.partial(tf.keras.optimizers.legacy.Adam, LEARNING_RATE)
     else:
         OPTIMIZER: tf.keras.optimizers.Optimizer = functools.partial(tf.keras.optimizers.Adam, LEARNING_RATE)
+        
+    LENET_BATCH_SIZE: int = 60
+    RESNET_BATCH_SIZE: int = 128
+    VGG_BATCH_SIZE: int = 64
+    
+    CONV_PRUNING_RATE: float = 0.1
+    FC_PRUNING_RATE: float = 0.2
+    
