@@ -23,7 +23,8 @@ from src.harness import rewind
 from src.harness import training as train
 from src.harness import utils
 
-def get_mnist_lenet_300_100_experiment_parameters(
+def get_lenet_300_100_experiment_parameters(
+    dataset: ds.Datasets = ds.Datasets.MNIST,
     first_step_pruning: float = 0.20, 
     target_sparsity: float = 0.01, 
     ) -> tuple:
@@ -31,10 +32,15 @@ def get_mnist_lenet_300_100_experiment_parameters(
     Function which produces all the parameters for using the LeNet-300-100
     architecture with the MNIST dataset.
 
+    Args:
+        dataset (ds.Dataseta, optional): Dataset being used. Defaults to ds.Datasets.MNIST.
+        first_step_pruning (float, optional): % to use for first step of pruning. Defaults to 0.20.
+        target_sparsity (float, optional): Target sparsity to get below. Defaults to 0.01.
+
     Returns:
         tuple[...]: Positional arguments which will get passed into an experiment function.
     """
-    dataset: ds.Dataset = ds.Dataset(ds.Datasets.MNIST)
+    dataset: ds.Dataset = ds.Dataset(dataset)
     make_model: callable = functools.partial(
         mod.create_lenet_300_100, 
         dataset.input_shape,
@@ -83,7 +89,8 @@ def run_experiments(
     # Save pickled experiment summary
     experiment_summary.save_to(experiment_directory, 'experiment_summary.pkl')
     
-    return experiment_summary      
+    # return experiment_summary  
+    return experiment_summary    
 
 def run_iterative_pruning_experiment(
     random_seed: int, 
@@ -148,26 +155,20 @@ def run_iterative_pruning_experiment(
     experiment_data: history.ExperimentData = history.ExperimentData()
     # Make models and save them
     model: keras.Model = create_model()
-    mask_model: keras.Model = mod.create_masked_nn(create_model)  
-    
+    mask_model: keras.Model = mod.create_masked_nn(create_model)   
     mod.save_model(model, random_seed, 0, initial=True)
     mod.save_model(mask_model, random_seed, 0, masks=True, initial=True)
-
+    
     for pruning_step, sparsity in enumerate(sparsities):
-        # Prune the model to the new sparsity
-        pruning.prune(model, pruning_rule, sparsity, global_pruning=global_pruning)
-        
-        # Update mask model
-        pruning.update_masks(model, mask_model)
-        
+        # Prune the model to the new sparsity and update the mask model
+        pruning.prune(model, mask_model, pruning_rule, sparsity, global_pruning=global_pruning)
+
         # Reset unpruned weights to original values.
         rewind.rewind_model_weights(model, mask_model, rewind_rule)
         
-        if loss_function is None:
-            loss_function = C.LOSS_FUNCTION()
-        if optimizer is None:
-            optimizer = C.OPTIMIZER()
-        accuracy_metric: tf.keras.metrics.Metric = tf.keras.metrics.CategoricalAccuracy()
+        # Handle default initialization
+        loss_fn: tf.losses.Loss = C.LOSS_FUNCTION() if loss_function is None else loss_function()
+        opt: tf.optimizers.Optimizer = C.OPTIMIZER() if optimizer is None else optimizer()
 
         trial_data: train.TrialData = train.train(
             random_seed, 
@@ -179,14 +180,19 @@ def run_iterative_pruning_experiment(
             batch_size=batch_size, 
             patience=patience, 
             minimum_delta=minimum_delta,
-            loss_function=loss_function,
-            optimizer=optimizer,
+            loss_function=loss_fn,
+            optimizer=opt,
             allow_early_stopping=allow_early_stopping,
+            verbose=verbose,
         )
+
         experiment_data.add_pruning_round(trial_data)
 
         if verbose:
-            print(f'\nTook {np.sum(trial_data.test_accuracies != 0)} / {C.TRAINING_EPOCHS} epochs')
-            print(f'Ended with a best training accuracy of {np.max(trial_data.train_accuracies) * 100:.2f}% and test accuracy of training accuracy of {np.max(trial_data.test_accuracies) * 100:.2f}%')
-            
+            X_train, _, _, _ = dataset.load()
+            iteration_count: int = np.sum(trial_data.train_accuracies != 0)
+            print(f'Took {iteration_count} iterations')
+            print(f'Ended on epoch {np.ceil(iteration_count * batch_size / X_train.shape[0])} out of {num_epochs}')
+            print(f'Ended with a best training accuracy of {np.max(trial_data.train_accuracies) * 100:.2f}% and test accuracy of {np.max(trial_data.test_accuracies) * 100:.2f}%')
+        
     return experiment_data

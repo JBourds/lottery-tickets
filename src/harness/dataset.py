@@ -25,6 +25,8 @@ class Dataset:
         match self.dataset:
             case Datasets.MNIST:
                 self.loader: callable = load_and_process_mnist
+            case Datasets.CIFAR10:
+                self.loader: callable = load_and_process_cifar10
     
     def get_input_shape(self, flatten: bool = True):
         """
@@ -39,7 +41,7 @@ class Dataset:
         """
         shape: tuple[int] = self.dataset.value
         if flatten:
-            return (shape[2], np.prod(shape[:2]))  # Flatten only the first two dimensions
+            return (1, np.prod(shape))  # Flatten only the first two dimensions
         else:
             return shape
         
@@ -80,27 +82,32 @@ class Dataset:
     
 # ---------------------- Data Loader Functions ----------------------
 
-def load_and_process_mnist(random_seed: int = 0) -> tuple[np.array, np.array, np.array, np.array]:
+def load_and_process_mnist(random_seed: int = 0, flatten: bool = True) -> tuple[np.array, np.array, np.array, np.array]:
     """
     Function to load and preprocess the MNIST dataset.
     Source: https://colab.research.google.com/github/maticvl/dataHacker/blob/master/CNN/LeNet_5_TensorFlow_2_0_datahacker.ipynb#scrollTo=UA2ehjxgF7bY
 
-    :param random_seed: Random seed to set for dataset shuffling.
+    Args:
+        random_seed (int, optional): Random seed to set for dataset shuffling. Defaults to 0.
+        flatten (bool, optional): Boolean flag for whether data should be flattened to 1 dimension.
+            True by default, since MNIST tends to be used by Multilayer Perceptrons.
 
-    :returns X and Y training and test sets after preprocessing.
+    Returns:
+        tuple[np.array, np.array, np.array, np.array]: X and Y training and test sets after preprocessing.
     """
     utils.set_seed(random_seed)
     (X_train, Y_train), (X_test, Y_test) = tf.keras.datasets.mnist.load_data()
     
-    # Add a new axis for use in training the model
-    X_train: np.array = X_train[:, :, :, np.newaxis]
-    X_test: np.array = X_test[:, :, :, np.newaxis]
+    if flatten:
+        # Add a new axis for use in training the model
+        X_train: np.array = X_train[:, :, :, np.newaxis]
+        X_test: np.array = X_test[:, :, :, np.newaxis]
 
-    # Reshape labels
-    X_train = X_train.reshape((X_train.shape[0], 1, -1))
-    X_test = X_test.reshape((X_test.shape[0], 1, -1))
-    Y_train = Y_train.reshape((Y_train.shape[0], 1, -1))
-    Y_test = Y_test.reshape((Y_test.shape[0], 1, -1))
+        # Reshape labels
+        X_train = X_train.reshape((X_train.shape[0], 1, -1))
+        X_test = X_test.reshape((X_test.shape[0], 1, -1))
+        Y_train = Y_train.reshape((Y_train.shape[0], 1, -1))
+        Y_test = Y_test.reshape((Y_test.shape[0], 1, -1))
 
     # Convert class vectors to binary class matrices.
     num_classes: int = 10
@@ -108,9 +115,60 @@ def load_and_process_mnist(random_seed: int = 0) -> tuple[np.array, np.array, np
     Y_test: np.array = tf.keras.utils.to_categorical(Y_test, num_classes)
 
     # Data normalization
-    X_train = X_train.astype('float32')
-    X_test = X_test.astype('float32')
-    X_train /= 255
-    X_test /= 255
+    X_train = X_train.astype('float32') / 255
+    X_test = X_test.astype('float32') / 255
 
     return X_train, X_test, Y_train, Y_test
+
+def load_and_process_cifar10(random_seed: int = 0, flatten: bool = False) -> tuple[np.array, np.array, np.array, np.array]:
+    """
+    Function to load and preprocess the CIFAR10 dataset.
+
+    Args:
+        random_seed (int, optional): Random seed to set for dataset shuffling. Defaults to 0.
+        flatten (bool, optional): Boolean flag for whether data should be flattened to 1 dimension.
+            False by default, since CIFAR10 tends to be used with CNNs.
+
+    Returns:
+        tuple[np.array, np.array, np.array, np.array]: X and Y training and test sets after preprocessing.
+    """
+    utils.set_seed(random_seed)
+
+    # Load CIFAR10 dataset
+    (X_train, Y_train), (X_test, Y_test) = tf.keras.datasets.cifar10.load_data()
+    
+    if flatten:
+        # Add a new axis for use in training the model
+        X_train: np.array = X_train[:, :, :, np.newaxis]
+        X_test: np.array = X_test[:, :, :, np.newaxis]
+
+        # Reshape labels
+        X_train = X_train.reshape((X_train.shape[0], 1, -1))
+        X_test = X_test.reshape((X_test.shape[0], 1, -1))
+        Y_train = Y_train.reshape((Y_train.shape[0], 1, -1))
+        Y_test = Y_test.reshape((Y_test.shape[0], 1, -1))
+
+    # Convert class vectors to binary class matrices.
+    num_classes: int = 10
+    Y_train: np.array = tf.keras.utils.to_categorical(Y_train, num_classes)
+    Y_test: np.array = tf.keras.utils.to_categorical(Y_test, num_classes)
+
+    # Data normalization
+    X_train = X_train.astype('float32') / 255
+    X_test = X_test.astype('float32') / 255
+
+    return X_train, X_test, Y_train, Y_test
+
+
+def load_and_process_imagenet(random_seed: int = 0) -> tuple[np.array, np.array, np.array, np.array]:
+    """
+    Function to load and preprocess the ImageNet dataset.
+
+    :param random_seed: Random seed to set for dataset shuffling.
+
+    :returns X and Y training and test sets after preprocessing.
+    """
+    utils.set_seed(random_seed)
+    
+    # TODO: Add this later
+    

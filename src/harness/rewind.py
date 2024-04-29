@@ -44,6 +44,16 @@ def rewind_to_random_init(seed: int, initializer: tf.keras.initializers.Initiali
             weights_shape = [w.shape for w in layer.get_weights()]
             new_weights = [initializer(shape) for shape in weights_shape]
             layer.set_weights(new_weights)
+            
+def no_rewind(model: keras.Model):
+    """
+    Rewind rule which does not alter the model weights in any way.
+    Used to continue training on masked model.
+
+    Args:
+        model (keras.Model): Keras model expected to be passed in.
+    """
+    pass
 
 def rewind_to_original_init(seed: int, model: keras.Model):
     """

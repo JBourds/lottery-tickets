@@ -70,16 +70,17 @@ class TrialData(mixins.PickleMixin):
         """
         return np.max(self.test_losses if use_test else self.train_losses)
         
-    def get_early_stopping_step(self) -> int:
+    def get_early_stopping_iteration(self) -> int:
         """
         Get the step at which early stopping occurred during training.
 
         Returns:
             int: The step at which training was stopped early.
         """
+        performance_evaluation_frequency: int = self.train_accuracies.shape[0] // self.test_accuracies.shape[0]
         nonzero_indices = np.nonzero(self.train_accuracies == 0)[0]
-        stopping_step: int = len(self.train_accuracies) if len(nonzero_indices) == 0 else nonzero_indices[0]
-        return stopping_step
+        stop_index: int = len(self.train_accuracies) if len(nonzero_indices) == 0 else nonzero_indices[0]
+        return stop_index * performance_evaluation_frequency
     
     def __str__(self):
         """
@@ -92,15 +93,19 @@ class TrialData(mixins.PickleMixin):
         Best Test Accuracy: {self.get_best_accuracy() * 100:.3f}%
         Best Training Loss: {self.get_best_loss(use_test=False):.3f}
         Best Test Loss: {self.get_best_loss():.3f}
+        Early Stopping Iteration: {self.get_early_stopping_iteration()}
         """
         return representation
 
+
 class ExperimentData(mixins.PickleMixin):
-    """
-    Class which stores the data from an experiment 
-    (list of `TrialData` objects which is of length N, where N is the # of pruning steps).
-    """
-    pruning_rounds: list[TrialData] = []
+    
+    def __init__(self):
+        """
+        Class which stores the data from an experiment 
+        (list of `TrialData` objects which is of length N, where N is the # of pruning steps).
+        """
+        self.pruning_rounds: list[TrialData] = []
 
     def add_pruning_round(self, round: TrialData):
         """
@@ -112,13 +117,23 @@ class ExperimentData(mixins.PickleMixin):
     def get_pruning_rounds(self):
         return self.pruning_rounds
 
+    def __str__(self) -> str:
+      """
+      String representation to create a summary of an experiment.
+
+      :returns: String representation.
+      """
+      return '\n'.join([str(round) for round in self.pruning_rounds])
+
 
 class ExperimentSummary(mixins.PickleMixin):
-    """
-    Class which stores data from many experiments in a dictionary, where the key
-    is the random seed used for the experiment and the value is an `ExperimentData` object.
-    """
-    experiments: dict[int: ExperimentData] = {}
+    
+    def __init__(self):
+        """
+        Class which stores data from many experiments in a dictionary, where the key
+        is the random seed used for the experiment and the value is an `ExperimentData` object.
+        """
+        self.experiments: dict[int: ExperimentData] = {}
 
     def add_experiment(self, seed: int, experiment: ExperimentData):
         """
@@ -165,9 +180,10 @@ class ExperimentSummary(mixins.PickleMixin):
 
       :returns: String representation.
       """
-      for seed, experiment in self.experiments.items():
-          print(f'\nSeed {seed}')
-          for idx, round in enumerate(experiment.pruning_rounds):
-              print(f'Pruning Step {idx}:')
-              print(round)
+      representation: str = ''
+      for seed, experiment_data in self.experiments.items():
+          representation += f'Random Seed: {seed}'
+          representation += str(experiment_data)
+      return representation
+              
 
