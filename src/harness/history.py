@@ -10,7 +10,7 @@ Date Created: 4/28/24
 
 from dataclasses import dataclass
 import numpy as np
-
+import os
 from src.harness import mixins
 
 @dataclass
@@ -114,6 +114,8 @@ class ExperimentData(mixins.PickleMixin):
         :param round: `TrialData` object being added.
         """
         self.pruning_rounds.append(round)
+    def get_pruning_rounds(self):
+        return self.pruning_rounds
 
     def __str__(self) -> str:
       """
@@ -141,6 +143,36 @@ class ExperimentSummary(mixins.PickleMixin):
         :param experiment: `Experiment` object to store.
         """
         self.experiments[seed] = experiment
+    
+    def aggregate_across_experiments(self,agg_trial:callable, agg_exp:callable = np.mean()) -> list[float]:
+        """
+        Method that reads in the data from each experiment and aggregates
+
+        :param agg_trial: the method used to aggregate all the trial data   
+        :param agg_exp:   the method used to aggregate the experiment data
+        """
+        # maybe make this one a dict
+        experiments_aggregated = []
+        trials_aggregated = []
+        for experiment in self.experiments.values:
+            for trial in experiment.get_pruning_rounds():
+                trials_aggregated.append(agg_trial(trial))
+            experiments_aggregated.append(agg_exp(trials_aggregated))
+            trials_aggregated.clear()
+        
+        return experiments_aggregated
+
+    def percent_weights_remaining(self, trial: TrialData):
+        return trial.get_sparsity() * 100
+
+    def early_stop(self,trial: TrialData):
+        return trial.get_early_stopping_step()
+    
+    def accuracy_at_stop(self,trial:TrialData):
+        return trial.test_accuracies[trial.get_early_stopping_step()]
+    
+    def iteration_at_50k(self,trial:TrialData):
+        return trial.test_accuracies[50000]
 
     def __str__(self) -> str:
       """

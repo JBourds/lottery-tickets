@@ -62,6 +62,7 @@ def get_train_one_step() -> callable:
 
         accuracy: float = accuracy_metric(labels, predictions)
         accuracy_metric.reset_state()
+        accuracy_metric.reset_state()
         
         return loss, accuracy
     
@@ -91,6 +92,7 @@ def test_step(
     predictions: tf.Tensor = model(inputs)
     loss: float = loss_fn(labels, predictions)
     accuracy: float = accuracy_metric(labels, predictions)
+    accuracy_metric.reset_state()
     accuracy_metric.reset_state()
     return loss, accuracy
 

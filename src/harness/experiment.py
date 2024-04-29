@@ -79,9 +79,6 @@ def run_experiments(
     
     # Object to keep track of experiment data
     experiment_summary: history.ExperimentSummary = history.ExperimentSummary()
-    
-    summary = []
-    
     # For each experiment, use a different random seed and keep track of all the data produced
     for seed in range(num_experiments):
         experiment_data: history.ExperimentData = experiment(
@@ -89,7 +86,6 @@ def run_experiments(
             *get_experiment_parameters()
         )
         experiment_summary.add_experiment(seed, experiment_data)
-    
     # Save pickled experiment summary
     experiment_summary.save_to(experiment_directory, 'experiment_summary.pkl')
     
@@ -157,11 +153,9 @@ def run_iterative_pruning_experiment(
         rewind_rule = functools.partial(rewind.rewind_to_original_init, random_seed)
     
     experiment_data: history.ExperimentData = history.ExperimentData()
-
     # Make models and save them
     model: keras.Model = create_model()
     mask_model: keras.Model = mod.create_masked_nn(create_model)   
-    
     mod.save_model(model, random_seed, 0, initial=True)
     mod.save_model(mask_model, random_seed, 0, masks=True, initial=True)
     

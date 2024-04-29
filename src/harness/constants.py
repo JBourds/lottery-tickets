@@ -21,7 +21,11 @@ DIRECTORIES: list[str] = [
 PATIENCE: int = 3
 MINIMUM_DELTA: float = 0.0001
 LEARNING_RATE: float = 0.005
-OPTIMIZER = functools.partial(tf.keras.optimizers.legacy.Adam, LEARNING_RATE)
+if platform.lower() == 'darwin':
+    OOPTIMIZER = functools.partial(tf.keras.optimizers.legacy.Adam, LEARNING_RATE)
+else:
+    OPTIMIZER = functools.partial(tf.keras.optimizers.Adam, LEARNING_RATE)
+
 LOSS_FUNCTION: tf.keras.losses.Loss = functools.partial(tf.keras.losses.CategoricalCrossentropy)
 
 # Test Experiment Parameters
