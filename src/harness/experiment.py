@@ -80,6 +80,8 @@ def run_experiments(
     # Object to keep track of experiment data
     experiment_summary: history.ExperimentSummary = history.ExperimentSummary()
     
+    summary = []
+    
     # For each experiment, use a different random seed and keep track of all the data produced
     for seed in range(num_experiments):
         experiment_data: history.ExperimentData = experiment(
@@ -91,7 +93,8 @@ def run_experiments(
     # Save pickled experiment summary
     experiment_summary.save_to(experiment_directory, 'experiment_summary.pkl')
     
-    return experiment_summary      
+    # return experiment_summary  
+    return experiment_summary    
 
 def run_iterative_pruning_experiment(
     random_seed: int, 
@@ -160,7 +163,7 @@ def run_iterative_pruning_experiment(
     mask_model: keras.Model = mod.create_masked_nn(create_model)   
     mod.save_model(model, random_seed, 0, initial=True)
     mod.save_model(mask_model, random_seed, 0, masks=True, initial=True)
-
+    
     for pruning_step, sparsity in enumerate(sparsities):
         # Prune the model to the new sparsity
         pruning.prune(model, pruning_rule, sparsity, global_pruning=global_pruning)
@@ -175,7 +178,6 @@ def run_iterative_pruning_experiment(
             loss_function = C.LOSS_FUNCTION()
         if optimizer is None:
             optimizer = C.OPTIMIZER()
-        accuracy_metric: tf.keras.metrics.Metric = tf.keras.metrics.CategoricalAccuracy()
 
         trial_data: train.TrialData = train.train(
             random_seed, 
@@ -190,11 +192,16 @@ def run_iterative_pruning_experiment(
             loss_function=loss_function,
             optimizer=optimizer,
             allow_early_stopping=allow_early_stopping,
+            verbose=False,
         )
+
         experiment_data.add_pruning_round(trial_data)
 
         if verbose:
-            print(f'\nTook {np.sum(trial_data.test_accuracies != 0)} / {C.TRAINING_EPOCHS} epochs')
-            print(f'Ended with a best training accuracy of {np.max(trial_data.train_accuracies) * 100:.2f}% and test accuracy of training accuracy of {np.max(trial_data.test_accuracies) * 100:.2f}%')
-            
+            X_train, _, _, _ = dataset.load()
+            iteration_count: int = np.sum(trial_data.train_accuracies != 0)
+            print(f'Took {iteration_count} iterations')
+            print(f'Ended on epoch {np.ceil(iteration_count * batch_size / X_train.shape[0])} out of {num_epochs}')
+            print(f'Ended with a best training accuracy of {np.max(trial_data.train_accuracies) * 100:.2f}% and test accuracy of {np.max(trial_data.test_accuracies) * 100:.2f}%')
+    
     return experiment_data

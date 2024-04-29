@@ -55,4 +55,6 @@ class OriginalParams(Enum):
     
     CONV_PRUNING_RATE: float = 0.1
     FC_PRUNING_RATE: float = 0.2
-    
+    # The number of iterations (batches) to train for at a time before evaluating
+    # validation set performance and checking for early stopping
+    PERFORMANCE_EVALUATION_FREQUENCY: int = 100
