@@ -114,6 +114,7 @@ class ExperimentData(mixins.PickleMixin):
         :param round: `TrialData` object being added.
         """
         self.pruning_rounds.append(round)
+        
     def get_pruning_rounds(self):
         return self.pruning_rounds
 
@@ -182,7 +183,7 @@ class ExperimentSummary(mixins.PickleMixin):
       """
       representation: str = ''
       for seed, experiment_data in self.experiments.items():
-          representation += f'Random Seed: {seed}'
+          representation += f'Random Seed: {seed}\n'
           representation += str(experiment_data)
       return representation
               

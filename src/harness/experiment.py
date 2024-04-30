@@ -46,12 +46,14 @@ def get_lenet_300_100_experiment_parameters(
         dataset.input_shape,
         dataset.num_classes
     )
+    pruning_rule: callable = pruning.low_magnitude_pruning
+    rewind_rule: callable = rewind.rewind_to_original_init
     
     # Pruning Parameters- Set parameters, make a reference model, and extract sparsities
     model: keras.Model = make_model()
     sparsities: list[float] = pruning.get_sparsity_percents(model, first_step_pruning, target_sparsity)
     
-    return make_model, dataset, sparsities
+    return make_model, dataset, sparsities, pruning_rule, rewind_rule
             
 def run_experiments(
     starting_seed: int,
@@ -152,8 +154,8 @@ def run_iterative_pruning_experiment(
     if pruning_rule is None:
         pruning_rule = pruning.low_magnitude_pruning
     if rewind_rule is None:
-        rewind_rule = functools.partial(rewind.rewind_to_original_init, random_seed)
-    
+        rewind_rule = rewind.rewind_to_original_init
+        
     experiment_data: history.ExperimentData = history.ExperimentData()
     # Make models and save them
     model: keras.Model = create_model()
@@ -166,7 +168,7 @@ def run_iterative_pruning_experiment(
         pruning.prune(model, mask_model, pruning_rule, sparsity, global_pruning=global_pruning)
 
         # Reset unpruned weights to original values.
-        rewind.rewind_model_weights(model, mask_model, rewind_rule)
+        rewind.rewind_model_weights(model, mask_model, rewind_rule, random_seed)
         
         # Handle default initialization
         loss_fn: tf.losses.Loss = C.LOSS_FUNCTION() if loss_function is None else loss_function()
