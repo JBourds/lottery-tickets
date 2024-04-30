@@ -21,8 +21,8 @@ DIRECTORIES: list[str] = [
 PATIENCE: int = 3
 MINIMUM_DELTA: float = 0.0001
 LEARNING_RATE: float = 0.005
-if platform.lower() == 'darwin':
-    OOPTIMIZER = functools.partial(tf.keras.optimizers.legacy.Adam, LEARNING_RATE)
+if platform == 'darwin':
+    OPTIMIZER = functools.partial(tf.keras.optimizers.legacy.Adam, LEARNING_RATE)
 else:
     OPTIMIZER = functools.partial(tf.keras.optimizers.Adam, LEARNING_RATE)
 

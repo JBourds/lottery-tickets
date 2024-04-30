@@ -144,7 +144,7 @@ class ExperimentSummary(mixins.PickleMixin):
         """
         self.experiments[seed] = experiment
     
-    def aggregate_across_experiments(self,agg_trial:callable, agg_exp:callable = np.mean()) -> list[float]:
+    def aggregate_across_experiments(self,agg_trial:callable, agg_exp:callable = np.mean) -> list[float]:
         """
         Method that reads in the data from each experiment and aggregates
 
