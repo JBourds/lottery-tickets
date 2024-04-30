@@ -22,45 +22,13 @@ from src.harness import pruning
 from src.harness import rewind
 from src.harness import training as train
 from src.harness import utils
-
-def get_lenet_300_100_experiment_parameters(
-    dataset: ds.Datasets = ds.Datasets.MNIST,
-    first_step_pruning: float = 0.20, 
-    target_sparsity: float = 0.01, 
-    ) -> tuple:
-    """
-    Function which produces all the parameters for using the LeNet-300-100
-    architecture with the MNIST dataset.
-
-    Args:
-        dataset (ds.Dataseta, optional): Dataset being used. Defaults to ds.Datasets.MNIST.
-        first_step_pruning (float, optional): % to use for first step of pruning. Defaults to 0.20.
-        target_sparsity (float, optional): Target sparsity to get below. Defaults to 0.01.
-
-    Returns:
-        tuple[...]: Positional arguments which will get passed into an experiment function.
-    """
-    dataset: ds.Dataset = ds.Dataset(dataset)
-    make_model: callable = functools.partial(
-        mod.create_lenet_300_100, 
-        dataset.input_shape,
-        dataset.num_classes
-    )
-    pruning_rule: callable = pruning.low_magnitude_pruning
-    rewind_rule: callable = rewind.rewind_to_original_init
-    
-    # Pruning Parameters- Set parameters, make a reference model, and extract sparsities
-    model: keras.Model = make_model()
-    sparsities: list[float] = pruning.get_sparsity_percents(model, first_step_pruning, target_sparsity)
-    
-    return make_model, dataset, sparsities, pruning_rule, rewind_rule
             
 def run_experiments(
     starting_seed: int,
     num_experiments: int, 
     experiment_directory: str,
-    get_experiment_parameters: callable, 
     experiment: callable,
+    get_experiment_parameters: callable, 
     ) -> history.ExperimentSummary:
     """
     Function where experimental parameters are configured to run.
@@ -70,9 +38,11 @@ def run_experiments(
         num_experiments (int): Number of experiments to run with the
             specified configuration.
         experiment_directory (str): String directory for where to put the experiment results.
-        get_experiment_parameters (callable): Function which produces all the positional
-            and keyword arguments to get passed into the experiment being ran.
+        get_experiment_parameters (callable): Function which takes in the seed and experiment
+            directory then produces all the parameters which get unpacked into the function
+            responsible for running the experiment.
         experiment (callable): Function to run the experiments.
+        verbose (bool): Whether training displays console output.
 
     Returns:
         history.ExperimentSummary: Object containing information about all trained models.
@@ -85,10 +55,8 @@ def run_experiments(
     experiment_summary: history.ExperimentSummary = history.ExperimentSummary()
     # For each experiment, use a different random seed and keep track of all the data produced
     for seed in range(starting_seed, starting_seed + num_experiments):
-        experiment_data: history.ExperimentData = experiment(
-            seed,
-            *get_experiment_parameters()
-        )
+        kwargs: dict = get_experiment_parameters(seed, experiment_directory)
+        experiment_data: history.ExperimentData = experiment(**kwargs)
         experiment_summary.add_experiment(seed, experiment_data)
     # Save pickled experiment summary
     experiment_summary.save_to(experiment_directory, 'experiment_summary.pkl')
@@ -101,8 +69,8 @@ def run_iterative_pruning_experiment(
     create_model: callable, 
     dataset: ds.Dataset,
     sparsities: list[float], 
-    pruning_rule: callable = None,
-    rewind_rule: callable = None,
+    pruning_rule: callable,
+    rewind_rule: callable,
     loss_function: callable = None,
     optimizer: tf.keras.optimizers.Optimizer = None, 
     global_pruning: bool = False,
@@ -111,6 +79,7 @@ def run_iterative_pruning_experiment(
     patience: int = C.PATIENCE,
     minimum_delta: float = C.MINIMUM_DELTA,
     allow_early_stopping: bool = True,
+    experiment_directory: str = './',
     verbose: bool = True,
     ) -> history.ExperimentData:
     """
@@ -125,9 +94,7 @@ def run_iterative_pruning_experiment(
         dataset (enum): Enum for the dataset being used.
         sparsities (list[float]): List of sparsities for each step of training.
         pruning_rule (callable, optional): Function used to prune model. 
-            Defaults to None - becomes low magnitude pruning.
         rewind_rule (callable, optional): Function used for rewinding model weights. 
-            Defaults to None - becomes initial weights.
         loss_function (callable, optional): Loss function for training. 
             Defaults to None - becomes loss function specified in `constants.py`.
         optimizer (tf.keras.optimizers.Optimizer, optional): Optimizer. 
@@ -142,6 +109,7 @@ def run_iterative_pruning_experiment(
             Defaults to C.MINIMUM_DELTA.
         allow_early_stopping (bool, optional): Boolean flag for whether early stopping is enabled. 
             Defaults to True.
+        experiment_director (str): Path to place all experimental data.
         verbose (bool, optional): Boolean flag for whether console output is displayed. Defaults to True.
 
     Returns:
@@ -149,26 +117,23 @@ def run_iterative_pruning_experiment(
     """
     # Set seed for reproducability
     utils.set_seed(random_seed)
-    
-    # Handle outer loop default values
-    if pruning_rule is None:
-        pruning_rule = pruning.low_magnitude_pruning
-    if rewind_rule is None:
-        rewind_rule = rewind.rewind_to_original_init
         
     experiment_data: history.ExperimentData = history.ExperimentData()
     # Make models and save them
     model: keras.Model = create_model()
     mask_model: keras.Model = mod.create_masked_nn(create_model)   
-    mod.save_model(model, random_seed, 0, initial=True)
-    mod.save_model(mask_model, random_seed, 0, masks=True, initial=True)
+    
+    print(f'Experiment directory: {experiment_directory}')
+    
+    mod.save_model(model, random_seed, 0, initial=True, directory=experiment_directory)
+    mod.save_model(mask_model, random_seed, 0, masks=True, initial=True, directory=experiment_directory)
     
     for pruning_step, sparsity in enumerate(sparsities):
         # Prune the model to the new sparsity and update the mask model
         pruning.prune(model, mask_model, pruning_rule, sparsity, global_pruning=global_pruning)
 
         # Reset unpruned weights to original values.
-        rewind.rewind_model_weights(model, mask_model, rewind_rule, random_seed)
+        rewind.rewind_model_weights(model, mask_model, rewind_rule)
         
         # Handle default initialization
         loss_fn: tf.losses.Loss = C.LOSS_FUNCTION() if loss_function is None else loss_function()
@@ -187,6 +152,7 @@ def run_iterative_pruning_experiment(
             loss_function=loss_fn,
             optimizer=opt,
             allow_early_stopping=allow_early_stopping,
+            output_directory=experiment_directory,
             verbose=verbose,
         )
 

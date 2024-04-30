@@ -8,32 +8,46 @@ Data Created: 3/8/24
 """
 
 import numpy as np
+import os
 import tensorflow as tf
 from tensorflow import keras
 from keras import Sequential
 from keras.layers import Dense, Flatten, Input
 from sys import platform
-from sys import platform
 
 from src.harness import constants as C
 from src.harness import paths
 
-def load_model(seed: int, pruning_step: int = 0, masks: bool = False, initial: bool = False) -> tf.keras.Model:
+def load_model(
+    seed: int, 
+    pruning_step: int = 0, 
+    masks: bool = False, 
+    initial: bool = False,
+    directory: str = './',
+    ) -> tf.keras.Model:
     """
     Function used to load a single trained model.
 
-    :param seed:           Random seed the model was trained using
-    :param pruning_step:   Integer value for the number of pruning steps which had been completed for the model.
-    :param masks:          Boolean for whether the model masks are being retrieved or not.
-    :param initial:        Boolean flag for whether to load initial weights.
+    :param seed:         Random seed the model was trained using
+    :param pruning_step: Integer value for the number of pruning steps which had been completed for the model.
+    :param masks:        Boolean for whether the model masks are being retrieved or not.
+    :param initial:      Boolean flag for whether to load initial weights.
+    :param directory:    Parent directory to look from.
 
     :returns: Model object with weights loaded and callbacks to use when fitting the model.
     """
-    filepath: str = paths.get_model_filepath(seed, pruning_step, masks, initial)
+    filepath: str = os.path.join(directory, paths.get_model_filepath(seed, pruning_step, masks, initial))
     model: tf.keras.Model = tf.keras.models.load_model(filepath)
     return model
 
-def save_model(model: tf.keras.Model, seed: int, pruning_step: int, masks: bool = False, initial: bool = False):
+def save_model(
+    model: tf.keras.Model, 
+    seed: int, 
+    pruning_step: int, 
+    masks: bool = False, 
+    initial: bool = False,
+    directory: str = './',
+    ):
     """
     Function to save a single trained model.
 
@@ -42,11 +56,12 @@ def save_model(model: tf.keras.Model, seed: int, pruning_step: int, masks: bool 
     :param pruning_step: Integer value for the number of pruning steps which had been completed for the model.
     :param masks:        Boolean for whether the model is a real model or only masks.
     :param initial:      Boolean flag for whether this is the initial randomly initialized weights.
+    :param directory:    Parent directory to look for.
     """
     
-    directory: str = paths.get_model_directory(seed, pruning_step, masks, initial)
-    paths.create_path(directory)
-    filepath: str = paths.get_model_filepath(seed, pruning_step, masks, initial)
+    model_directory: str = os.path.join(directory, paths.get_model_directory(seed, pruning_step, masks, initial))
+    paths.create_path(model_directory)
+    filepath: str = os.path.join(directory, paths.get_model_filepath(seed, pruning_step, masks, initial))
         
     # Save the initial weights in an 'initial' directory in the top-level of the model directory
     model.save(filepath, overwrite=True)

@@ -259,6 +259,7 @@ def train(
     loss_function: tf.keras.losses.Loss = C.LOSS_FUNCTION(),
     optimizer: tf.keras.optimizers.Optimizer = C.OPTIMIZER(), 
     allow_early_stopping: bool = True,
+    output_directory: str = './',
     verbose: bool = True,
     ) -> tuple[tf.keras.Model, tf.keras.Model, history.TrialData]:
     """
@@ -279,6 +280,7 @@ def train(
     :param loss_function: Loss function to use during training. Has a default value in `constants.py`.
     :param optimizer:     Optimizer to use during training. Has a default value in `constants.py`.
     :param allow_early_stopping: Boolean flag for whether early stopping is enabled.
+    :param output_directory: String path for the output directory to use. Current directory by default.
     :param verbose:       Whether console output is emitted or not.
 
     :returns: Model, masked model, and training round objects with the final trained model and the training summary/.
@@ -304,11 +306,11 @@ def train(
     )
     
     # Save the round data
-    trial_data_directory: str = paths.get_model_directory(random_seed, pruning_step, trial_data=True)
+    trial_data_directory: str = os.path.join(output_directory, paths.get_model_directory(random_seed, pruning_step, trial_data=True))
     trial_data.save_to(trial_data_directory, 'trial_data.pkl')
 
     # Save network final weights and masks to its folder in the appropriate trial folder
-    mod.save_model(model, random_seed, pruning_step)
-    mod.save_model(mask_model, random_seed, pruning_step, masks=True)
+    mod.save_model(model, random_seed, pruning_step, directory=output_directory)
+    mod.save_model(mask_model, random_seed, pruning_step, masks=True, directory=output_directory)
 
     return trial_data

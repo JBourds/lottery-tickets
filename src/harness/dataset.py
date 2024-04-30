@@ -21,12 +21,22 @@ class Datasets(Enum):
 class Dataset:
     
     def __init__(self, dataset: Datasets):
+        # Handle if a string is passed in, from cmdline arguments for instance
+        if isinstance(dataset, str):
+            match dataset.lower():
+                case 'mnist':
+                    dataset = Datasets.MNIST
+                case 'cifar10':
+                    dataset = Datasets.CIFAR10
+                case 'imagenet':
+                    dataset = Datasets.ImageNet
+
         self.dataset: Datasets = dataset
         match self.dataset:
             case Datasets.MNIST:
-                self.loader: callable = load_and_process_mnist
+                self.loader_function: callable = load_and_process_mnist
             case Datasets.CIFAR10:
-                self.loader: callable = load_and_process_cifar10
+                self.loader_function: callable = load_and_process_cifar10
     
     def get_input_shape(self, flatten: bool = True):
         """
@@ -71,6 +81,17 @@ class Dataset:
             case Datasets.ImageNet:
                 return 1000
             
+    @property
+    def loader(self):
+        """
+        Method to get the data loader.
+
+        Returns:
+            callable: Function which returns the inputs/labels for the dataset
+                split into training and testing sets.
+        """
+        return self.loader_function
+            
     def load(self):
         """
         Method to load the data for a given dataset.
@@ -78,7 +99,8 @@ class Dataset:
         Returns:
             callable: Method to load the training/test data.
         """
-        return self.loader()
+        return self.loader_function()
+    
     
 # ---------------------- Data Loader Functions ----------------------
 

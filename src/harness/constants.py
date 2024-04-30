@@ -9,9 +9,10 @@ import functools
 import tensorflow as tf
 from sys import platform
 
-# File Locations
+# Directories
 DATA_DIRECTORY: str = 'data'
 MODEL_DIRECTORY: str = 'models'
+EXPERIMENTS_DIRECTORY: str = 'experiments'
 
 DIRECTORIES: list[str] = [
     MODEL_DIRECTORY,

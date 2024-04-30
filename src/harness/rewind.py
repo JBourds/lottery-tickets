@@ -75,13 +75,26 @@ def no_rewind(*args):
     """
     pass
 
-def rewind_to_original_init(model: keras.Model, seed: int):
+def get_rewind_to_original_init_for(seed: int, directory: str = './') -> callable:
     """
-    Function which rewinds a model to its initial weights.
+    Function which returns a rewind rule that returns to original initialization
+    with a directory instantiated in it.
 
     Args:
-        model (keras.Model): Keras model to rewind weights for.
-        seed (int): Random seed a model was created on and its index in the `models/` directory.
+        directory (str, optional): Directory to look for weights to rewind. Defaults to './'.
+
+    Returns:
+        callable: Rewind rule for a specific directory.
     """
-    original_model: keras.Model = mod.load_model(seed, initial=True)
-    model.set_weights(original_model.get_weights())
+
+    def rewind_to_original_init(model: keras.Model):
+        """
+        Function which rewinds a model to its initial weights.
+
+        Args:
+            model (keras.Model): Keras model to rewind weights for.
+        """
+        original_model: keras.Model = mod.load_model(seed, initial=True, directory=directory)
+        model.set_weights(original_model.get_weights())
+        
+    return rewind_to_original_init
