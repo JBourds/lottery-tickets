@@ -58,10 +58,11 @@ def run_experiments(
         kwargs: dict = get_experiment_parameters(seed, experiment_directory)
         experiment_data: history.ExperimentData = experiment(**kwargs)
         experiment_summary.add_experiment(seed, experiment_data)
-    # Save pickled experiment summary
-    experiment_summary.save_to(experiment_directory, 'experiment_summary.pkl')
+        
+        # Save pickled experiment summary after every iteration- works like a checkpoint
+        experiment_summary.save_to(experiment_directory, 'experiment_summary.pkl')
     
-    # return experiment_summary  
+    # Return the experiment summary still in memory
     return experiment_summary    
 
 def run_iterative_pruning_experiment(
