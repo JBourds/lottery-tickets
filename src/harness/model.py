@@ -8,6 +8,7 @@ Data Created: 3/8/24
 """
 
 import numpy as np
+import os
 import tensorflow as tf
 from tensorflow import keras
 from keras import Sequential
@@ -17,22 +18,36 @@ from sys import platform
 from src.harness import constants as C
 from src.harness import paths
 
-def load_model(seed: int, pruning_step: int = 0, masks: bool = False, initial: bool = False) -> tf.keras.Model:
+def load_model(
+    seed: int, 
+    pruning_step: int = 0, 
+    masks: bool = False, 
+    initial: bool = False,
+    directory: str = './',
+    ) -> tf.keras.Model:
     """
     Function used to load a single trained model.
 
-    :param seed:           Random seed the model was trained using
-    :param pruning_step:   Integer value for the number of pruning steps which had been completed for the model.
-    :param masks:          Boolean for whether the model masks are being retrieved or not.
-    :param initial:        Boolean flag for whether to load initial weights.
+    :param seed:         Random seed the model was trained using
+    :param pruning_step: Integer value for the number of pruning steps which had been completed for the model.
+    :param masks:        Boolean for whether the model masks are being retrieved or not.
+    :param initial:      Boolean flag for whether to load initial weights.
+    :param directory:    Parent directory to look from.
 
     :returns: Model object with weights loaded and callbacks to use when fitting the model.
     """
-    filepath: str = paths.get_model_filepath(seed, pruning_step, masks, initial)
+    filepath: str = os.path.join(directory, paths.get_model_filepath(seed, pruning_step, masks, initial))
     model: tf.keras.Model = tf.keras.models.load_model(filepath)
     return model
 
-def save_model(model: tf.keras.Model, seed: int, pruning_step: int, masks: bool = False, initial: bool = False):
+def save_model(
+    model: tf.keras.Model, 
+    seed: int, 
+    pruning_step: int, 
+    masks: bool = False, 
+    initial: bool = False,
+    directory: str = './',
+    ):
     """
     Function to save a single trained model.
 
@@ -41,11 +56,12 @@ def save_model(model: tf.keras.Model, seed: int, pruning_step: int, masks: bool 
     :param pruning_step: Integer value for the number of pruning steps which had been completed for the model.
     :param masks:        Boolean for whether the model is a real model or only masks.
     :param initial:      Boolean flag for whether this is the initial randomly initialized weights.
+    :param directory:    Parent directory to look for.
     """
     
-    directory: str = paths.get_model_directory(seed, pruning_step, masks, initial)
-    paths.create_path(directory)
-    filepath: str = paths.get_model_filepath(seed, pruning_step, masks, initial)
+    model_directory: str = os.path.join(directory, paths.get_model_directory(seed, pruning_step, masks, initial))
+    paths.create_path(model_directory)
+    filepath: str = os.path.join(directory, paths.get_model_filepath(seed, pruning_step, masks, initial))
         
     # Save the initial weights in an 'initial' directory in the top-level of the model directory
     model.save(filepath, overwrite=True)
@@ -53,27 +69,27 @@ def save_model(model: tf.keras.Model, seed: int, pruning_step: int, masks: bool 
 def create_lenet_300_100(
     input_shape: tuple[int, ...], 
     num_classes: int, 
+    initializer: tf.initializers.Initializer = tf.initializers.GlorotNormal(),
     ) -> keras.Model:
     """
     Function for creating LeNet-300-100 model.
 
     :param input_shape: Expected input shape for images.
     :param num_classes: Number of potential classes to predict.
-    :param optimizer:   Optimizer to use for training.
+    :param initializer: Initializer used to set weights at the beginning
 
     :returns: Compiled LeNet-300-100 architecture.
     """
     model: keras.Model = Sequential([
         Input(input_shape),
-        Dense(300, activation='relu', kernel_initializer=tf.initializers.GlorotUniform()),
-        Dense(100, activation='relu', kernel_initializer=tf.initializers.GlorotUniform()),
-        Dense(num_classes, activation='softmax', kernel_initializer=tf.initializers.GlorotUniform()),
+        Dense(300, activation='relu', kernel_initializer=initializer),
+        Dense(100, activation='relu', kernel_initializer=initializer),
+        Dense(num_classes, activation='softmax', kernel_initializer=initializer),
     ], name="LeNet-300-100")
     
     # Explicitly build the model to initialize weights
-    if platform.lower() == 'darwin':
+    if platform == 'darwin':
         model.build(input_shape=input_shape)
-        
     return model
 
 def initialize_mask_model(model: keras.Model):

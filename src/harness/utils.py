@@ -45,10 +45,24 @@ def count_total_and_nonzero_params(model: keras.Model) -> tuple[int, int]:
 
     :returns: Total number of weights and total number of nonzero weights.
     """
-    weights = model.get_weights()
-    total_weights = sum(tf.size(w).numpy() for w in weights)  # Calculate total weights
-    nonzero_weights = sum(tf.math.count_nonzero(w).numpy() for w in weights)  # Calculate non-zero weights
+    weights: list[np.ndarray] = model.get_weights()
+    total_weights: int = sum(tf.size(w).numpy() for w in weights)  # Calculate total weights
+    nonzero_weights: int = sum(tf.math.count_nonzero(w).numpy() for w in weights)  # Calculate non-zero weights
     return total_weights, nonzero_weights
+
+def count_total_and_nonzero_params_per_layer(model: keras.Model) -> list[tuple[int, int]]:
+    """
+    Helper function to count the total number of parameters and number of nonzero parameters
+    for each layer.
+
+    :param model: Keras model to count the parameters for.
+`
+    :returns: Total number of weights and total number of nonzero weights in each layer.
+    """
+    weights: list[np.ndarray] = model.get_weights()
+    total_weights: list[int] = [tf.size(w).numpy() for w in weights] # Calculate total weights
+    nonzero_weights: list[int] = [tf.math.count_nonzero(w).numpy() for w in weights]  # Calculate non-zero weights
+    return list(zip(total_weights, nonzero_weights))
 
 def get_layer_weight_counts(model: tf.keras.Model) -> list[int]:
     """
@@ -61,8 +75,8 @@ def get_layer_weight_counts(model: tf.keras.Model) -> list[int]:
 
         for idx in range(len(weights))[::2]:
             synapses: np.ndarray = weights[idx]
-            neurons: np.array = weights[idx + 1]
-            layer_weight_count += np.prod(synapses.shape) + np.prod(neurons.shape)
+            biases: np.array = weights[idx + 1]
+            layer_weight_count += np.prod(synapses.shape) + np.prod(biases.shape)
 
         return layer_weight_count
     
