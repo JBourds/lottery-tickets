@@ -54,6 +54,7 @@ def get_lenet_300_100_experiment_parameters(
     return make_model, dataset, sparsities
             
 def run_experiments(
+    starting_seed: int,
     num_experiments: int, 
     experiment_directory: str,
     get_experiment_parameters: callable, 
@@ -63,6 +64,7 @@ def run_experiments(
     Function where experimental parameters are configured to run.
 
     Args:
+        starting_seed (int): Starting random seed to use.
         num_experiments (int): Number of experiments to run with the
             specified configuration.
         experiment_directory (str): String directory for where to put the experiment results.
@@ -80,7 +82,7 @@ def run_experiments(
     # Object to keep track of experiment data
     experiment_summary: history.ExperimentSummary = history.ExperimentSummary()
     # For each experiment, use a different random seed and keep track of all the data produced
-    for seed in range(num_experiments):
+    for seed in range(starting_seed, starting_seed + num_experiments):
         experiment_data: history.ExperimentData = experiment(
             seed,
             *get_experiment_parameters()
