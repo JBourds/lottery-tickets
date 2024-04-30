@@ -80,7 +80,14 @@ class TrialData(mixins.PickleMixin):
         nonzero_indices = np.nonzero(self.train_accuracies == 0)[0]
         stopping_step: int = len(self.train_accuracies) if len(nonzero_indices) == 0 else nonzero_indices[0]
         return stopping_step
-    
+    def get_pruning_step(self)-> int:
+        """
+        Get the pruning step of the TrialData.
+
+        returns 
+            int: The trials respective pruning step.
+        """
+        return self.pruning_step
     def __str__(self):
         """
         Returns:
@@ -129,7 +136,7 @@ class ExperimentSummary(mixins.PickleMixin):
         """
         self.experiments[seed] = experiment
     
-    def aggregate_across_experiments(self,agg_trial:callable, agg_exp:callable = np.mean()) -> list[float]:
+    def aggregate_across_experiments(self,agg_trial:callable, agg_exp:callable = np.mean) -> dict[int: list[float]]:
         """
         Method that reads in the data from each experiment and aggregates
 
@@ -138,10 +145,17 @@ class ExperimentSummary(mixins.PickleMixin):
         """
         # maybe make this one a dict
         experiments_aggregated = []
-        trials_aggregated = []
-        for experiment in self.experiments.values:
+        trials_aggregated = {}
+        for experiment in self.experiments.values():
+            print(experiment)
             for trial in experiment.get_pruning_rounds():
-                trials_aggregated.append(agg_trial(trial))
+                print(trial)
+                if trial.get_pruning_step() in trials_aggregated:
+                    trials_aggregated[trial.get_pruning_step()] = trials_aggregated[trial.get_pruning_step()].append((agg_trial(trial)))
+                else:
+                    trials_aggregated[trial.get_pruning_step()] = [agg_trial(trial)]
+
+
             experiments_aggregated.append(agg_exp(trials_aggregated))
             trials_aggregated.clear()
         
@@ -170,4 +184,5 @@ class ExperimentSummary(mixins.PickleMixin):
           for idx, round in enumerate(experiment.pruning_rounds):
               print(f'Pruning Step {idx}:')
               print(round)
+
 
