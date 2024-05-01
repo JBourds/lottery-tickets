@@ -147,13 +147,26 @@ def training_loop(
     num_batches: int = int(np.ceil(len(X_train) / batch_size))
 
     # Store the loss and accuracies at various points to use later in history.TrialData object
+    
     train_losses: np.array = np.zeros(num_epochs * num_batches)
     train_accuracies: np.array = np.zeros(num_epochs * num_batches)
     validation_losses: np.array = np.zeros(int(num_epochs * num_batches / performance_evaluation_frequency))
     validation_accuracies: np.array = np.zeros(int(num_epochs * num_batches / performance_evaluation_frequency))
 
+    # Initialize function and metric for use
     train_one_step: callable = get_train_one_step()
     accuracy_metric: tf.keras.metrics.Metric = tf.keras.metrics.CategoricalAccuracy()
+    
+    # Cache the loss and accuracy prior to training, using just the masked off initial weights
+    loss_before_training: float
+    accuracy_before_training: float
+    loss_before_training, accuracy_before_training = test_step(
+        model, 
+        X_test, 
+        Y_test,
+        loss_fn,
+        accuracy_metric,
+    )
 
     if verbose:
         print(f'Number of Batches: {num_batches}')
@@ -172,6 +185,8 @@ def training_loop(
             Y_batch: np.ndarray = Y_train[low_index:high_index]
             
             # Update model parameters for each point in the training set
+            loss: float
+            accuracy: float
             loss, accuracy = train_one_step(
                 model, 
                 mask_model, 
@@ -189,6 +204,8 @@ def training_loop(
             # Only perform checks for early stopping at specified number of intervals
             if batch_counter % performance_evaluation_frequency == 0:
                 # Evaluate model on validation test set using whole batch after each epoch
+                validation_loss: float
+                validation_accuracy: float
                 validation_loss, validation_accuracy = test_step(
                     model, 
                     X_test, 
@@ -220,10 +237,11 @@ def training_loop(
                             print(f'Early stopping initiated')
                         break
                     
-            # Print output and increment batch counter
             if verbose:
                 print(f'Epoch {epoch + 1} Iteration {batch_index + 1} with Batch Size: {batch_size}: Training Loss: {loss}, Training Accuracy: {accuracy}')   
+            
             batch_counter += 1
+            
         # Cursed way to ripple break from inner loop to outer loop
         else:
             continue
@@ -237,6 +255,8 @@ def training_loop(
         initial_parameters, 
         final_parameters, 
         masks, 
+        loss_before_training,
+        accuracy_before_training,
         train_losses, 
         train_accuracies, 
         validation_losses, 

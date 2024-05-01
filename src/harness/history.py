@@ -25,11 +25,15 @@ class TrialData(mixins.PickleMixin):
     :param masks:           (list[np.ndarray]) List of mask model weights (binary mask).
     """
     pruning_step: int
+    
     # Model parameters
     initial_weights: list[np.ndarray]
     final_weights: list[np.ndarray]
     masks: list[np.ndarray]
+    
     # Metrics
+    loss_before_training: float
+    accuracy_before_training: float
     train_losses: np.array
     train_accuracies: np.array
     test_losses: np.array
