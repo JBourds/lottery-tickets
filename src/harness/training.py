@@ -139,8 +139,8 @@ def training_loop(
     # Extract input and target
     X_train, X_test, Y_train, Y_test = dataset.load()
 
-    initial_parameters: list[np.ndarray] = copy.deepcopy(model.trainable_variables)
-    masks: list[np.ndarray] = copy.deepcopy(mask_model.trainable_variables)
+    initial_parameters: list[np.ndarray] = [tensor.numpy() for tensor in copy.deepcopy(model.trainable_variables)]
+    masks: list[np.ndarray] = [tensor.numpy() for tensor in copy.deepcopy(mask_model.trainable_variables)]
     
     # Calculate the number of batches and create arrays to keep track of batch
     # loss/accuracies while iterating over batches before it goes into training loss/accuracies
@@ -247,7 +247,7 @@ def training_loop(
             continue
         break
             
-    final_parameters: list[np.ndarray] = copy.deepcopy(model.trainable_variables)
+    final_parameters: list[np.ndarray] = [tensor.numpy() for tensor in copy.deepcopy(model.trainable_variables)]
             
     # Compile training round data
     trial_data: history.TrialData = history.TrialData(

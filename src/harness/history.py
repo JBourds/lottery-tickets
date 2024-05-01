@@ -11,7 +11,10 @@ Date Created: 4/28/24
 from dataclasses import dataclass
 import numpy as np
 import os
+import sys
+
 from src.harness import mixins
+from src.metrics.experiment_aggregations import mean_over_experiments
 
 @dataclass
 class TrialData(mixins.PickleMixin):
@@ -38,6 +41,20 @@ class TrialData(mixins.PickleMixin):
     train_accuracies: np.array
     test_losses: np.array
     test_accuracies: np.array
+    
+    def get_loss_before_training(self) -> float:
+        """
+        Returns:
+            float: Model loss on the masked initial weights.
+        """
+        return self.loss_before_training
+    
+    def get_accuracy_before_training(self) -> float:
+        """
+        Returns:
+            float: Model accuracy on the masked initial weights.
+        """
+        return self.accuracy_before_training
     
     def get_sparsity(self) -> float:
         """
@@ -85,6 +102,7 @@ class TrialData(mixins.PickleMixin):
         nonzero_indices = np.nonzero(self.train_accuracies == 0)[0]
         stop_index: int = len(self.train_accuracies) if len(nonzero_indices) == 0 else nonzero_indices[0]
         return stop_index * performance_evaluation_frequency
+    
     def get_pruning_step(self)-> int:
         """
         Get the pruning step of the TrialData.
@@ -93,6 +111,7 @@ class TrialData(mixins.PickleMixin):
             int: The trials respective pruning step.
         """
         return self.pruning_step
+    
     def __str__(self):
         """
         Returns:
@@ -125,9 +144,6 @@ class ExperimentData(mixins.PickleMixin):
         :param round: `TrialData` object being added.
         """
         self.pruning_rounds.append(round)
-        
-    def get_pruning_rounds(self):
-        return self.pruning_rounds
 
     def __str__(self) -> str:
       """
@@ -156,60 +172,42 @@ class ExperimentSummary(mixins.PickleMixin):
         """
         self.experiments[seed] = experiment
     
-    def aggregate_across_experiments(self,agg_trial:callable, agg_exp:callable = np.mean) -> dict[int: list[float]]:
+    def aggregate_across_experiments(
+        self, 
+        trial_aggregation: callable, 
+        experiment_aggregation: callable = mean_over_experiments,
+        ) -> any:
         """
-        Method that reads in the data from each experiment and aggregates
+        Method used to aggregate over all the experiments within a summary
+        using user-defined functions to aggregate trial and experiment data.
+        
+        Parameters:
+            trial_aggregation (callable): Function which returns a single value when
+                called on a `TrialData` object.
+            experiment_aggregation (callable): Function which aggregates across all
+                the data produced by aggregating over all the trial data.  
 
-        :param agg_trial: the method used to aggregate all the trial data   
-        :param agg_exp:   the method used to aggregate the experiment data
+        Returns:
+            any: Can return any type depending on how the aggregation is performed but
+                will likely be a 1D array aggregating over all the trials from the 
+                same pruning step.
         """
-        trials_aggregated = {}
-        experiment_aggregated = []
+        trials_aggregated: dict = {}
+        experiment_aggregated: list[np.array] = []
+        # Iterate across experiments
         for experiment in self.experiments.values():
-            for trial in experiment.get_pruning_rounds():
+            # Iterate over trials within an experiment
+            for trial in experiment.pruning_rounds:
+                # Check if the 
                 if trial.get_pruning_step() in trials_aggregated.keys():
-                    trials_aggregated.get(trial.get_pruning_step()).append((agg_trial(trial)))
+                    trials_aggregated.get(trial.get_pruning_step()).append((trial_aggregation(trial)))
                 else:
-                    trials_aggregated[trial.get_pruning_step()] = [agg_trial(trial)]
+                    trials_aggregated[trial.get_pruning_step()] = [trial_aggregation(trial)]
+                    
         for trial in trials_aggregated.keys():
-            experiment_aggregated.append(agg_exp((trials_aggregated[trial])))
+            experiment_aggregated.append(experiment_aggregation((trials_aggregated[trial])))
             
         return experiment_aggregated
-
-    def get_sparcity(self, trial: TrialData):
-        return trial.get_sparsity() * 100
-
-    def early_stop(self,trial: TrialData):
-        return trial.get_early_stopping_iteration()
-    
-    def accuracy_at_stop(self,trial:TrialData):
-        return np.max(trial.test_accuracies)
-        
-    def get_test_accuracy(self,trial:TrialData):
-        return trial.test_accuracies[trial.test_accuracies != 0]
-        
-    def get_positive_ratio_total_final(self, trial:TrialData):
-        total_positive = np.sum([np.sum(weights[weights != 0] > 0) for weights in trial.final_weights])
-        total_nonzero = np.sum([np.sum(weights != 0) for weights in trial.final_weights])
-        return total_positive / total_nonzero
-        
-    def print_acc(self,trial):
-        print(trial.test_accuracies)
-    
-    def get_negative_ratio_total_final(self,trial:TrialData):
-        return 1 - self.get_positive_ratio_total_final(trial)
-        
-    def get_positive_ratio_total_init(self, trial:TrialData):
-        total_positive = np.sum([np.sum(weights[weights != 0] > 0) for weights in trial.initial_weights])
-        total_nonzero = np.sum([np.sum(weights != 0) for weights in trial.initial_weights])
-        return total_positive / total_nonzero
-    
-    def get_negative_ratio_total_init(self, trial:TrialData):
-        return 1 - get_positive_ratio_total_init(trial)
-    
-    def mean_list(self, iter):
-        return np.mean(iter,axis = 0)
-            
             
     def __str__(self) -> str:
       """
