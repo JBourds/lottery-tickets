@@ -8,10 +8,12 @@ Date: 3/17/24
 """
 
 import functools
+import multiprocess as mp
 import numpy as np
 import os
 import tensorflow as tf
 from tensorflow import keras
+import warnings
 
 from src.harness import constants as C
 from src.harness import dataset as ds
@@ -29,21 +31,23 @@ def run_experiments(
     experiment_directory: str,
     experiment: callable,
     get_experiment_parameters: callable, 
+    max_processes: int = os.cpu_count(),
     ) -> history.ExperimentSummary:
     """
-    Function where experimental parameters are configured to run.
+    Main function which runs experiments with provided configurations.
+    Optionally performs multiprocessing parallelism to speed up training.
 
     Args:
         starting_seed (int): Starting random seed to use.
         num_experiments (int): Number of experiments to run with the
             specified configuration.
         experiment_directory (str): String directory for where to put the experiment results.
+        experiment (callable): Function to run the experiments.
         get_experiment_parameters (callable): Function which takes in the seed and experiment
             directory then produces all the parameters which get unpacked into the function
             responsible for running the experiment.
-        experiment (callable): Function to run the experiments.
-        verbose (bool): Whether training displays console output.
-
+        max_processes (int): Integer value for the maximum number of processes which are attempted
+            to be run in parallel.
     Returns:
         history.ExperimentSummary: Object containing information about all trained models.
     """
@@ -53,17 +57,29 @@ def run_experiments(
     
     # Object to keep track of experiment data
     experiment_summary: history.ExperimentSummary = history.ExperimentSummary()
-    # For each experiment, use a different random seed and keep track of all the data produced
-    for seed in range(starting_seed, starting_seed + num_experiments):
-        kwargs: dict = get_experiment_parameters(seed, experiment_directory)
-        experiment_data: history.ExperimentData = experiment(**kwargs)
-        experiment_summary.add_experiment(seed, experiment_data)
-        
-        # Save pickled experiment summary after every iteration- works like a checkpoint
-        experiment_summary.save_to(experiment_directory, 'experiment_summary.pkl')
+    
+    def run_single_experiment(experiment_arguments: dict) -> tuple[int, history.ExperimentData]:
+        """
+        Helper function which unpacks experiment arguments into a call to the function.
+        """
+        experiment_data: history.ExperimentData = experiment(**experiment_arguments)
+        return experiment_data
+    
+    # Prepare arguments for multiprocessing
+    random_seeds: list[int] = list(range(starting_seed, starting_seed + num_experiments))
+    partial_get_experiment_parameters = functools.partial(get_experiment_parameters, directory=experiment_directory)
+    experiment_args: list[tuple[int, dict]] = [partial_get_experiment_parameters(seed) for seed in random_seeds]
+    
+    # Run experiments in parallel
+    with mp.get_context('spawn').Pool(max_processes) as pool:
+        experiment_results: list[history.ExperimentData] = pool.map(run_single_experiment, experiment_args)
+            
+    # Fill the experiment summary object and save it
+    experiment_summary.experiments = {seed: experiment_result for seed, experiment_result in zip(random_seeds, experiment_results)}
+    experiment_summary.save_to(experiment_directory, 'experiment_summary.pkl')
     
     # Return the experiment summary still in memory
-    return experiment_summary    
+    return experiment_summary
 
 def run_iterative_pruning_experiment(
     random_seed: int, 
@@ -123,8 +139,6 @@ def run_iterative_pruning_experiment(
     # Make models and save them
     model: keras.Model = create_model()
     mask_model: keras.Model = mod.create_masked_nn(create_model)   
-    
-    print(f'Experiment directory: {experiment_directory}')
     
     mod.save_model(model, random_seed, 0, initial=True, directory=experiment_directory)
     mod.save_model(mask_model, random_seed, 0, masks=True, initial=True, directory=experiment_directory)

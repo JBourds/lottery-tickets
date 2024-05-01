@@ -68,7 +68,7 @@ def get_train_one_step() -> callable:
     
     return train_one_step
     
-@tf.function(experimental_relax_shapes=True)
+@tf.function
 def test_step(
     model: tf.keras.Model, 
     inputs: tf.Tensor, 

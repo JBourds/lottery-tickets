@@ -4,9 +4,11 @@ utils.py
 File containing utility functions.
 """
 
+from contextlib import contextmanager
 import numpy as np
 import os
 import random
+import sys
 import tensorflow as tf
 from tensorflow import keras
 
@@ -81,3 +83,17 @@ def get_layer_weight_counts(model: tf.keras.Model) -> list[int]:
         return layer_weight_count
     
     return list(map(get_num_layer_weights, model.layers))
+
+class SuppressOutput:
+    """
+    Context manager which suppresses all output generated within its contents.
+    """
+    def __enter__(self):
+        self.devnull = open(os.devnull, 'w')
+        self.old_stdout = sys.stdout
+        sys.stdout = self.devnull
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        sys.stdout = self.old_stdout
+        self.devnull.close()

@@ -78,22 +78,24 @@ if __name__ == '__main__':
     # Default parameters
     experiment_directory: str = os.path.join('../..', C.EXPERIMENTS_DIRECTORY,  'lenet_300_100_iterative_magnitude_pruning_experiment')
     starting_seed: int = 0
-    num_experiment: int = 1
+    num_experiments: int = 1
     first_step_pruning_percent: float = 0.2
     target_sparsity: float = 0.85
     dataset: str = 'mnist'
+    max_processes: int = os.cpu_count()
     verbose: bool = False
     
     # Initialize ArgumentParser
     parser = argparse.ArgumentParser(description='Description of your program')
 
     # Add arguments
-    parser.add_argument('--dir', type=str, default=experiment_directory, help='Output directory to store all models and experiment summary')
-    parser.add_argument('--seed', type=int, default=starting_seed, help='Starting seed')
-    parser.add_argument('--num_experiments', type=int, default=num_experiment, help='Number of experiments')
-    parser.add_argument('--pruning_percent', type=float, default=first_step_pruning_percent, help='First step pruning percent')
-    parser.add_argument('--target_sparsity', type=float, default=target_sparsity, help='Target sparsity')
-    parser.add_argument('--dataset', type=str, default=dataset, help='Dataset')
+    parser.add_argument('--dir', type=str, default=experiment_directory, help='Output directory to store all models and experiment summary.')
+    parser.add_argument('--seed', type=int, default=starting_seed, help='Starting seed. Defaults to 0.')
+    parser.add_argument('--num_experiments', type=int, default=num_experiments, help='Number of experiments. Defaults to 1.')
+    parser.add_argument('--pruning_percent', type=float, default=first_step_pruning_percent, help='First step pruning percent. Defaults to 20%.')
+    parser.add_argument('--target_sparsity', type=float, default=target_sparsity, help='Target sparsity. Defaults to 85% sparse (1 step).')
+    parser.add_argument('--dataset', type=str, default=dataset, help='Dataset to use for training. Defaults to MNIST.')
+    parser.add_argument('--max_processes', type=int, default=max_processes, help='Max number of processes to run in tandem. Defaults to total number of CPU cores.')
     parser.add_argument('--verbose', type=bool, default=verbose, help='Display console output or not.')
     
     # Parse arguments
@@ -107,6 +109,7 @@ if __name__ == '__main__':
     target_sparsity = args.target_sparsity
     dataset = args.dataset
     verbose = args.verbose
+    max_processes = args.max_processes
     
     get_experiment_parameters: callable = get_lenet_300_100_experiment_parameters(
         dataset, 
@@ -121,5 +124,6 @@ if __name__ == '__main__':
         experiment_directory=experiment_directory,
         experiment=experiment.run_iterative_pruning_experiment,
         get_experiment_parameters=get_experiment_parameters,
+        max_processes=max_processes,
     )
     
