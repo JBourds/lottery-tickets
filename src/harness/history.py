@@ -85,7 +85,14 @@ class TrialData(mixins.PickleMixin):
         nonzero_indices = np.nonzero(self.train_accuracies == 0)[0]
         stop_index: int = len(self.train_accuracies) if len(nonzero_indices) == 0 else nonzero_indices[0]
         return stop_index * performance_evaluation_frequency
-    
+    def get_pruning_step(self)-> int:
+        """
+        Get the pruning step of the TrialData.
+
+        returns 
+            int: The trials respective pruning step.
+        """
+        return self.pruning_step
     def __str__(self):
         """
         Returns:
@@ -149,46 +156,71 @@ class ExperimentSummary(mixins.PickleMixin):
         """
         self.experiments[seed] = experiment
     
-    def aggregate_across_experiments(self,agg_trial:callable, agg_exp:callable = np.mean) -> list[float]:
+    def aggregate_across_experiments(self,agg_trial:callable, agg_exp:callable = np.mean) -> dict[int: list[float]]:
         """
         Method that reads in the data from each experiment and aggregates
 
         :param agg_trial: the method used to aggregate all the trial data   
         :param agg_exp:   the method used to aggregate the experiment data
         """
-        # maybe make this one a dict
-        experiments_aggregated = []
-        trials_aggregated = []
-        for experiment in self.experiments.values:
+        trials_aggregated = {}
+        experiment_aggregated = []
+        for experiment in self.experiments.values():
             for trial in experiment.get_pruning_rounds():
-                trials_aggregated.append(agg_trial(trial))
-            experiments_aggregated.append(agg_exp(trials_aggregated))
-            trials_aggregated.clear()
-        
-        return experiments_aggregated
+                if trial.get_pruning_step() in trials_aggregated.keys():
+                    trials_aggregated.get(trial.get_pruning_step()).append((agg_trial(trial)))
+                else:
+                    trials_aggregated[trial.get_pruning_step()] = [agg_trial(trial)]
+        for trial in trials_aggregated.keys():
+            experiment_aggregated.append(agg_exp((trials_aggregated[trial])))
+            
+        return experiment_aggregated
 
-    def percent_weights_remaining(self, trial: TrialData):
+    def get_sparcity(self, trial: TrialData):
         return trial.get_sparsity() * 100
 
     def early_stop(self,trial: TrialData):
-        return trial.get_early_stopping_step()
+        return trial.get_early_stopping_iteration()
     
     def accuracy_at_stop(self,trial:TrialData):
-        return trial.test_accuracies[trial.get_early_stopping_step()]
+        return np.max(trial.test_accuracies)
+        
+    def get_test_accuracy(self,trial:TrialData):
+        return trial.test_accuracies[trial.test_accuracies != 0]
+        
+    def get_positive_ratio_total_final(self, trial:TrialData):
+        total_positive = np.sum([np.sum(weights[weights != 0] > 0) for weights in trial.final_weights])
+        total_nonzero = np.sum([np.sum(weights != 0) for weights in trial.final_weights])
+        return total_positive / total_nonzero
+        
+    def print_acc(self,trial):
+        print(trial.test_accuracies)
     
-    def iteration_at_50k(self,trial:TrialData):
-        return trial.test_accuracies[50000]
-
+    def get_negative_ratio_total_final(self,trial:TrialData):
+        return 1 - self.get_positive_ratio_total_final(trial)
+        
+    def get_positive_ratio_total_init(self, trial:TrialData):
+        total_positive = np.sum([np.sum(weights[weights != 0] > 0) for weights in trial.initial_weights])
+        total_nonzero = np.sum([np.sum(weights != 0) for weights in trial.initial_weights])
+        return total_positive / total_nonzero
+    
+    def get_negative_ratio_total_init(self, trial:TrialData):
+        return 1 - get_positive_ratio_total_init(trial)
+    
+    def mean_list(self, iter):
+        return np.mean(iter,axis = 0)
+            
+            
     def __str__(self) -> str:
       """
       String representation to create a summary of the experiment.
 
       :returns: String representation.
       """
-      representation: str = ''
-      for seed, experiment_data in self.experiments.items():
-          representation += f'Random Seed: {seed}\n'
-          representation += str(experiment_data)
-      return representation
-              
+      for seed, experiment in self.experiments.items():
+          print(f'\nSeed {seed}')
+          for idx, round in enumerate(experiment.pruning_rounds):
+              print(f'Pruning Step {idx}:')
+              print(round)
+
 
