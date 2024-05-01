@@ -159,36 +159,54 @@ class ExperimentSummary(mixins.PickleMixin):
         :param agg_trial: the method used to aggregate all the trial data   
         :param agg_exp:   the method used to aggregate the experiment data
         """
-        # maybe make this one a dict
-        experiments_aggregated = []
         trials_aggregated = {}
+        experiment_aggregated = []
         for experiment in self.experiments.values():
-            print(experiment)
             for trial in experiment.get_pruning_rounds():
-                print(trial)
-                if trial.get_pruning_step() in trials_aggregated:
-                    trials_aggregated[trial.get_pruning_step()] = trials_aggregated[trial.get_pruning_step()].append((agg_trial(trial)))
+                if trial.get_pruning_step() in trials_aggregated.keys():
+                    trials_aggregated.get(trial.get_pruning_step()).append((agg_trial(trial)))
                 else:
                     trials_aggregated[trial.get_pruning_step()] = [agg_trial(trial)]
+        for trial in trials_aggregated.keys():
+            experiment_aggregated.append(agg_exp((trials_aggregated[trial])))
+            
+        return experiment_aggregated
 
-
-            experiments_aggregated.append(agg_exp(trials_aggregated))
-            trials_aggregated.clear()
-        
-        return experiments_aggregated
-
-    def percent_weights_remaining(self, trial: TrialData):
+    def get_sparcity(self, trial: TrialData):
         return trial.get_sparsity() * 100
 
     def early_stop(self,trial: TrialData):
-        return trial.get_early_stopping_step()
+        return trial.get_early_stopping_iteration()
     
     def accuracy_at_stop(self,trial:TrialData):
-        return trial.test_accuracies[trial.get_early_stopping_step()]
+        return np.max(trial.test_accuracies)
+        
+    def get_test_accuracy(self,trial:TrialData):
+        return trial.test_accuracies[trial.test_accuracies != 0]
+        
+    def get_positive_ratio_total_final(self, trial:TrialData):
+        total_positive = np.sum([np.sum(weights[weights != 0] > 0) for weights in trial.final_weights])
+        total_nonzero = np.sum([np.sum(weights != 0) for weights in trial.final_weights])
+        return total_positive / total_nonzero
+        
+    def print_acc(self,trial):
+        print(trial.test_accuracies)
     
-    def iteration_at_50k(self,trial:TrialData):
-        return trial.test_accuracies[50000]
-
+    def get_negative_ratio_total_final(self,trial:TrialData):
+        return 1 - self.get_positive_ratio_total_final(trial)
+        
+    def get_positive_ratio_total_init(self, trial:TrialData):
+        total_positive = np.sum([np.sum(weights[weights != 0] > 0) for weights in trial.initial_weights])
+        total_nonzero = np.sum([np.sum(weights != 0) for weights in trial.initial_weights])
+        return total_positive / total_nonzero
+    
+    def get_negative_ratio_total_init(self, trial:TrialData):
+        return 1 - get_positive_ratio_total_init(trial)
+    
+    def mean_list(self, iter):
+        return np.mean(iter,axis = 0)
+            
+            
     def __str__(self) -> str:
       """
       String representation to create a summary of the experiment.
