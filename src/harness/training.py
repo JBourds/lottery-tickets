@@ -150,8 +150,8 @@ def training_loop(
     
     train_losses: np.array = np.zeros(num_epochs * num_batches)
     train_accuracies: np.array = np.zeros(num_epochs * num_batches)
-    validation_losses: np.array = np.zeros(int(num_epochs * num_batches / performance_evaluation_frequency))
-    validation_accuracies: np.array = np.zeros(int(num_epochs * num_batches / performance_evaluation_frequency))
+    validation_losses: np.array = np.zeros(int(num_epochs * np.ceil(num_batches / performance_evaluation_frequency)))
+    validation_accuracies: np.array = np.zeros(int(num_epochs * np.ceil(num_batches / performance_evaluation_frequency)))
 
     # Initialize function and metric for use
     train_one_step: callable = get_train_one_step()

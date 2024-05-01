@@ -8,6 +8,7 @@ Date Created: 4/30/24
 
 import argparse
 import functools
+import numpy as np
 import os
 from tensorflow import keras
 import sys
@@ -79,6 +80,7 @@ if __name__ == '__main__':
     experiment_directory: str = os.path.join('../..', C.EXPERIMENTS_DIRECTORY,  'lenet_300_100_iterative_magnitude_pruning_experiment')
     starting_seed: int = 0
     num_experiments: int = 1
+    num_batches: int = 1
     first_step_pruning_percent: float = 0.2
     target_sparsity: float = 0.85
     dataset: str = 'mnist'
@@ -92,6 +94,7 @@ if __name__ == '__main__':
     parser.add_argument('--dir', type=str, default=experiment_directory, help='Output directory to store all models and experiment summary.')
     parser.add_argument('--seed', type=int, default=starting_seed, help='Starting seed. Defaults to 0.')
     parser.add_argument('--num_experiments', type=int, default=num_experiments, help='Number of experiments. Defaults to 1.')
+    parser.add_argument('--num_batches', type=int, default=num_batches, help='Number of batches to split training into')
     parser.add_argument('--pruning_percent', type=float, default=first_step_pruning_percent, help='First step pruning percent. Defaults to 20%.')
     parser.add_argument('--target_sparsity', type=float, default=target_sparsity, help='Target sparsity. Defaults to 85% sparse (1 step).')
     parser.add_argument('--dataset', type=str, default=dataset, help='Dataset to use for training. Defaults to MNIST.')
@@ -105,6 +108,7 @@ if __name__ == '__main__':
     experiment_directory = args.dir
     starting_seed = args.seed
     num_experiments = args.num_experiments
+    num_batches = args.num_batches
     first_step_pruning_percent = args.pruning_percent
     target_sparsity = args.target_sparsity
     dataset = args.dataset
@@ -118,12 +122,22 @@ if __name__ == '__main__':
         verbose,
     )
     
-    experiment.run_experiments(
-        starting_seed=starting_seed,
-        num_experiments=num_experiments, 
-        experiment_directory=experiment_directory,
-        experiment=experiment.run_iterative_pruning_experiment,
-        get_experiment_parameters=get_experiment_parameters,
-        max_processes=max_processes,
-    )
+    # Perform paralellized training in evenly split batches
+    num_experiments_in_batch: int = int(np.ceil(num_experiments / num_batches))
+    for batch_idx in range(num_batches):
+        batch_starting_seed: int = starting_seed + batch_idx * num_experiments_in_batch
+        batch_directory: str = os.path.join(experiment_directory, f'batch_{batch_idx}')
+        
+        # Last batch could be smaller
+        if batch_idx == num_batches - 1:
+            num_experiments_in_batch = num_experiments - batch_idx * num_experiments_in_batch
+        
+        experiment.run_experiments(
+            starting_seed=batch_starting_seed,
+            num_experiments=num_experiments_in_batch, 
+            experiment_directory=batch_directory,
+            experiment=experiment.run_iterative_pruning_experiment,
+            get_experiment_parameters=get_experiment_parameters,
+            max_processes=max_processes,
+        )
     
