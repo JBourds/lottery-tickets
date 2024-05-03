@@ -11,12 +11,16 @@ import numpy as np
 
 from src.harness import history
 
+# ------------------------- Sparsity -------------------------
+
 def get_sparsity_percentage(trial: history.TrialData) -> float:
     """
     Returns:
         float: Sparsity percentage of a trial.
     """
     return trial.get_sparsity() * 100
+
+# ------------------------- Training Time Metrics -------------------------
 
 def get_early_stopping_iteration(trial: history.TrialData) -> int:
     """
@@ -26,12 +30,23 @@ def get_early_stopping_iteration(trial: history.TrialData) -> int:
     """
     return trial.get_early_stopping_iteration()
 
+# ------------------------- Loss Metrics -------------------------
+
 def get_loss_before_training(trial: history.TrialData) -> float:
     """
     Returns:
         float: Model loss calculated from the masked initial weights.
     """
     return trial.get_loss_before_training()
+
+def get_best_loss(trial: history.TrialData, train: bool = False) -> float:
+  """
+  Returns:
+      float: Best model accuracy from within a round of iterative pruning.
+  """
+  return np.max(trial.train_losses if train else trial.test_losses)
+
+# ------------------------- Accuracy Metrics -------------------------
 
 def get_accuracy_before_training(trial: history.TrialData) -> float:
     """
@@ -47,36 +62,49 @@ def get_best_accuracy_percent(trial: history.TrialData, train: bool = False) -> 
     """
     return np.max(trial.train_accuracies if train else trial.test_accuracies) * 100
 
-def get_negative_percent_of_weights_across_all_layers(trial: history.TrialData, use_initial: bool = False):
+# ------------------------- Magnitude Metrics -------------------------
+
+def get_global_average_magnitude(trial: history.TrialData, use_initial_weights: bool = False) -> float:
     """
     Returns:
-        float: Negative percent of the unpruned initial weights stored before 
-            each round of training in a trial across all layers.
+        float: Average magnitude of unpruned weights across the entire network.
     """
-    return 100 - get_positive_percent_of_weights_across_all_layers(trial, use_initial=use_initial)
-    
-def get_positive_percent_of_weights_across_all_layers(trial: history.TrialData, use_initial: bool = False) -> float:
+    return trial.get_average_magnitude(layerwise=False, use_initial_weights=use_initial_weights)
+
+def get_layerwise_average_magnitude(trial: history.TrialData, use_initial_weights: bool = False) -> float:
+  """
+  Returns:
+      float: Average magnitude of unpruned weights by layer.
+  """
+  return trial.get_average_magnitude(layerwise=True, use_initial_weights=use_initial_weights)
+
+
+# ------------------------- Sign Proportion Metrics -------------------------
+
+def get_global_percent_negative_weights(trial: history.TrialData, use_initial_weights: bool = False) -> float:
     """
-    Function which gets the positive percent of the unpruned initial weights stored
-    before each round of training in a trial across all layers.
-
-    Args:
-        trial (history.TrialData): Object containing information from a single round
-            of iterative pruning.
-        use_initial_weights (bool): Flag for whether initial or final weights should be selected.
-            Defaults to False and looks at final weights.
-
     Returns:
-        float: Proportion of positive weights across all parameters in the network.
+        float: Negative percent of the unpruned weights stored across layers in the network.
     """
-    # Convert masks into boolean Numpy array for indexing, and convert weights into Numpy array as well
-    masks: list[np.ndarray] = [mask.numpy().astype('bool') for mask in trial.masks]
-    weights: list[np.ndarray] = trial.initial_weights if use_initial else trial.final_weights
-    weights = [w.numpy() for w in weights]
+    return 100 - get_global_percent_positive_weights(trial, use_initial_weights=use_initial_weights)
     
-    # There is a chance weights could be set to 0 but not masked (e.g. bias terms)
-    # Because of this, we use the mask as indices and only consider the unmasked portion 
-    total_positive: float = np.sum([np.sum(w[mask] >= 0) for mask, w in zip(masks, weights)])
-    total_nonzero: float = np.sum([len(w[mask]) for mask, w in zip(masks, weights)])
+def get_global_percent_positive_weights(trial: history.TrialData, use_initial_weights: bool = False) -> float:
+    """
+    Returns:
+        float: Positive percent of the unpruned weights stored across layers in the network.
+    """
+    return trial.get_positive_weight_ratio(layerwise=False, use_initial_weights=use_initial_weights) * 100
+
+def get_layerwise_percent_negative_weights(trial: history.TrialData, use_initial_weights: bool = False) -> float:
+    """
+    Returns:
+        list[float]: Negative percent of the unpruned weights stored by layer in the network.
+    """
+    return 100 - get_layerwise_percent_positive_weights(trial, use_initial_weights=use_initial_weights)
     
-    return (total_positive / total_nonzero) * 100
+def get_layerwise_percent_positive_weights(trial: history.TrialData, use_initial_weights: bool = False) -> float:
+    """
+    Returns:
+        list[float]: Positive percent of the unpruned weights stored by layer in the network.
+    """
+    return trial.get_positive_weight_ratio(layerwise=True, use_initial_weights=use_initial_weights) * 100

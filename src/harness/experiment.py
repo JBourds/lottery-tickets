@@ -52,11 +52,19 @@ def run_experiments(
         history.ExperimentSummary: Object containing information about all trained models.
     """
     
+    # Set CPU affinity to use all available CPU cores
+    # and keep each thread scheduled to the same core
+    os.environ['OMP_NUM_THREADS'] = str(os.cpu_count())
+    os.environ['KMP_BLOCKTIME'] = '1'
+    os.environ['KMP_SETTINGS'] = '1'
+    os.environ['KMP_AFFINITY']= 'granularity=fine,verbose,compact,1,0'
+    
     # Make the path to store all the experiment data in
     paths.create_path(experiment_directory)
     
     # Object to keep track of experiment data
     experiment_summary: history.ExperimentSummary = history.ExperimentSummary()
+    experiment_summary.start_timer()
     
     def run_single_experiment(experiment_arguments: dict) -> tuple[int, history.ExperimentData]:
         """
@@ -74,8 +82,9 @@ def run_experiments(
     with mp.get_context('spawn').Pool(max_processes) as pool:
         experiment_results: list[history.ExperimentData] = pool.map(run_single_experiment, experiment_args)
             
-    # Fill the experiment summary object and save it
+    # Fill the experiment summary object, stop its timer, and save it
     experiment_summary.experiments = {seed: experiment_result for seed, experiment_result in zip(random_seeds, experiment_results)}
+    experiment_summary.stop_timer()
     experiment_summary.save_to(experiment_directory, 'experiment_summary.pkl')
     
     # Return the experiment summary still in memory
@@ -126,7 +135,7 @@ def run_iterative_pruning_experiment(
             Defaults to C.MINIMUM_DELTA.
         allow_early_stopping (bool, optional): Boolean flag for whether early stopping is enabled. 
             Defaults to True.
-        experiment_director (str): Path to place all experimental data.
+        experiment_directory (str): Path to place all experimental data.
         verbose (bool, optional): Boolean flag for whether console output is displayed. Defaults to True.
 
     Returns:
@@ -136,6 +145,8 @@ def run_iterative_pruning_experiment(
     utils.set_seed(random_seed)
         
     experiment_data: history.ExperimentData = history.ExperimentData()
+    experiment_data.start_timer()
+
     # Make models and save them
     model: keras.Model = create_model()
     mask_model: keras.Model = mod.create_masked_nn(create_model)   
@@ -171,7 +182,7 @@ def run_iterative_pruning_experiment(
             verbose=verbose,
         )
 
-        experiment_data.add_pruning_round(trial_data)
+        experiment_data.add_trial(trial_data)
 
         if verbose:
             X_train, _, _, _ = dataset.load()
@@ -179,5 +190,6 @@ def run_iterative_pruning_experiment(
             print(f'Took {iteration_count} iterations')
             print(f'Ended on epoch {np.ceil(iteration_count * batch_size / X_train.shape[0])} out of {num_epochs}')
             print(f'Ended with a best training accuracy of {np.max(trial_data.train_accuracies) * 100:.2f}% and test accuracy of {np.max(trial_data.test_accuracies) * 100:.2f}%')
-        
+    
+    experiment_data.stop_timer()
     return experiment_data

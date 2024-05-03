@@ -1,134 +1,72 @@
-# Investigating Lottery Ticket Neural Networks
+# Identifying Structural Characteristics in Sparse Lottery Ticket Neural Networks
 
-## Checklist
+Jordan Bourdeau, Casey Forey
 
-### Preliminary:
-- Form specific hypotheses \[X]
-    - What metrics are we examining? \[ ]
-        > Distribution of weights per layer
-        > Sign-based structural comparison metric
-            - Neural Network Sparse Topology Distance
-            - Modify to also include signs
-    - What are we expecting to happen \[ ]
-- Write out procedure \[X]
-    - Finding lottery tickets \[X]
-    - What is "added" from our code to other work \[X]
+5/4/24
 
-### Making Models:
-- Create neural architecture(s) \[X]
-- Code to train model based on input and random seed \[X]
-- Code to test mode performance \[X]
-- Code to save model to file \[X]
-- Code to run lottery ticket procedure \[ ]
+## About
 
-### Comparing Models:
-- Code for layer-wise comparison? \[ ]
-- Code for sign-similarity algorithm? \[ ]
+This project reimplements the procedure from the Lottery Ticket Hypothesis paper \[3]
+and builds a codebase to run experiments on different variations of the procedure and its
+hyperparameters.
 
-### Visualizations: 
+### Lottery Ticket Hypothesis
 
-*Break this into more subtasks
-- Code to plot results \[ ]
+The Lottery Ticket Hypothesis (LTH) states that it is possible to selectively train networks
+with unstructured sparsity through iterative magnitude pruning which are able to match or
+exceed the performance of the original network in as many or fewer training iterations.
 
-### Project Proposal & Short Video Presentation 
+The original paper investigated several network architectures on the MNIST and CIFAR10 datasets
+but due to time constraints we have only implemented the experimental configuration for the 
+LeNet-300-100 architecture on the MNIST dataset.
 
-*Preliminary results due
+## Requirements
 
-[Template](https://docs.google.com/document/d/1Ibxb8Egomb8bcWKkVDugm8msLasEfDYyuyuCgU5X5Co/edit)
-- Introduction \[ ]
-- Problem Defintion and Algorithm \[ ]
-    - Task definition
-    - Dataset
-    - Algorithm definition
-- Experimental Evaluation \[ ]
-    - Methodology
-    - Results
-    - Discussion
-- Related Work \[ ]
-- Next Steps \[ ]
-    - Elaborate on specific next steps
-    - Define roles going forward
-- Code and Dataset \[ ]
-- Conclusion \[ ]
-- Bibliography \[ ]
-- Formatting \[ ]
-- Video Report \[ ]
-    - Problem description (~2 minutes)
-    - Dataset description (~2 minutes)
-    - Initial results (~2 minutes)
-    - Next steps and timeline (~2 minutes)
-- Submit \[ ]
-    - Project_Proposal_Report_Group_#.pdf
-    - Project_Proposal_Video_Group_#.mp4
+This project was developed on Python version 3.11.5 and requires the following packages:
+- `tensorflow`
+- `matplotlib`
+- `numpy`
+- `multiprocess`
+
+Along with any dependencies pulled in by these packages.
+
+Running:
+
+```
+pip install tensorflow matplotlib numpy multiprocess
+``` 
+
+should be able to install all necessary packages. It may be necessary to create a new Python
+environment to do this in depending on package versions installed in the exsting one.
 
 
-### Final Report:
+## Running
 
-[Template](https://docs.google.com/document/d/1afAWQNCTLAsdrjXKEf7ndB2c5xbw5cBnfQUea-eHDr4/edit)
-- Introduction \[ ]
-- Problem Defintion and Algorithm \[ ]
-    - Task definition
-    - Algorithm definition
-- Experimental Evaluation \[ ]
-    - Methodology
-    - Results
-    - Discussion
-- Related Work \[ ]
-- Code and Dataset \[ ]
-- Conclusion \[ ]
-- Bibliography \[ ]
-- Formatting \[ ]
-- Submit \[ ]
-    - Project_Report_Group_#.pdf
+There are a few top-level Jupyter notebooks which are used primarily for testing/developing.
+These can be ran in order to get a glimpse of various components, but the main scripts are in
+the following locations.
 
-### Final Presentation:
-- Submit \[ ]
-    - Problem description (~3 minutes)
-    - Data description (~3 minutes)
-    - ML approaches and results (~7 minutes)
+### Experimental Scripts
 
-### Misc:
-- Peer Evaluations \[ ]
+**src/experiment_scripts**
 
-## Introduction
+Experimental scripts are used to run the LTH procedure and create/train/save models at different
+steps in the process. These are set up as Python scripts which take a number of configurable 
+command line arguments and can be ran as follows:
 
-The recent trends of deep neural networks becoming increasingly deep stems from the apparent ability of these more sophisticated networks to still generalize well to unseen data. With the ability for enhanced performance, there are a number of drawbacks with continually creating larger networks. Among these are:
-1. Increased computational costs to train these networks make it exceedingly prohibitive to conduct research.
-2. Huge networks take up a large amount of memory and take a long time to run, making their use prohibitive on resource-constrained technology (old or mobile devices, embedded systems, etc.)
-3. It becomes even more difficult to make any sense from the resulting models as the sheer size of them makes them a black box.
+```
+python lenet_300_100_iterative_magnitude_pruning.py --args
+```
 
-With these challenges, techniques for pruning these neural networks and extracting workable subnetworks with fewer parameters has become an active field of research. The techniques explored in this project are derived from the *Lottery Ticket Hypothesis" posed by Frankle and Carbin which states: "A randomly-initialized, dense neural network contains a subnet- work that is initialized such that—when trained in isolation—it can match the test accuracy of the original network after training for at most the same number of iterations."
+This will spin up a specified number of processes which will parallelize training of models
+and save output to the location specified by the user through the arguments.
 
-In the paper, they employ the following procedure for iteratively extracting winning tickets on both a fully-connected network for the MNIST dataset (LeNet architecture), and on several different convolutional networks for the CIFAR10 dataset (Conv-2, Conv-4, and Conv-6 architectures):
+**Note: As of now there is only one experiment script for LeNet-300-100 architecture using the MNIST dataset.**
 
-Strategy 1: Iterative pruning with resetting.
-1. Randomly initialize a neural network f (x; m ⊙ θ) where θ = θ0 and m = 1|θ| is a mask.
-2. Train the network for j iterations, reaching parameters m ⊙ θj .
-3. Prune s% of the parameters, creating an updated mask m′ where Pm′ = (Pm − s)%.
-4. Reset the weights of the remaining portion of the network to their values in θ0. That is, let θ = θ0.
-5. Let m = m′ and repeat steps 2 through 4 until a sufficiently pruned network has been obtained.
+A 'Hello World' version of running experiments can be accessed in the top-level `experiments.ipynb` Jupyter
+notebook. Console output is hidden by default, but this can be toggled by changing the argument supplied to the
+`verbose` argument in the call to the `get_lenet_300_100_parameters` function.
 
-For the LeNet and Conv architectures, Pruning is done on a magnitudual layer-wise basis, and connections to outputs are pruned at half of the rate of the rest of the network. For Resnet-18 and VGG-19, pruning is done globally in order to avoid bottlenecking lottery tickets when a layer with few parameters gets overpruned.
-
-Some of the most interesting results seen by these lottery ticket networks is that they:
-- Learn faster and hit early stopping earlier during training as they are pruned more (to a certain point)
-- Improve performance as opposed to the original network until pruning reaches ~2.1% remaining parameters
-- Generalize better, with closer training/test set accuracy
-
-The main explanation for why these networks can be found via this iterative pruning is that with larger networks there is a combinatorial increase in the number of subnetworks, meaning bigger networks are more likely to have a subnetwork which is, by chance, able to match or exceed the performance of the full network. The authors conjecture one possible explanation that SGD selectively seeks out and trains a well-initialized subnetwork. While this implies there are solid odds for discovering lottery ticket networks in a sufficiently large network, it does not examine the reason why the resulting networks are so performant. A crucial step in the procedure for extracting these lottery tickets is to reset the weights of parameters back to their initial, randomly-initialized weights after each round of pruning. Randomly reinitialized weights resulted in the networks which were reset after pruning to learn slower and experience performance dropoffs at much lower levels of pruning. This seems to imply a prerequisite condition for a set of parameters in the original network to form one of these sparse lottery ticket subnetworks which is fulfilled by the original randomly-initialized weights. The purpose of this project is to investigate what exactly these prerequisites may be, and if they are able to be leveraged to more efficiently train for/seek out lottery ticket networks.
-
-## Hypothesis
-
-We hypothesize there are structual similarities across winning lottery tickets from a certain dataset, task, and architecture which are what allow them to be so successful in training sparse networks to match or succeed the performance of unpruned neural networks trained on the same task.
-
-## Procedure
-
-## Results
-
-## Conclusion
-
-## Links
-- [Google Drive](https://drive.google.com/drive/folders/1TV3oNUlDSi0IRF1knm-K9NLvfo4Xl9Lr?usp=share_link)
 
 ## References
 - [Reference Code](https://github.com/arjun-majumdar/Lottery_Ticket_Hypothesis-TensorFlow_2/blob/master/LTH-LeNet_300_100_10_MNIST_Unstructured_Pruning.ipynb)

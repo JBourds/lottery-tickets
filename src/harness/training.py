@@ -10,6 +10,7 @@ Date: 3/17/24
 """
 
 import copy
+from datetime import datetime
 import numpy as np
 import os
 import tensorflow as tf
@@ -132,6 +133,9 @@ def training_loop(
 
     :returns: Model with updated weights as well as the training round data.
     """
+    # Keep track of the start time
+    training_start_time: datetime = datetime.now()        
+
     # Number of epochs without improvement
     local_patience: int = 0
     best_validation_loss: float = float('inf')
@@ -172,9 +176,9 @@ def training_loop(
         print(f'Number of Batches: {num_batches}')
         print(f'Batch Size: {batch_size}')
         print(f'Step {pruning_step} of Iterative Magnitude Pruning')
-        
+      
     batch_counter: int = 0
-        
+
     for epoch in range(num_epochs):
         for batch_index in range(num_batches):
             # Calculate the lower/upper index for batch (assume data is shuffled)
@@ -262,6 +266,7 @@ def training_loop(
         validation_losses, 
         validation_accuracies
     )
+    trial_data.set_start_time(training_start_time)
 
     return trial_data
 
@@ -325,7 +330,8 @@ def train(
         verbose,
     )
     
-    # Save the round data
+    # Stop the trial data's timer and save it to the target directory
+    trial_data.stop_timer()
     trial_data_directory: str = os.path.join(output_directory, paths.get_model_directory(random_seed, pruning_step, trial_data=True))
     trial_data.save_to(trial_data_directory, 'trial_data.pkl')
 
