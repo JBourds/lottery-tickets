@@ -10,6 +10,7 @@ Date Created: 5/2/24
 
 import os
 import re
+from typing import Generator
 
 from src.harness import history
 
@@ -51,7 +52,7 @@ def get_batch_summaries(
     batch_data_file: str = 'experiment_summary.pkl',
     start_batch: int = 0,
     max_num_batches: int = None,
-    ) -> list[history.ExperimentSummary]:
+) -> Generator[history.ExperimentSummary, None, None]:
     """
     Function which takes a top level directory and information about the naming convention of 
     subdirectories in order to read in all the batch experiment summaries.
@@ -70,8 +71,9 @@ def get_batch_summaries(
         max_num_batches (int, optional): Maximum number of batch summaries to try and load.
             Default is None, will load every possible batch.
 
-    Returns:
-        list[history.ExperimentSummary]: List of all experiment summaries which were read in.
+    Yields:
+        ExperimentSummary: Each experiment summary as it's loaded- prevents running out of memory
+            by only needing to have one batch in memory at a time.
     """
         
     if not isinstance(start_batch, int):
@@ -80,22 +82,18 @@ def get_batch_summaries(
         raise ValueError('Start batch cannot be negative.')
     elif max_num_batches is None:
         max_num_batches = float('inf')
-    
         
     # Get a list of all directories in the experiment directory which match the batch prefix
-    batch_summaries: list[history.ExperimentSummary] = []
     # Order batch directories by number at the end (lexicographical ordering doesn't work here)
-    batch_directories: list[str] = sorted([directory for directory in os.listdir(batch_directory) if re.match(batch_prefix, directory, re.IGNORECASE)], key=lambda x: int(re.match(batch_prefix + r'(\d+)$', x, re.IGNORECASE).group(1)))
+    batch_directories = sorted([directory for directory in os.listdir(batch_directory) if re.match(batch_prefix, directory, re.IGNORECASE)], key=lambda x: int(re.match(batch_prefix + r'(\d+)$', x, re.IGNORECASE).group(1)))
     
     for batch_dir in batch_directories[start_batch:]:
         batch_number = int(re.match(batch_prefix + r'(\d+)$', batch_dir, re.IGNORECASE).group(1))
         if batch_number >= start_batch and batch_number < start_batch + max_num_batches:
-            batch_summary_file: str = os.path.join(batch_directory, batch_dir, batch_data_file)
+            batch_summary_file = os.path.join(batch_directory, batch_dir, batch_data_file)
             if not os.path.exists(batch_summary_file):
                 raise FileNotFoundError(f'Could not find summary file at path: {batch_summary_file}')
-            batch_summaries.append(history.ExperimentSummary.load_from(batch_summary_file))
-    
-    return batch_summaries
+            yield history.ExperimentSummary.load_from(batch_summary_file)
 
 def get_experiment_summaries_from_batch_trials(
     batch_directory: str, 

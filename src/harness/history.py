@@ -41,15 +41,6 @@ class TrialData(mixins.PickleMixin, mixins.TimerMixin):
     train_accuracies: np.array
     test_losses: np.array
     test_accuracies: np.array
-    
-    def __str__(self):
-        """
-        Returns:
-            str: String representation of a training round.
-        """
-        representation: str = f'Trial from puning step {self.pruning_step}'
-        return representation
-
 
 class ExperimentData(mixins.PickleMixin, mixins.TimerMixin):
     
@@ -86,14 +77,6 @@ class ExperimentData(mixins.PickleMixin, mixins.TimerMixin):
         """
         self.trials[trial.pruning_step] = trial
 
-    def __str__(self) -> str:
-      """
-      String representation to create a summary of an experiment.
-
-      :returns: String representation.
-      """
-      return '\n'.join([str(round) for round in self.trials.values()])
-
 
 class ExperimentSummary(mixins.PickleMixin, mixins.TimerMixin):
     
@@ -121,17 +104,4 @@ class ExperimentSummary(mixins.PickleMixin, mixins.TimerMixin):
             int: Number of experiments.
         """
         return len(self.experiments)
-            
-    def __str__(self) -> str:
-      """
-      String representation to create a summary of the experiment.
-
-      :returns: String representation.
-      """
-      for seed, experiment in self.experiments.items():
-          print(f'\nSeed {seed}')
-          for idx, round in enumerate(experiment.trials.values()):
-              print(f'Pruning Step {idx}:')
-              print(round)
-
 
