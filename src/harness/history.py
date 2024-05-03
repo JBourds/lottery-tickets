@@ -151,6 +151,24 @@ class TrialData(mixins.PickleMixin, mixins.TimerMixin):
             layerwise=layerwise,
             use_initial_weights=use_initial_weights
         )
+        
+    def get_weight_density(
+        self, 
+        layerwise: bool = False, 
+        use_initial_weights: bool = False,
+        ) -> Union[float, list[float]]:
+        """
+        Function used to get a density plot of weight distributions,
+
+        Returns:
+            Union[float, list[float]]: Single float or list of floats depending on whether it performs
+                calculations globally or by layer.
+        """
+        return self._perform_operation_globally_or_layerwise(
+            operation=self._get_weight_density,
+            layerwise=layerwise,
+            use_initial_weights=use_initial_weights
+        )
     
     # ------------------------- Private Helper Methods -------------------------
     
@@ -174,7 +192,7 @@ class TrialData(mixins.PickleMixin, mixins.TimerMixin):
             any: Returns type depends on the operation.
         """
         # Convert masks into boolean Numpy array for indexing, and convert weights into Numpy array as well
-        masks: list[np.ndarray] = [mask.astype('bool') for mask in self.masks]
+        masks: list[np.ndarray] = [mask.astype(bool) for mask in self.masks]
         weights: list[np.ndarray] = self.initial_weights if use_initial_weights else self.final_weights
         weights = [w for w in weights]
         
@@ -188,7 +206,7 @@ class TrialData(mixins.PickleMixin, mixins.TimerMixin):
 
     def _get_ratio_of_unmasked_positive_weights(self, weights: list[np.ndarray], masks: list[np.ndarray]) -> float:
         """
-        Private function which computers the proportion of unmasked positive weights.
+        Private function which computes the proportion of unmasked positive weights.
         
         Args:   
             weights: (list[np.ndarray]): List of Numpy arrays for the weights in each layer being included.
@@ -209,7 +227,7 @@ class TrialData(mixins.PickleMixin, mixins.TimerMixin):
     
     def _get_average_parameter_magnitude(self, weights: list[np.ndarray], masks: list[np.ndarray]) -> float:
         """
-        Private function which computers the average magnitude in a list of unmasked weights.
+        Private function which computes the average magnitude in a list of unmasked weights.
         
         Args:   
             weights: (list[np.ndarray]): List of Numpy arrays for the weights in each layer being included.
@@ -226,6 +244,28 @@ class TrialData(mixins.PickleMixin, mixins.TimerMixin):
         unmasked_weight_count: int = np.sum([np.size(w) for w in unmasked_weights])
         
         return unmasked_weight_sum_magnitude / unmasked_weight_count
+    
+    def _get_weight_density(self, weights: list[np.ndarray], masks: list[np.ndarray]) -> np.array:
+        """
+        Private function which computes a density plot of weights.
+        
+        Args:   
+            weights: (list[np.ndarray]): List of Numpy arrays for the weights in each layer being included.
+            masks: (list[np.ndarray]): List of Numpy arrays for the masks in each layer being included.
+                
+        Returns:
+            np.array[float]: Density plot of weights.
+        """
+        assert len(weights) == len(masks), 'Weight and mask arrays must be the same length.'
+        assert np.all([w.shape == m.shape for w, m in zip(weights, masks)]), 'Weights and masks must all be the same shape'
+        
+        # Flatten the weights according to the masks
+        unmasked_weights = np.concatenate([w[mask].flatten() for w, mask in zip(weights, masks)])
+        
+        # Compute the density plot of target weights
+        density, bins = np.histogram(unmasked_weights, bins=20, density=True)
+        
+        return density, bins
     
     def __str__(self):
         """

@@ -108,6 +108,39 @@ def plot_average_magnitude(
     plt.gca().grid()
     plt.show()
     
+def plot_weight_density(
+    summary: history.ExperimentSummary, 
+    use_initial_weights: bool = False,
+    plot_both: bool = False, 
+    ):
+    """
+    Plot the density histograms of weights across models.
+
+    Args:
+        summary (history.ExperimentSummary): Experiment data.
+        use_initial_weights (bool, optional): Flag for using initial weights. Defaults to False.
+        plot_both (bool, optional): Flag for plotting both sets of weights. Defaults to False.
+    """
+    
+    magnitude_function: callable = functools.partial(t_agg.get_global_average_magnitude, use_initial_weights=use_initial_weights)
+    mask_status: str = 'Initial' if use_initial_weights else 'Final'
+    
+    # Global Initial Weight Proportion Positive Weights
+    plt.figure()
+    bp.create_line_graph_with_confidence_intervals_over_sparsities(summary, magnitude_function, legend=f'{mask_status} Weights', show_ci_legend=not plot_both)
+    if plot_both:
+        second_mask_status: str = 'Final' if use_initial_weights else 'Initial'
+        second_magnitude_function: callable = functools.partial(t_agg.get_global_average_magnitude, use_initial_weights=not use_initial_weights)
+        bp.create_line_graph_with_confidence_intervals_over_sparsities(summary, second_magnitude_function, legend=f'{second_mask_status} Weights')
+
+    plt.gca().yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}'))
+    plt.gca().set_title(f'Average Magnitude of Masked {mask_status} Weights Over Iterative Pruning')
+    plt.gca().set_ylabel('Average Magnitude')
+    plt.gca().set_xlabel('Sparsity (% Unpruned Weights)')
+    plt.gca().legend()
+    plt.gca().grid()
+    plt.show()
+    
 def plot_loss_before_training(summary: history.ExperimentSummary):
     """
     Plot the loss from reset or masked initial weights.
