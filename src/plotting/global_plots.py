@@ -17,8 +17,11 @@ import os
 from src.harness import constants as C
 from src.harness import history
 from src.harness import paths
+from src.metrics import experiment_aggregations as e_agg
 from src.metrics import trial_aggregations as t_agg
 from src.plotting import base_plots as bp
+
+# ------------------------- Helper Functions -------------------------
 
 def save_plot(location: str):
     """
@@ -35,6 +38,8 @@ def save_plot(location: str):
             paths.create_path(directory)
         plt.savefig(location)
         
+# ------------------------- Plots for Single Experiment Summary -------------------------
+        
 def plot_early_stopping(
     summary: history.ExperimentSummary, 
     save_location: str = None,
@@ -50,9 +55,10 @@ def plot_early_stopping(
     
     # Early Stopping
     plt.figure(figsize=(8,6))
-    bp.create_line_graph_with_confidence_intervals_over_sparsities(
-        summary, 
-        t_agg.get_early_stopping_iteration, 
+    bp.plot_aggregated_summary_ci(
+        summary=summary, 
+        get_x=e_agg.get_sparsities,
+        aggregate_trials=t_agg.get_early_stopping_iteration, 
         legend='Early Stopping Iteration',
         show_min_point=True,
     )
@@ -86,9 +92,10 @@ def plot_best_accuracy_at_early_stopping(
     
     # Best Accuracy at Early Stopping
     plt.figure(figsize=(8,6))
-    bp.create_line_graph_with_confidence_intervals_over_sparsities(
-        summary, 
-        best_accuracy, 
+    bp.plot_aggregated_summary_ci(
+        summary=summary, 
+        get_x=e_agg.get_sparsities,
+        aggregate_trials=best_accuracy, 
         legend='Test Accuracy',
         show_max_point=True,
     )
@@ -125,7 +132,11 @@ def plot_sign_proportion(
     
     # Global Initial Weight Proportion Positive Weights
     plt.figure(figsize=(8,6))
-    bp.create_line_graph_with_confidence_intervals_over_sparsities(summary, proportion_of_weights_function)
+    bp.plot_aggregated_summary_ci(
+        summary=summary, 
+        get_x=e_agg.get_sparsities,
+        aggregate_trials=proportion_of_weights_function,
+    )
     plt.gca().yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}%'))
     plt.gca().set_title(f'Percentage of {sign} Masked {mask_status} Weights Over Iterative Pruning')
     plt.gca().set_ylabel(f'Proportion of {sign} Weights')
@@ -156,11 +167,21 @@ def plot_average_magnitude(
     
     # Global Initial Weight Proportion Positive Weights
     plt.figure(figsize=(8,6))
-    bp.create_line_graph_with_confidence_intervals_over_sparsities(summary, magnitude_function, legend=f'{mask_status} Weights', show_ci_legend=not plot_both)
+    bp.plot_aggregated_summary_ci(
+        summary=summary, 
+        get_x=e_agg.get_sparsities,
+        aggregate_trials=magnitude_function, 
+        legend=f'{mask_status} Weights', 
+        show_ci_legend=not plot_both),
     if plot_both:
         second_mask_status: str = 'Final' if use_initial_weights else 'Initial'
         second_magnitude_function: callable = functools.partial(t_agg.get_global_average_magnitude, use_initial_weights=not use_initial_weights)
-        bp.create_line_graph_with_confidence_intervals_over_sparsities(summary, second_magnitude_function, legend=f'{second_mask_status} Weights')
+        bp.plot_aggregated_summary_ci(
+            summary=summary, 
+            get_x=e_agg.get_sparsities,
+            aggregate_trials=second_magnitude_function, 
+            legend=f'{second_mask_status} Weights'
+        )
         # If we plot this twice, it inverts x axis twice
         plt.gca().invert_xaxis()
 
@@ -194,11 +215,22 @@ def plot_weight_density(
     
     # Global Initial Weight Proportion Positive Weights
     plt.figure(figsize=(8,6))
-    bp.create_line_graph_with_confidence_intervals_over_sparsities(summary, magnitude_function, legend=f'{mask_status} Weights', show_ci_legend=not plot_both)
+    bp.plot_aggregated_summary_ci(
+        summary=summary, 
+        get_x=e_agg.get_sparsities,
+        aggregate_trials=magnitude_function, 
+        legend=f'{mask_status} Weights', 
+        show_ci_legend=not plot_both,
+    )
     if plot_both:
         second_mask_status: str = 'Final' if use_initial_weights else 'Initial'
         second_magnitude_function: callable = functools.partial(t_agg.get_global_average_magnitude, use_initial_weights=not use_initial_weights)
-        bp.create_line_graph_with_confidence_intervals_over_sparsities(summary, second_magnitude_function, legend=f'{second_mask_status} Weights')
+        bp.plot_aggregated_summary_ci(
+            summary=summary, 
+            get_x=e_agg.get_sparsities,
+            aggregate_trials=second_magnitude_function, 
+            legend=f'{second_mask_status} Weights',
+        )
 
     plt.gca().yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}'))
     plt.gca().set_title(f'Average Magnitude of Masked {mask_status} Weights Over Iterative Pruning')
@@ -224,10 +256,11 @@ def plot_loss_before_training(
 
     # Global Initial Weight Proportion Positive Weights
     plt.figure(figsize=(8,6))
-    bp.create_line_graph_with_confidence_intervals_over_sparsities(
-        summary, 
-        loss_before_training, 
-        show_min_point=True
+    bp.plot_aggregated_summary_ci(
+        summary=summary, 
+        get_x=e_agg.get_sparsities,
+        aggregate_trials=loss_before_training, 
+        show_min_point=True,
     )
     plt.gca().yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}'))
     plt.gca().set_title('Untrained and Masked Initial Weights Loss')
@@ -253,9 +286,10 @@ def plot_accuracy_before_training(
 
     # Global Initial Weight Proportion Positive Weights
     plt.figure(figsize=(8,6))
-    bp.create_line_graph_with_confidence_intervals_over_sparsities(
-        summary, 
-        accuracy_before_training,
+    bp.plot_aggregated_summary_ci(
+        summary=summary, 
+        get_x=e_agg.get_sparsities,
+        aggregate_trials=accuracy_before_training,
         show_max_point=True,
     )
     plt.gca().yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}%'))
@@ -266,3 +300,5 @@ def plot_accuracy_before_training(
     plt.gca().grid()
     save_plot(save_location)
     plt.show()
+    
+# ------------------------- Plots for Doing Batch Summaries -------------------------
