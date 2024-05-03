@@ -13,11 +13,7 @@ from sys import platform
 DATA_DIRECTORY: str = 'data'
 MODEL_DIRECTORY: str = 'models'
 EXPERIMENTS_DIRECTORY: str = 'experiments'
-
-DIRECTORIES: list[str] = [
-    MODEL_DIRECTORY,
-    DATA_DIRECTORY,
-]
+PLOTS_DIRECTORY: str = 'plots'
 
 PATIENCE: int = 3
 MINIMUM_DELTA: float = 0.0001
