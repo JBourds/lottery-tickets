@@ -8,6 +8,7 @@ Date: 3/17/24
 """
 
 import functools
+import logging
 import multiprocess as mp
 import numpy as np
 import os
@@ -32,6 +33,7 @@ def run_experiments(
     experiment: callable,
     get_experiment_parameters: callable, 
     max_processes: int = os.cpu_count(),
+    log_level: int = logging.INFO,
     ) -> history.ExperimentSummary:
     """
     Main function which runs experiments with provided configurations.
@@ -48,6 +50,7 @@ def run_experiments(
             responsible for running the experiment.
         max_processes (int): Integer value for the maximum number of processes which are attempted
             to be run in parallel.
+        log_level (int): Log level to use.
     Returns:
         history.ExperimentSummary: Object containing information about all trained models.
     """
@@ -69,7 +72,11 @@ def run_experiments(
     def run_single_experiment(experiment_arguments: dict) -> tuple[int, history.ExperimentData]:
         """
         Helper function which unpacks experiment arguments into a call to the function.
+        Sets logging for the specific experiment, since each experiment runs in
+        its own process.
         """
+        logging.basicConfig()
+        logging.getLogger().setLevel(log_level)
         experiment_data: history.ExperimentData = experiment(**experiment_arguments)
         return experiment_data
     
@@ -80,7 +87,7 @@ def run_experiments(
     
     # Run experiments in parallel
     with mp.get_context('spawn').Pool(max_processes) as pool:
-        experiment_results: list[history.ExperimentData] = pool.map(run_single_experiment, experiment_args)
+        experiment_results: list[history.ExperimentData] = list(pool.map(run_single_experiment, experiment_args))
             
     # Fill the experiment summary object, stop its timer, and save it
     experiment_summary.experiments = {seed: experiment_result for seed, experiment_result in zip(random_seeds, experiment_results)}
@@ -106,7 +113,6 @@ def run_iterative_pruning_experiment(
     minimum_delta: float = C.MINIMUM_DELTA,
     allow_early_stopping: bool = True,
     experiment_directory: str = './',
-    verbose: bool = True,
     ) -> history.ExperimentData:
     """
     Function used to run the pruning experiements for a given random seed.
@@ -136,7 +142,6 @@ def run_iterative_pruning_experiment(
         allow_early_stopping (bool, optional): Boolean flag for whether early stopping is enabled. 
             Defaults to True.
         experiment_directory (str): Path to place all experimental data.
-        verbose (bool, optional): Boolean flag for whether console output is displayed. Defaults to True.
 
     Returns:
         history.ExperimentData: Object containing information about all the training rounds produced in the experiment.
@@ -179,17 +184,15 @@ def run_iterative_pruning_experiment(
             optimizer=opt,
             allow_early_stopping=allow_early_stopping,
             output_directory=experiment_directory,
-            verbose=verbose,
         )
 
         experiment_data.add_trial(trial_data)
 
-        if verbose:
-            X_train, _, _, _ = dataset.load()
-            iteration_count: int = np.sum(trial_data.train_accuracies != 0)
-            print(f'Took {iteration_count} iterations')
-            print(f'Ended on epoch {np.ceil(iteration_count * batch_size / X_train.shape[0])} out of {num_epochs}')
-            print(f'Ended with a best training accuracy of {np.max(trial_data.train_accuracies) * 100:.2f}% and test accuracy of {np.max(trial_data.test_accuracies) * 100:.2f}%')
+        X_train, _, _, _ = dataset.load()
+        iteration_count: int = np.sum(trial_data.train_accuracies != 0)
+        logging.info(f'Took {iteration_count} iterations')
+        logging.info(f'Ended on epoch {np.ceil(iteration_count * batch_size / X_train.shape[0])} out of {num_epochs}')
+        logging.info(f'Ended with a best training accuracy of {np.max(trial_data.train_accuracies) * 100:.2f}% and test accuracy of {np.max(trial_data.test_accuracies) * 100:.2f}%')
     
     experiment_data.stop_timer()
     return experiment_data

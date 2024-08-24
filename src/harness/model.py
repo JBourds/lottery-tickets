@@ -11,9 +11,6 @@ import numpy as np
 import os
 import tensorflow as tf
 from tensorflow import keras
-from keras import Sequential
-from keras.layers import Dense, Flatten, Input
-from sys import platform
 
 from src.harness import constants as C
 from src.harness import paths
@@ -37,7 +34,7 @@ def load_model(
     :returns: Model object with weights loaded and callbacks to use when fitting the model.
     """
     filepath: str = os.path.join(directory, paths.get_model_filepath(seed, pruning_step, masks, initial))
-    model: tf.keras.Model = tf.keras.models.load_model(filepath)
+    model: tf.keras.Model = keras.models.load_model(filepath)
     return model
 
 def save_model(
@@ -65,32 +62,6 @@ def save_model(
         
     # Save the initial weights in an 'initial' directory in the top-level of the model directory
     model.save(filepath, overwrite=True)
-
-def create_lenet_300_100(
-    input_shape: tuple[int, ...], 
-    num_classes: int, 
-    initializer: tf.initializers.Initializer = tf.initializers.GlorotNormal(),
-    ) -> keras.Model:
-    """
-    Function for creating LeNet-300-100 model.
-
-    :param input_shape: Expected input shape for images.
-    :param num_classes: Number of potential classes to predict.
-    :param initializer: Initializer used to set weights at the beginning
-
-    :returns: Compiled LeNet-300-100 architecture.
-    """
-    model: keras.Model = Sequential([
-        Input(input_shape),
-        Dense(300, activation='relu', kernel_initializer=initializer),
-        Dense(100, activation='relu', kernel_initializer=initializer),
-        Dense(num_classes, activation='softmax', kernel_initializer=initializer),
-    ], name="LeNet-300-100")
-    
-    # Explicitly build the model to initialize weights
-    if platform == 'darwin':
-        model.build(input_shape=input_shape)
-    return model
 
 def initialize_mask_model(model: keras.Model):
     """

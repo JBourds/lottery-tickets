@@ -15,7 +15,7 @@ MODEL_DIRECTORY: str = 'models'
 EXPERIMENTS_DIRECTORY: str = 'experiments'
 PLOTS_DIRECTORY: str = 'plots'
 
-PATIENCE: int = 3
+PATIENCE: int = 2
 MINIMUM_DELTA: float = 0.0001
 LEARNING_RATE: float = 0.005
 if platform == 'darwin':
@@ -35,6 +35,18 @@ NUM_MODELS: int = 100
 TRAINING_EPOCHS: int = 60
 BATCH_SIZE: int = 128
 PRUNING_STEPS: int = 45
+
+# Architectures
+MLP_ARCHITECTURES = {
+    'lenet',
+}
+
+SUPPORTED_ARCHITECTURES = {
+    'lenet',
+    'conv-2',
+    'conv-4',
+    'conv-6',
+}
 
 class OriginalParams(Enum):
     """

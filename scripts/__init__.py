@@ -1,0 +1,97 @@
+"""
+scripts/__init__.py
+
+Module file containing utility functions for running scripts.
+
+Author: Jordan Bourdeau
+"""
+
+import argparse
+import functools
+import logging
+import numpy as np
+import os
+from tensorflow import keras
+import sys
+from typing import Any, Callable, Dict, List, Optional, Tuple
+
+sys.path.append('../')
+from src.harness.architecture import Architecture
+from src.harness import constants as C
+from src.harness import dataset as ds
+from src.harness import experiment
+from src.harness import model as mod
+from src.harness import pruning
+from src.harness import rewind
+
+def get_experiment_parameter_constructor(
+    model: str,
+    dataset: ds.Datasets,
+    rewind_rule: str,
+    pruning_rule: str,
+    sparsity_percents: List[float],
+    loss_function: Optional[keras.losses.Loss] = None,
+    optimizer: Optional[keras.optimizers.Optimizer] = None,
+    global_pruning: bool = False,
+    ) -> Callable[Tuple[int, str], Dict[str, Any]]:
+    """
+    Generic function which takes experiment parameters and returns a function
+    which acts as a constructor for the dictionary containing experimental
+    parameters.
+    """
+
+    def inner_function(seed: int, directory: str) -> dict:        
+        """
+        Inner function which inherits all the context it was created in but
+        gets called with a unique seed and directory each time.
+        """
+        architecture = Architecture(model, dataset)
+        make_model = architecture.get_model_constructor()
+            
+        return {
+            'random_seed': seed,
+            'create_model': make_model,
+            'dataset': architecture.dataset,
+            'sparsities': sparsity_percents,
+            'rewind_rule': get_rewind_rule(rewind_rule),
+            'pruning_rule': get_pruning_rule(pruning_rule),
+            'loss_function': loss_function,
+            'optimizer': optimizer,
+            'global_pruning': global_pruning,
+            'experiment_directory': directory,
+        }
+    
+    return inner_function
+
+def get_log_level(log_level: int) -> int:
+    match log_level:
+        case 0:
+            return logging.NOTSET
+        case 1:
+            return logging.DEBUG
+        case 2:
+            return logging.INFO
+        case 3:
+            return logging.WARNING
+        case 4:
+            return logging.ERROR
+        case 5:
+            return logging.CRITICAL
+        case _:
+            raise ValueError("Unknown log level '{log_level}'.")
+
+def get_rewind_rule(rewind_rule: str) -> Callable:
+    match rewind_rule:
+        case 'oi':
+            return rewind.get_rewind_to_original_init_for
+        case _:
+            raise ValueError(f"'{rewind}' is not a valid rewind rule option.")
+
+def get_pruning_rule(pruning_rule: str) -> Callable:
+    match pruning_rule:
+        case 'lm':
+            return pruning.low_magnitude_pruning
+        case 'hm':
+            return pruning.high_magnitude_pruning
+        case _:
+            raise ValueError(f"'{prune}' is not a valid pruning rule option.")

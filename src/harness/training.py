@@ -11,6 +11,7 @@ Date: 3/17/24
 
 import copy
 from datetime import datetime
+import logging
 import numpy as np
 import os
 import tensorflow as tf
@@ -110,7 +111,6 @@ def training_loop(
     loss_fn: tf.keras.losses.Loss = C.LOSS_FUNCTION(),
     optimizer: tf.keras.optimizers.Optimizer = C.OPTIMIZER(),
     allow_early_stopping: bool = True,
-    verbose: bool = True,
     ) -> tuple[tf.keras.Model, history.TrialData]:
     """
     Main training loop for the model.
@@ -129,7 +129,6 @@ def training_loop(
                           Has a default value in `constants.py`.
     :param loss_fn:       Loss function being used. Has a default value in `constants.py`.
     :param optimizer:     Optimizer function being used to update model weights. Has a default value in `constants.py`.
-    :param verbose:       Whether console output is emitted or not.
 
     :returns: Model with updated weights as well as the training round data.
     """
@@ -172,10 +171,9 @@ def training_loop(
         accuracy_metric,
     )
 
-    if verbose:
-        print(f'Number of Batches: {num_batches}')
-        print(f'Batch Size: {batch_size}')
-        print(f'Step {pruning_step} of Iterative Magnitude Pruning')
+    logging.info(f'Number of Batches: {num_batches}')
+    logging.info(f'Batch Size: {batch_size}')
+    logging.info(f'Step {pruning_step} of Iterative Magnitude Pruning')
       
     batch_counter: int = 0
 
@@ -237,12 +235,10 @@ def training_loop(
 
                     # Exit early if there are `patience` epochs without improvement
                     if local_patience >= patience:
-                        if verbose:
-                            print(f'Early stopping initiated')
+                        logging.info(f'Early stopping initiated')
                         break
                     
-            if verbose:
-                print(f'Epoch {epoch + 1} Iteration {batch_index + 1} with Batch Size: {batch_size}: Training Loss: {loss}, Training Accuracy: {accuracy}')   
+            logging.debug(f'Epoch {epoch + 1} Iteration {batch_index + 1} with Batch Size: {batch_size}: Training Loss: {loss}, Training Accuracy: {accuracy}')   
             
             batch_counter += 1
             
@@ -285,7 +281,6 @@ def train(
     optimizer: tf.keras.optimizers.Optimizer = C.OPTIMIZER(), 
     allow_early_stopping: bool = True,
     output_directory: str = './',
-    verbose: bool = True,
     ) -> tuple[tf.keras.Model, tf.keras.Model, history.TrialData]:
     """
     Function to perform a single round of training for a model.
@@ -306,7 +301,6 @@ def train(
     :param optimizer:     Optimizer to use during training. Has a default value in `constants.py`.
     :param allow_early_stopping: Boolean flag for whether early stopping is enabled.
     :param output_directory: String path for the output directory to use. Current directory by default.
-    :param verbose:       Whether console output is emitted or not.
 
     :returns: Model, masked model, and training round objects with the final trained model and the training summary/.
     """
@@ -327,7 +321,6 @@ def train(
         loss_function,
         optimizer,
         allow_early_stopping,
-        verbose,
     )
     
     # Stop the trial data's timer and save it to the target directory

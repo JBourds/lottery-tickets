@@ -6,6 +6,7 @@ Note: There is a bug where this being
 """
 
 from enum import Enum
+import functools
 import numpy as np
 import os
 import tensorflow as tf
@@ -20,13 +21,13 @@ class Datasets(Enum):
 
 class Dataset:
     
-    def __init__(self, dataset: Datasets):
+    def __init__(self, dataset: Datasets, flatten: bool = False):
         # Handle if a string is passed in, from cmdline arguments for instance
         if isinstance(dataset, str):
             match dataset.lower():
                 case 'mnist':
                     dataset = Datasets.MNIST
-                case 'cifar10':
+                case 'cifar':
                     dataset = Datasets.CIFAR10
                 case 'imagenet':
                     dataset = Datasets.ImageNet
@@ -34,9 +35,9 @@ class Dataset:
         self.dataset: Datasets = dataset
         match self.dataset:
             case Datasets.MNIST:
-                self.loader_function: callable = load_and_process_mnist
+                self.loader_function = functools.partial(load_and_process_mnist, flatten=flatten)
             case Datasets.CIFAR10:
-                self.loader_function: callable = load_and_process_cifar10
+                self.loader_function = functools.partial(load_and_process_cifar10, flatten=flatten)
     
     def get_input_shape(self, flatten: bool = True):
         """
@@ -97,14 +98,14 @@ class Dataset:
         Method to load the data for a given dataset.
 
         Returns:
-            callable: Method to load the training/test data.
+            Numpy data array extracted from the loader function.
         """
         return self.loader_function()
     
     
 # ---------------------- Data Loader Functions ----------------------
 
-def load_and_process_mnist(random_seed: int = 0, flatten: bool = True) -> tuple[np.array, np.array, np.array, np.array]:
+def load_and_process_mnist(random_seed: int = 0, flatten: bool = False) -> tuple[np.array, np.array, np.array, np.array]:
     """
     Function to load and preprocess the MNIST dataset.
     Source: https://colab.research.google.com/github/maticvl/dataHacker/blob/master/CNN/LeNet_5_TensorFlow_2_0_datahacker.ipynb#scrollTo=UA2ehjxgF7bY
@@ -112,7 +113,7 @@ def load_and_process_mnist(random_seed: int = 0, flatten: bool = True) -> tuple[
     Args:
         random_seed (int, optional): Random seed to set for dataset shuffling. Defaults to 0.
         flatten (bool, optional): Boolean flag for whether data should be flattened to 1 dimension.
-            True by default, since MNIST tends to be used by Multilayer Perceptrons.
+            False by default.
 
     Returns:
         tuple[np.array, np.array, np.array, np.array]: X and Y training and test sets after preprocessing.
@@ -149,14 +150,12 @@ def load_and_process_cifar10(random_seed: int = 0, flatten: bool = False) -> tup
     Args:
         random_seed (int, optional): Random seed to set for dataset shuffling. Defaults to 0.
         flatten (bool, optional): Boolean flag for whether data should be flattened to 1 dimension.
-            False by default, since CIFAR10 tends to be used with CNNs.
+            False by default.
 
     Returns:
         tuple[np.array, np.array, np.array, np.array]: X and Y training and test sets after preprocessing.
     """
     utils.set_seed(random_seed)
-
-    # Load CIFAR10 dataset
     (X_train, Y_train), (X_test, Y_test) = tf.keras.datasets.cifar10.load_data()
     
     if flatten:
