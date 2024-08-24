@@ -33,38 +33,26 @@ class Dataset:
                     dataset = Datasets.ImageNet
 
         self.dataset: Datasets = dataset
+        self.flatten = flatten
         match self.dataset:
             case Datasets.MNIST:
                 self.loader_function = functools.partial(load_and_process_mnist, flatten=flatten)
             case Datasets.CIFAR10:
                 self.loader_function = functools.partial(load_and_process_cifar10, flatten=flatten)
     
-    def get_input_shape(self, flatten: bool = True):
+    @property
+    def input_shape(self):
         """
         Method to get the input shape of a dataset.
-
-        Args:
-            flatten (bool, optional): Flag for whether the input should have its first 2 dimensions
-                flattened (image height and width). Defaults to True.
 
         Returns:
             tuple[int]: Shape of the dataset in length of each dimension.
         """
         shape: tuple[int] = self.dataset.value
-        if flatten:
+        if self.flatten:
             return (1, np.prod(shape))  # Flatten only the first two dimensions
         else:
             return shape
-        
-    @property
-    def input_shape(self):
-        """
-        Method to treat input shape as a property.
-
-        Returns:
-            tuple[int]: Shape of the dataset in length of each dimension.
-        """
-        return self.get_input_shape()
 
     @property
     def num_classes(self):
