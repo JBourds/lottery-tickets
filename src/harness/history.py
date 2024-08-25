@@ -8,13 +8,15 @@ Author: Jordan Bourdeay
 Date Created: 4/28/24
 """
 
-from dataclasses import dataclass
-from datetime import datetime
-import numpy as np
 import os
 import sys
+from dataclasses import dataclass
+from datetime import datetime
+
+import numpy as np
 
 from src.harness import mixins
+
 
 @dataclass
 class TrialData(mixins.PickleMixin, mixins.TimerMixin):
@@ -28,29 +30,32 @@ class TrialData(mixins.PickleMixin, mixins.TimerMixin):
     :param masks:           (list[np.ndarray]) List of mask model weights (binary mask).
     """
     pruning_step: int
-    
+
     # Model parameters
     initial_weights: list[np.ndarray]
     final_weights: list[np.ndarray]
     masks: list[np.ndarray]
-    
+
     # Metrics
     loss_before_training: float
     accuracy_before_training: float
     train_losses: np.array
     train_accuracies: np.array
-    test_losses: np.array
-    test_accuracies: np.array
+    validation_losses: np.array
+    validation_accuracies: np.array
+    test_loss: float
+    test_accuracy: float
+
 
 class ExperimentData(mixins.PickleMixin, mixins.TimerMixin):
-    
+
     def __init__(self):
         """
         Class which stores the data from an experiment 
         (list of `TrialData` objects which is of length N, where N is the # of pruning steps).
         """
         self.trials: dict[int: TrialData] = {}
-        
+
     def get_trial_count(self) -> int:
         """
         Function to return the number of trials in an experiment.
@@ -59,7 +64,7 @@ class ExperimentData(mixins.PickleMixin, mixins.TimerMixin):
             int: Number of trials.
         """
         return len(self.trials)
-        
+
     def add_trials(self, trials: list[TrialData]):
         """
         Method used to add a list `TrialData` objects to the internal representation.
@@ -79,7 +84,7 @@ class ExperimentData(mixins.PickleMixin, mixins.TimerMixin):
 
 
 class ExperimentSummary(mixins.PickleMixin, mixins.TimerMixin):
-    
+
     def __init__(self):
         """
         Class which stores data from many experiments in a dictionary, where the key
@@ -95,7 +100,7 @@ class ExperimentSummary(mixins.PickleMixin, mixins.TimerMixin):
         :param experiment: `Experiment` object to store.
         """
         self.experiments[seed] = experiment
-        
+
     def get_experiment_count(self) -> int:
         """
         Function to return the number of experiments in a summary.
@@ -104,4 +109,3 @@ class ExperimentSummary(mixins.PickleMixin, mixins.TimerMixin):
             int: Number of experiments.
         """
         return len(self.experiments)
-

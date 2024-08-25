@@ -17,12 +17,13 @@ with unstructured sparsity through iterative magnitude pruning which are able to
 exceed the performance of the original network in as many or fewer training iterations.
 
 The original paper investigated several network architectures on the MNIST and CIFAR10 datasets
-but due to time constraints we have only implemented the experimental configuration for the 
+but due to time constraints we have only implemented the experimental configuration for the
 LeNet-300-100 architecture on the MNIST dataset.
 
 ## Requirements
 
 This project was developed on Python version 3.11.5 and requires the following packages:
+
 - `tensorflow`
 - `matplotlib`
 - `numpy`
@@ -34,11 +35,10 @@ Running:
 
 ```
 pip install tensorflow matplotlib numpy multiprocess
-``` 
+```
 
 should be able to install all necessary packages. It may be necessary to create a new Python
 environment to do this in depending on package versions installed in the exsting one.
-
 
 ## Running
 
@@ -51,7 +51,7 @@ the following locations.
 **src/experiment_scripts**
 
 Experimental scripts are used to run the LTH procedure and create/train/save models at different
-steps in the process. These are set up as Python scripts which take a number of configurable 
+steps in the process. These are set up as Python scripts which take a number of configurable
 command line arguments and can be ran as follows:
 
 ```
@@ -67,8 +67,8 @@ A 'Hello World' version of running experiments can be accessed in the top-level 
 notebook. Console output is hidden by default, but this can be toggled by changing the argument supplied to the
 `verbose` argument in the call to the `get_lenet_300_100_parameters` function.
 
-
 ## References
+
 - [Reference Code](https://github.com/arjun-majumdar/Lottery_Ticket_Hypothesis-TensorFlow_2/blob/master/LTH-LeNet_300_100_10_MNIST_Unstructured_Pruning.ipynb)
 - [Dual Lottery Ticket Hypothesis Paper](https://arxiv.org/pdf/2203.04248.pdf)
 - [Lottery Ticket Hypothesis Paper + Code](https://paperswithcode.com/paper/the-lottery-ticket-hypothesis-finding-sparse)

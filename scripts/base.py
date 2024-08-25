@@ -10,20 +10,23 @@ Date Created: 4/30/24
 import argparse
 import functools
 import logging
-import numpy as np
 import os
-from tensorflow import keras
 import sys
 from typing import List
 
-sys.path.append('../')
+import numpy as np
+from tensorflow import keras
+
 from scripts import get_experiment_parameter_constructor, get_log_level
 from src.harness import constants as C
 from src.harness import dataset as ds
 from src.harness import experiment
 from src.harness import model as mod
-from src.harness import pruning
-from src.harness import rewind
+from src.harness import pruning, rewind
+from src.harness.architecture import Hyperparameters
+
+sys.path.append('../')
+
 
 def run_parallel_experiments(
     experiment_directory: str,
@@ -32,13 +35,14 @@ def run_parallel_experiments(
     num_batches: int = 1,
     sparsity_percents: List[float] = [],
     model: str = 'lenet',
+    hyperparameters: Hyperparameters | None = None,
     dataset: str = 'mnist',
     rewind_rule: str = 'oi',
     pruning_rule: str = 'lm',
-    max_processes: int = None,
+    max_processes: int | None = None,
     log_level: int = 2,
     global_pruning: bool = False
-    ) -> None:
+) -> None:
     """
     Run parallelized experiments with specified configurations.
 
@@ -56,6 +60,8 @@ def run_parallel_experiments(
         Sparsity percentages for each round of pruning.
     model : str, optional
         Model architecture to use. Defaults to 'lenet'.
+    hyperparameters : Hyperparameters, optional
+        Hyperparameters to use. Will default to defaults for provided model.
     dataset : str, optional
         Dataset to use for training. Defaults to 'mnist'.
     rewind_rule : str, optional
@@ -89,32 +95,32 @@ def run_parallel_experiments(
 
     get_experiment_parameters = get_experiment_parameter_constructor(
         model=model,
-        dataset=dataset, 
+        hyperparameters=hyperparameters,
+        dataset=dataset,
         rewind_rule=rewind_rule,
         pruning_rule=pruning_rule,
         sparsity_percents=sparsity_percents,
-        loss_function=None,
-        optimizer=None,
         global_pruning=global_pruning
     )
-    
+
     # Perform parallelized training in evenly split batches
     num_experiments_in_batch = int(np.ceil(num_experiments / num_batches))
     for batch_idx in range(num_batches):
         batch_starting_seed = starting_seed + batch_idx * num_experiments_in_batch
-        batch_directory = os.path.join(experiment_directory, f'batch_{batch_idx}')
-        
+        batch_directory = os.path.join(
+            experiment_directory, f'batch_{batch_idx}')
+
         # Last batch could be smaller
         if batch_idx == num_batches - 1:
-            num_experiments_in_batch = num_experiments - batch_idx * num_experiments_in_batch
-        
+            num_experiments_in_batch = num_experiments - \
+                batch_idx * num_experiments_in_batch
+
         experiment.run_experiments(
             starting_seed=batch_starting_seed,
-            num_experiments=num_experiments_in_batch, 
+            num_experiments=num_experiments_in_batch,
             experiment_directory=batch_directory,
             experiment=experiment.run_iterative_pruning_experiment,
             get_experiment_parameters=get_experiment_parameters,
             max_processes=max_processes,
             log_level=get_log_level(log_level),
         )
-
