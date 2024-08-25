@@ -52,9 +52,9 @@ class Architectures(Enum):
     to use in building and training them.
     """
     LENET = 'lenet'
-    CONV_2 = 'conv-2'
-    CONV_4 = 'conv-4'
-    CONV_6 = 'conv-6'
+    CONV_2 = 'conv2'
+    CONV_4 = 'conv4'
+    CONV_6 = 'conv6'
 
     # --------------- Hyperparameters ---------------
     @staticmethod
