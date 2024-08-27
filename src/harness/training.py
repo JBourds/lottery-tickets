@@ -46,7 +46,7 @@ def get_train_one_step() -> callable:
                            the mask being applied to the model getting trained.
         :param inputs:     Batch inputs.
         :param labels:     Batch labels.
-        :param hp.optimizer:  Optimizer function being used. 
+        :param hp.optimizer:  Optimizer function being used.
         :param loss_fn:    Loss function being used. Defaults to value in `constants.py`.
         :param accuracy_metric:   Accuracy metric to be used. Defaults to value in `constants.py`.
 
@@ -168,19 +168,13 @@ def training_loop(
         tf.random.shuffle(X_train, seed=pruning_step)
         tf.random.shuffle(Y_train, seed=pruning_step)
 
-        # Take first 10% of shuffled data for validation set
-        X_val = X_train[:num_validation_instances]
-        Y_val = Y_train[:num_validation_instances]
-        X_step_train = X_train[num_validation_instances:]
-        Y_step_train = Y_train[num_validation_instances:]
-
         for batch_index in range(num_batches):
             # Calculate the lower/upper index for batch (assume data is shuffled)
             low_index = batch_index * hp.batch_size
             high_index = (batch_index + 1) * hp.batch_size
             # Extract data to use for the batch
-            X_batch = X_step_train[low_index:high_index]
-            Y_batch = Y_step_train[low_index:high_index]
+            X_batch = X_train[low_index:high_index]
+            Y_batch = Y_train[low_index:high_index]
 
             # Update model parameters for each point in the training set
             loss, accuracy = train_one_step(
@@ -202,10 +196,16 @@ def training_loop(
                 # Evaluate model on validation test set using whole batch after each epoch
                 validation_loss, validation_accuracy = test_step(
                     model,
-                    X_val,
-                    Y_val,
+                    X_test,
+                    Y_test,
                     loss_function,
                     accuracy_metric,
+                )
+
+                logging.info(
+                    f'Epoch {epoch + 1}, Batch {batch_index} '
+                    + f'Validation Loss: {validation_loss}, '
+                    + f'Validation Accuracy: {validation_accuracy}'
                 )
 
                 validation_index = batch_counter // hp.eval_freq
@@ -237,16 +237,11 @@ def training_loop(
             continue
         break
 
+    logging.info(
+        f'Best Validation Accuracy and Loss: {np.max(validation_accuracies)}, {np.min(validation_losses)}')
+
     final_parameters = [tensor.numpy()
                         for tensor in copy.deepcopy(model.trainable_weights)]
-    # Final testing accuracies
-    test_loss, test_accuracy = test_step(
-        model,
-        X_test,
-        Y_test,
-        loss_function,
-        accuracy_metric,
-    )
 
     # Compile training round data
     trial_data = history.TrialData(
@@ -260,8 +255,6 @@ def training_loop(
         train_accuracies,
         validation_losses,
         validation_accuracies,
-        test_loss,
-        test_accuracy,
     )
     trial_data.set_start_time(training_start_time)
 

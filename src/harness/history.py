@@ -43,8 +43,6 @@ class TrialData(mixins.PickleMixin, mixins.TimerMixin):
     train_accuracies: np.array
     validation_losses: np.array
     validation_accuracies: np.array
-    test_loss: float
-    test_accuracy: float
 
 
 class ExperimentData(mixins.PickleMixin, mixins.TimerMixin):

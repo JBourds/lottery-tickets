@@ -179,7 +179,6 @@ def run_iterative_pruning_experiment(
             'Best accuracies:\n'
             + f'Training: {np.max(trial_data.train_accuracies) * 100:.2f}%\n'
             + f'Validation: {np.max(trial_data.validation_accuracies) * 100:.2f}%\n'
-            + f'Testing: {np.max(trial_data.test_accuracy) * 100:.2f}%\n'
         )
 
         # TODO: Have this differentiate based on outer layer name and kernel/bias

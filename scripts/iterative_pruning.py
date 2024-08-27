@@ -35,7 +35,7 @@ if __name__ == '__main__':
     #                     help='Loss function to use.')
     parser.add_argument('--eval_freq', type=int, default=100,
                         help='Frequency to test on validation data.')
-    parser.add_argument('--early_stopping', type=bool, default=True,
+    parser.add_argument('--early_stopping', type=bool, default=False,
                         help='Allow training to prematurely exit if improvements are not detected in performance.')
 
     # Experiment params

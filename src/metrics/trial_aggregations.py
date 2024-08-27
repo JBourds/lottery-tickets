@@ -81,7 +81,7 @@ def get_best_loss(trial: history.TrialData, train: bool = False) -> float:
     Returns:
         float: Best model accuracy from within a round of iterative pruning.
     """
-    return np.max(trial.train_losses) if train else trial.test_loss
+    return np.min(trial.train_losses if train else trial.validation_losses)
 
 # ------------------------- Accuracy Metrics -------------------------
 
