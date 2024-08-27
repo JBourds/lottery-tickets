@@ -49,7 +49,6 @@ def get_sparsity_percents(
         original_weight_counts: list[int],
         current_weight_counts: list[int]
     ) -> float:
-
         return np.sum(current_weight_counts) / np.sum(original_weight_counts)
 
     def sparsify(

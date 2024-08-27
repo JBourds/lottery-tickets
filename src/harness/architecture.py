@@ -61,7 +61,7 @@ class Architectures(Enum):
     def lenet_300_100_hyperparameters() -> Hyperparameters:
         return Hyperparameters(
             patience=2,
-            minimum_delta=0.0001,
+            minimum_delta=0.01,
             learning_rate=1.2e-3,
             optimizer=Adam,
             loss_function=tf.keras.losses.CategoricalCrossentropy,
@@ -71,31 +71,31 @@ class Architectures(Enum):
             fc_pruning_rate=0.2,
             conv_pruning_rate=0,
             eval_freq=100,
-            early_stopping=True,
+            early_stopping=False,
         )
 
     @staticmethod
     def conv2_hyperparameters() -> Hyperparameters:
         return Hyperparameters(
             patience=2,
-            minimum_delta=0.0001,
+            minimum_delta=0.01,
             learning_rate=2e-4,
             optimizer=Adam,
             loss_function=tf.keras.losses.CategoricalCrossentropy,
             accuracy_metric=tf.keras.metrics.CategoricalAccuracy,
-            epochs=20_000,
+            epochs=60,
             batch_size=60,
             fc_pruning_rate=0.2,
             conv_pruning_rate=0.1,
             eval_freq=100,
-            early_stopping=True,
+            early_stopping=False,
         )
 
     @staticmethod
     def conv4_hyperparameters() -> Hyperparameters:
         return Hyperparameters(
             patience=2,
-            minimum_delta=0.0001,
+            minimum_delta=0.01,
             learning_rate=3e-4,
             optimizer=Adam,
             loss_function=tf.keras.losses.CategoricalCrossentropy,
@@ -105,14 +105,14 @@ class Architectures(Enum):
             fc_pruning_rate=0.2,
             conv_pruning_rate=0.1,
             eval_freq=100,
-            early_stopping=True,
+            early_stopping=False,
         )
 
     @staticmethod
     def conv6_hyperparameters() -> Hyperparameters:
         return Hyperparameters(
             patience=2,
-            minimum_delta=0.0001,
+            minimum_delta=0.01,
             learning_rate=3e-4,
             optimizer=Adam,
             loss_function=tf.keras.losses.CategoricalCrossentropy,
@@ -122,7 +122,7 @@ class Architectures(Enum):
             fc_pruning_rate=0.2,
             conv_pruning_rate=0.15,
             eval_freq=100,
-            early_stopping=True,
+            early_stopping=False,
         )
 
   # --------------- Constructors ---------------

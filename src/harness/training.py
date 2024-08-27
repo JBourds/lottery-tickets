@@ -53,21 +53,20 @@ def get_train_one_step() -> callable:
         :returns: Loss and accuracy from data passed into the model.
         """
         with tf.GradientTape() as tape:
-            predictions: tf.Tensor = model(inputs)
-            loss: tf.keras.losses.Loss = loss_fn(labels, predictions)
+            predictions = model(inputs, training=True)
+            loss = loss_fn(labels, predictions)
 
-        gradients: tf.Tensor = tape.gradient(loss, model.trainable_variables)
+        gradients = tape.gradient(loss, model.trainable_weights)
 
-        grad_mask_mul: list[tf.Tensor] = []
+        grad_mask_mul = []
 
-        for grad_layer, mask in zip(gradients, mask_model.trainable_variables):
+        for grad_layer, mask in zip(gradients, mask_model.trainable_weights):
             grad_mask_mul.append(tf.math.multiply(grad_layer, mask))
 
         optimizer.apply_gradients(
-            zip(grad_mask_mul, model.trainable_variables))
+            zip(grad_mask_mul, model.trainable_weights))
 
-        accuracy: float = accuracy_metric(labels, predictions)
-        accuracy_metric.reset_state()
+        accuracy = accuracy_metric(labels, predictions)
         accuracy_metric.reset_state()
 
         return loss, accuracy
@@ -96,10 +95,9 @@ def test_step(
     :returns: Loss and accuracy from data passed into the model.
     """
 
-    predictions: tf.Tensor = model(inputs)
-    loss: float = loss_fn(labels, predictions)
-    accuracy: float = accuracy_metric(labels, predictions)
-    accuracy_metric.reset_state()
+    predictions = model(inputs)
+    loss = loss_fn(labels, predictions)
+    accuracy = accuracy_metric(labels, predictions)
     accuracy_metric.reset_state()
     return loss, accuracy
 
@@ -126,9 +124,9 @@ def training_loop(
     X_train, X_test, Y_train, Y_test = dataset.load()
 
     initial_parameters = [tensor.numpy()
-                          for tensor in copy.deepcopy(model.trainable_variables)]
+                          for tensor in copy.deepcopy(model.trainable_weights)]
     masks = [tensor.numpy for tensor in copy.deepcopy(
-        mask_model.trainable_variables)]
+        mask_model.trainable_weights)]
 
     # Calculate the number of batches and create arrays to keep track of batch
     # loss/accuracies while iterating over batches before it goes into training loss/accuracies
@@ -244,7 +242,7 @@ def training_loop(
         break
 
     final_parameters = [tensor.numpy()
-                        for tensor in copy.deepcopy(model.trainable_variables)]
+                        for tensor in copy.deepcopy(model.trainable_weights)]
     # Final testing accuracies
     test_loss, test_accuracy = test_step(
         model,
@@ -287,7 +285,7 @@ def train(
     Function to perform a single round of training for a model.
     NOTE: Modifed `model` input's weights.
 
-    :returns Model, masked model, and training round objects with the final trained model and the training summary/.
+    :returns Model, masked model, and training round objects with the final trained model and the training summary.
     """
 
     utils.set_seed(random_seed)
