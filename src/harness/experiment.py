@@ -10,8 +10,7 @@ Date: 3/17/24
 import functools
 import logging
 import os
-import warnings
-from typing import Callable
+from typing import Callable, Dict, Tuple
 
 import multiprocess as mp
 import numpy as np
@@ -32,9 +31,9 @@ def run_experiments(
     starting_seed: int,
     num_experiments: int,
     experiment_directory: str,
-    experiment: Callable,
-    get_experiment_parameters: callable,
-    max_processes: int = os.cpu_count(),
+    experiment: Callable[[Dict], history.ExperimentData],
+    get_experiment_parameters: Callable[[int, str], Dict],
+    max_processes: int | None = None,
     log_level: int = logging.INFO,
 ) -> history.ExperimentSummary:
     """
@@ -50,12 +49,16 @@ def run_experiments(
         get_experiment_parameters (callable): Function which takes in the seed and experiment
             directory then produces all the parameters which get unpacked into the function
             responsible for running the experiment.
-        max_processes (int): Integer value for the maximum number of processes which are attempted
-            to be run in parallel.
+        max_processes (int | None): Integer value for the maximum number of
+            processes which are attempted to be run in parallel. Defaults to
+            the number of CPU cores.
         log_level (int): Log level to use.
     Returns:
         history.ExperimentSummary: Object containing information about all trained models.
     """
+
+    if max_processes is None:
+        max_processes = os.cpu_count()
 
     # Set CPU affinity to use all available CPU cores
     # and keep each thread scheduled to the same core
@@ -68,7 +71,7 @@ def run_experiments(
     experiment_summary: history.ExperimentSummary = history.ExperimentSummary()
     experiment_summary.start_timer()
 
-    def run_single_experiment(experiment_arguments: dict) -> tuple[int, history.ExperimentData]:
+    def run_single_experiment(experiment_arguments: Dict) -> Tuple[int, history.ExperimentData]:
         """
         Helper function which unpacks experiment arguments into a call to the function.
         Sets logging for the specific experiment, since each experiment runs in
@@ -101,11 +104,12 @@ def run_experiments(
 
 
 def run_iterative_pruning_experiment(
-    random_seed: int,
-    create_model: Callable[[None], keras.models.Model],
     hyperparameters: Hyperparameters,
+    random_seed: int,
+    create_model: Callable[[], keras.models.Model],
     dataset: ds.Dataset,
-    sparsities: list[float],
+    target_sparsity: float,
+    sparsity_strategy: pruning.SparsityStrategy,
     pruning_rule: Callable,
     rewind_rule: Callable,
     global_pruning: bool = False,
@@ -121,9 +125,11 @@ def run_iterative_pruning_experiment(
         random_seed (int): Random seed for reproducability.
         create_model (callable): Function which produces the model.
         dataset (enum): Enum for the dataset being used.
-        sparsities (list[float]): List of sparsities for each step of training.
-        pruning_rule (callable, optional): Function used to prune model. 
-        rewind_rule (callable, optional): Function used for rewinding model weights. 
+        target_sparsity (float): Desired level of sparsity.
+        sparsity_strategy (SparsityStrategy): Function which maps layer names
+            to the appropriate level to sparsify them by.
+        pruning_rule (callable, optional): Function used to prune model.
+        rewind_rule (callable, optional): Function used for rewinding model weights.
         global_pruning (bool, optional): Boolean flag for whether pruning is done globally
             or layerwise. Defaults to False.
         experiment_directory (str): Path to place all experimental data.
@@ -146,14 +152,10 @@ def run_iterative_pruning_experiment(
     mod.save_model(mask_model, random_seed, 0, masks=True,
                    initial=True, directory=experiment_directory)
 
-    for pruning_step, sparsity in enumerate(sparsities):
-        # Prune the model to the new sparsity and update the mask model
-        pruning.prune(model, mask_model, pruning_rule,
-                      sparsity, global_pruning=global_pruning)
-
-        # Reset unpruned weights to original values.
-        rewind.rewind_model_weights(model, mask_model, rewind_rule)
-
+    pruning_step = 0
+    make_sparsities = functools.partial(
+        pruning.calculate_sparsity, sparsity_strategy=sparsity_strategy)
+    while True:
         trial_data = train.train(
             random_seed=random_seed,
             pruning_step=pruning_step,
@@ -168,7 +170,9 @@ def run_iterative_pruning_experiment(
 
         X_train, _, _, _ = dataset.load()
         iteration_count = np.sum(trial_data.train_accuracies != 0)
-        logging.info(f'Took {iteration_count} iterations')
+
+        logging.info(
+            f'Took {iteration_count} iterations / {len(trial_data.train_accuracies)}')
         logging.info(
             f'Ended on epoch {np.ceil(iteration_count * hyperparameters.batch_size / X_train.shape[0])} out of {hyperparameters.epochs}')
         logging.info(
@@ -177,6 +181,33 @@ def run_iterative_pruning_experiment(
             + f'Validation: {np.max(trial_data.validation_accuracies) * 100:.2f}%\n'
             + f'Testing: {np.max(trial_data.test_accuracy) * 100:.2f}%\n'
         )
+
+        # TODO: Have this differentiate based on outer layer name and kernel/bias
+        layer_strings = [
+            f'Layer {index}, '
+            + f'Total Params: {total}, '
+            + f'Nonzero Params: {nonzero}, '
+            + f'Sparsity: {nonzero / total:.2f}%'
+            for index, (total, nonzero)
+            in enumerate(utils.count_total_and_nonzero_params_per_layer(model))
+        ]
+        logging.info(
+            'Layer sparsities:\n'
+            + '\n\t'.join(layer_strings)
+        )
+
+        # Exit condition here makes sure we only break after having trained
+        # with the final iteration sparser than the target
+        if utils.model_sparsity(model) <= target_sparsity:
+            break
+
+        # Prune the model to the new sparsity and update the mask model
+        pruning.prune(model, mask_model, pruning_rule,
+                      make_sparsities, global_pruning=global_pruning)
+
+        # Reset unpruned weights to original values.
+        rewind.rewind_model_weights(model, mask_model, rewind_rule)
+        pruning_step += 1
 
     experiment_data.stop_timer()
     return experiment_data

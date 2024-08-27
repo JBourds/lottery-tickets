@@ -208,9 +208,7 @@ def training_loop(
                     accuracy_metric,
                 )
 
-                # Index of the validation to use
                 validation_index = batch_counter // hp.eval_freq
-
                 validation_losses[validation_index] = validation_loss
                 validation_accuracies[validation_index] = validation_accuracy
 
@@ -221,12 +219,10 @@ def training_loop(
                     if mean_validation_loss < best_validation_loss and (best_validation_loss - mean_validation_loss) >= hp.minimum_delta:
                         # update 'best_validation_loss' variable to lowest loss encountered so far
                         best_validation_loss = mean_validation_loss
-                        # Reset the counter
                         local_patience = 0
                     else:  # there is no improvement in monitored metric 'val_loss'
-                        local_patience += 1  # number of epochs without any improvement
-
-                    # Exit early if there are `hp.patience` epochs without improvement
+                        local_patience += 1
+                    # Exit early if there are `hp.patience` successive validations without improvement
                     if local_patience >= hp.patience:
                         logging.info(f'Early stopping initiated')
                         break

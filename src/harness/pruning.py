@@ -14,93 +14,97 @@ The requirements for any pruning rule method is as follows:
         > List of keras model layers being pruned
         > List of keras model mask layers to also prune
         > Target sparsity
-    
-      
+
+
 Author: Jordan Bourdeau
 Date Created: 3/24/24
 """
 
+import re
+from typing import Any, Callable, Dict, List, Tuple
+
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
+from tensorflow.keras.layers import Layer
 
 from src.harness import utils
 
+# Typedefs
+PruningRule = Callable[[List[Layer], List[Layer], float, Tuple[Any]], None]
+SparsityStrategy = Callable[[str], float]
 
-def get_sparsity_percents(
-    model: keras.Model,
-    first_step_pruning_percent: float,
-    target_sparsity: float,
-) -> list[float]:
+
+def default_sparsity_strategy(layer_name: str) -> float:
     """
-    Function to get arrays of model sparsity at each step of pruning based on a constant pruning %
-    applied to nonzer-parameters.
+    Default sparsity map which is used for determining pruning rates of layers.
+    If no match is found, return 0 (no pruning).
 
-    Args:
-        model (keras.Model): Keras model to get the percents for.
-        first_step_pruning_percent (float): Initial pruning percent step to use in subsequent steps.
-        target_sparsity (float): Desired level of sparsity.
+    @param layer_name (str): Name of the Tensorflow layer.
 
-    Returns:
-        list[float]: List of pruning percents corresponding to each step of iterative magnitude pruning.
+    @returns (float): Percent of remaining parameters to prune.
     """
+    mapping = {
+        ('conv.*', 0.1),
+        ('dense', 0.2),
+    }
 
-    def total_sparsity(
-        original_weight_counts: list[int],
-        current_weight_counts: list[int]
-    ) -> float:
-        return np.sum(current_weight_counts) / np.sum(original_weight_counts)
+    for pattern, pruning in mapping:
+        match = re.match(pattern, layer_name, flags=re.IGNORECASE)
+        if match:
+            return pruning
 
-    def sparsify(
-        original_weight_counts: list[int],
-        current_weight_counts: list[int],
-        original_pruning_percent: float,
-    ) -> float:
-        """
-        Function to calculate new sparsity percentage and update weight counts.
+    return 0
 
-        Args:
-            original_weight_counts (list[int]): Original nonzero parameter counts.
-            current_weight_counts (list[int]): Current nonzero parameter counts.
-            original_pruning_percent (float): Original pruning % used on the first step.
 
-        Returns:
-            float: Pruning % of previous step.
-        """
-        sparsities = []
-        for idx, (original, current) in enumerate(zip(original_weight_counts, current_weight_counts)):
-            if original == 0:
-                continue
-            new_weight_count = np.round(
-                current * (1 - original_pruning_percent))
-            sparsities.append(new_weight_count / original)
-            current_weight_counts[idx] = new_weight_count
-        return np.round(np.mean(sparsities), decimals=5)
+def calculate_sparsity(
+    layers: List[Layer],
+    sparsity_strategy: SparsityStrategy = default_sparsity_strategy,
+    sparsity_modifier: float = 1,
+) -> float:
+    """
+    Function used to calculate the next sparsity to pass into a pruning rule
+    based on the layers passed into this function and the mapping provided
+    between layer names and per-iteration sparsity.
 
-    layer_weight_counts = utils.get_layer_weight_counts(model)
-    sparsities = [1]   # First iteration will start at 100% parameters
+    @param layers (List[Layer]): List of layers to parse. For layerwise pruning
+        this will always be a list of 1 element and will just apply the mappings
+        from the provided dictionary. For global pruning, this will determine
+        the appropriate rate for each layer within it, and calculate the overall
+        global sparsity based off it.
+    @param sparsity_strategy (SparsityStrategy): Function which maps layer
+        names to a sparsity level when pruning.
+    @param sparsity_modifier (float): Scaler to modify sparsities with. 
+        Currently only used with the last layer.
 
-    # Elementwise copy
-    current_weight_counts = [
-        weight_count for weight_count in layer_weight_counts]
-
-    while total_sparsity(layer_weight_counts, current_weight_counts) > target_sparsity:
-        sparsities.append(sparsify(layer_weight_counts,
-                          current_weight_counts, first_step_pruning_percent))
-
-    return sparsities
+    @returns (float): New sparsity for the list of layers.
+    """
+    multipliers = list(
+        map(lambda l: 1 - sparsity_strategy(l.name) * sparsity_modifier, layers))
+    total_weights = 0
+    prunable_weights = 0
+    sparsified_weights = 0
+    for multiplier, layer in zip(multipliers, layers):
+        for w in layer.trainable_weights:
+            total_weights += tf.size(w).numpy()
+            nonzero = tf.math.count_nonzero(
+                w).numpy() if utils.is_prunable(w) else 0
+            sparsified_weights += int(multiplier * nonzero)
+            prunable_weights += nonzero
+    result = sparsified_weights / total_weights
+    return result
 
 
 def prune(
     model: keras.Model,
     mask_model: keras.Model,
-    pruning_rule: callable,
-    target_sparsity: float,
+    pruning_rule: PruningRule,
+    target_sparsity: Callable[[List[Layer]], float],
     *pruning_args,
     global_pruning: bool = False,
-) -> list[np.ndarray]:
+) -> None:
     """
-    Method which prunes a model's parameters according to some rule 
+    Method which prunes a model's parameters according to some rule
     (e.g. lowest N% magnitudes) and sets their values to 0.
 
     Also responsible for updating the mask model.
@@ -108,55 +112,58 @@ def prune(
     Args:
         model (keras.Model): Keras model being pruned.
         model (keras.Model): Keras model containing masks to be updated.
-        pruning_rule (callable): Function which takes a list of layers as input and prunes them
-            according to a predetermined rule.
-        target_sparsity (float): Target sparsity for the pruning method.
+        pruning_rule (PruningRule): Function which takes a list of layers as
+            input and prunes them according to a predetermined rule.
+        target_sparsity: (Callable[[List[Layer]], float]): Function which takes
+            a list of layers and outputs the desired level of sparsity to prune.
         *pruning_args: Other positional arguments to pass into the pruning rule along with the
             required target sparsity.
         global_pruning (bool): Boolean flag for if the pruning should be performed globally
             or layerwise.
-
-    Returns:
-        List of Numpy arrays with indices of pruned weights.
     """
     # Get all the trainable layers of the model and the corresponding mask layers
     layers_to_prune = [
-        layer for layer in model.layers if utils.is_prunable(layer)]
+        layer for layer in model.layers[:-1] if utils.is_prunable(layer)
+    ]
     mask_layers = [
-        layer for layer in mask_model.layers if utils.is_prunable(layer)]
+        layer for layer in mask_model.layers if utils.is_prunable(layer)
+    ]
 
     if global_pruning:
-        return pruning_rule(layers_to_prune, mask_layers, target_sparsity, *pruning_args)
+        pruning_rule(layers_to_prune, mask_layers,
+                     target_sparsity(layers_to_prune), *pruning_args)
     else:
         # Prune all the layers until the last one normally
-        for layer, masks in zip(layers_to_prune[:-1], mask_layers[:-1]):
-            pruning_rule([layer], [masks], target_sparsity, *pruning_args)
+        for layer, masks in zip(layers_to_prune, mask_layers):
+            pruning_rule([layer], [masks], target_sparsity(
+                [layer]), *pruning_args)
 
-        # Last layer is pruned at half the rate of other layers
-        last_layer_sparsity = (1 + target_sparsity) / 2
-        pruning_rule([layers_to_prune[-1]], [mask_layers[-1]],
-                     last_layer_sparsity, *pruning_args)
+    # Last layer is pruned at half the rate of other layers
+    last_layer_sparsity = target_sparsity(
+        [model.layers[-1]], sparsity_modifier=0.5)
+    pruning_rule([model.layers[-1]], [mask_model.layers[-1]], last_layer_sparsity,
+                 *pruning_args)
 
 
 def low_magnitude_pruning(
-    layers: list[keras.layers.Layer],
-    mask_layers: list[keras.layers.Layer],
+    layers: List[Layer],
+    mask_layers: List[Layer],
     target_sparsity: float,
 ):
     magnitude_pruning(layers, mask_layers, target_sparsity, True)
 
 
 def high_magnitude_pruning(
-    layers: list[keras.layers.Layer],
-    mask_layers: list[keras.layers.Layer],
+    layers: List[Layer],
+    mask_layers: List[Layer],
     target_sparsity: float,
 ):
     magnitude_pruning(layers, mask_layers, target_sparsity, False)
 
 
 def magnitude_pruning(
-    layers: list[keras.layers.Layer],
-    mask_layers: list[keras.layers.Layer],
+    layers: List[Layer],
+    mask_layers: List[Layer],
     target_sparsity: float,
     prune_low_magnitude: bool,
 ):
@@ -164,9 +171,12 @@ def magnitude_pruning(
     Function which performs magnitude pruning based on a specified target sparsity
     and strategy (low or high magnitude pruning) and updates the corresponding mask layers.
 
+    NOTE: This function originally also pruned biases but it was later commented
+        out since they did not do this in the original paper.
+
     Args:
-        layers (list[keras.layers.Layer]): List of layers to act on.
-        mask_layers (list[keras.layers.Layer]): List of masked layers to update with pruning.
+        layers (List[Layer]): List of layers to act on.
+        mask_layers (List[Layer]): List of masked layers to update with pruning.
         pruning_percentage (float): Target sparsity of the model (% of nonzero weights remaining).
         prune_low_magnitude (bool): Flag for whether to perform low or high magnitude pruning.
     """
@@ -194,26 +204,25 @@ def magnitude_pruning(
 
     # Apply pruning by setting low or high magnitude weights to zero
     for layer, mask in zip(layers, mask_layers):
-        weights = layer.get_weights()[0]
-        biases = layer.get_weights()[1]
+        weights, biases = layer.get_weights()
+        _, biases_mask = mask.get_weights()
 
         # Get pruned model weights/biases
         if prune_low_magnitude:
             pruned_weights = np.where(
                 np.abs(weights) < threshold_weight_bias, 0, weights)
-            pruned_biases = np.where(
-                np.abs(biases) < threshold_weight_bias, 0, biases)
+            # pruned_biases = np.where(
+            #     np.abs(biases) < threshold_weight_bias, 0, biases)
         else:
             pruned_weights = np.where(
                 np.abs(weights) > threshold_weight_bias, 0, weights)
-            pruned_biases = np.where(
-                np.abs(biases) > threshold_weight_bias, 0, biases)
+            # pruned_biases = np.where(
+            #     np.abs(biases) > threshold_weight_bias, 0, biases)
 
         # Get new masks after model pruning
         weights_mask = np.where(np.abs(weights) < threshold_weight_bias, 0, 1)
-        biases_mask = np.where(np.abs(biases) < threshold_weight_bias, 0, 1)
+        # biases_mask = np.where(np.abs(biases) < threshold_weight_bias, 0, 1)
 
         # Update pruned layer weights and masks
-        layer.set_weights([pruned_weights, pruned_biases])
+        layer.set_weights([pruned_weights, biases])
         mask.set_weights([weights_mask, biases_mask])
-

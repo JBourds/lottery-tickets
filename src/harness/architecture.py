@@ -33,13 +33,11 @@ class Hyperparameters:
     patience: int
     minimum_delta: float
     learning_rate: float
-    optimizer: Callable[[None], tf.keras.optimizers.Optimizer]
-    loss_function: Callable[[None], tf.keras.losses.Loss]
-    accuracy_metric: Callable[[None], tf.keras.metrics.Metric]
+    optimizer: Callable[[], tf.keras.optimizers.Optimizer]
+    loss_function: Callable[[], tf.keras.losses.Loss]
+    accuracy_metric: Callable[[], tf.keras.metrics.Metric]
     epochs: int
     batch_size: int
-    fc_pruning_rate: float
-    conv_pruning_rate: float
     # The number of iterations (batches) to train for at a time before
     # evaluating validation set performance and checking for early stopping
     eval_freq: int
@@ -58,71 +56,71 @@ class Architectures(Enum):
 
     # --------------- Hyperparameters ---------------
     @staticmethod
-    def lenet_300_100_hyperparameters() -> Hyperparameters:
+    def lenet_300_100_hyperparameters(**kwargs) -> Hyperparameters:
         return Hyperparameters(
-            patience=2,
-            minimum_delta=0.01,
-            learning_rate=1.2e-3,
-            optimizer=Adam,
-            loss_function=tf.keras.losses.CategoricalCrossentropy,
-            accuracy_metric=tf.keras.metrics.CategoricalAccuracy,
-            epochs=60,
-            batch_size=60,
-            fc_pruning_rate=0.2,
-            conv_pruning_rate=0,
-            eval_freq=100,
-            early_stopping=False,
+            patience=kwargs.get('patience', 2),
+            minimum_delta=kwargs.get('minimum_delta', 0.01),
+            learning_rate=kwargs.get('learning_rate', 1.2e-3),
+            optimizer=kwargs.get('optimizer', Adam),
+            loss_function=kwargs.get(
+                'loss', tf.keras.losses.CategoricalCrossentropy),
+            accuracy_metric=kwargs.get(
+                'accuracy', tf.keras.metrics.CategoricalAccuracy),
+            epochs=kwargs.get('epochs', 2),
+            batch_size=kwargs.get('batch_size', 60),
+            eval_freq=kwargs.get('eval_freq', 100),
+            early_stopping=kwargs.get('early_stopping', False),
         )
 
     @staticmethod
-    def conv2_hyperparameters() -> Hyperparameters:
+    def conv2_hyperparameters(**kwargs) -> Hyperparameters:
         return Hyperparameters(
-            patience=2,
-            minimum_delta=0.01,
-            learning_rate=2e-4,
-            optimizer=Adam,
-            loss_function=tf.keras.losses.CategoricalCrossentropy,
-            accuracy_metric=tf.keras.metrics.CategoricalAccuracy,
-            epochs=60,
-            batch_size=60,
-            fc_pruning_rate=0.2,
-            conv_pruning_rate=0.1,
-            eval_freq=100,
-            early_stopping=False,
+            patience=kwargs.get('patience', 2),
+            minimum_delta=kwargs.get('minimum_delta', 0.01),
+            learning_rate=kwargs.get('learning_rate', 2e-4),
+            optimizer=kwargs.get('optimizer', Adam),
+            loss_function=kwargs.get(
+                'loss', tf.keras.losses.CategoricalCrossentropy),
+            accuracy_metric=kwargs.get(
+                'accuracy', tf.keras.metrics.CategoricalAccuracy),
+            epochs=kwargs.get('epochs', 2),
+            batch_size=kwargs.get('batch_size', 60),
+            eval_freq=kwargs.get('eval_freq', 100),
+            early_stopping=kwargs.get('early_stopping', False),
         )
 
     @staticmethod
-    def conv4_hyperparameters() -> Hyperparameters:
+    def conv4_hyperparameters(**kwargs) -> Hyperparameters:
         return Hyperparameters(
-            patience=2,
-            minimum_delta=0.01,
-            learning_rate=3e-4,
-            optimizer=Adam,
-            loss_function=tf.keras.losses.CategoricalCrossentropy,
-            accuracy_metric=tf.keras.metrics.CategoricalAccuracy,
-            epochs=25_000,
-            batch_size=60,
-            fc_pruning_rate=0.2,
-            conv_pruning_rate=0.1,
-            eval_freq=100,
-            early_stopping=False,
+            patience=kwargs.get('patience', 2),
+            minimum_delta=kwargs.get('minimum_delta', 0.01),
+            learning_rate=kwargs.get('learning_rate', 3e-4),
+            optimizer=kwargs.get('optimizer', Adam),
+            loss_function=kwargs.get(
+                'loss', tf.keras.losses.CategoricalCrossentropy),
+            accuracy_metric=kwargs.get(
+                'accuracy', tf.keras.metrics.CategoricalAccuracy),
+            epochs=kwargs.get('epochs', 2),
+            batch_size=kwargs.get('batch_size', 60),
+            eval_freq=kwargs.get('eval_freq', 100),
+            early_stopping=kwargs.get('early_stopping', False),
         )
 
     @staticmethod
-    def conv6_hyperparameters() -> Hyperparameters:
+    def conv6_hyperparameters(**kwargs) -> Hyperparameters:
         return Hyperparameters(
-            patience=2,
-            minimum_delta=0.01,
-            learning_rate=3e-4,
-            optimizer=Adam,
-            loss_function=tf.keras.losses.CategoricalCrossentropy,
-            accuracy_metric=tf.keras.metrics.CategoricalAccuracy,
-            iterations=30_000,
-            batch_size=60,
-            fc_pruning_rate=0.2,
-            conv_pruning_rate=0.15,
-            eval_freq=100,
-            early_stopping=False,
+            patience=kwargs.get('patience', 2),
+            minimum_delta=kwargs.get('minimum_delta', 0.01),
+            learning_rate=kwargs.get('learning_rate', 3e-4),
+            optimizer=kwargs.get('optimizer', Adam),
+            loss_function=kwargs.get(
+                'loss', tf.keras.losses.CategoricalCrossentropy),
+            accuracy_metric=kwargs.get(
+                'accuracy', tf.keras.metrics.CategoricalAccuracy),
+            epochs=kwargs.get('epochs', 2),
+            batch_size=kwargs.get('batch_size', 60),
+            eval_freq=kwargs.get('eval_freq', 100),
+            early_stopping=kwargs.get('early_stopping', False),
         )
 
   # --------------- Constructors ---------------
@@ -260,7 +258,7 @@ class Architecture:
         Architectures.CONV_6: Architectures.conv6_hyperparameters,
     }
 
-    def __init__(self, architecture: str, dataset: ds.Datasets):
+    def __init__(self, architecture: str, dataset: ds.Datasets | str):
         self.architecture = Architectures(architecture.lower())
         if not self._supported(self.architecture):
             raise ValueError(
@@ -279,14 +277,14 @@ class Architecture:
         # Lazy implementation for now
         return architecture != Architectures.LENET
 
-    def get_model_hyperparameters(self) -> Hyperparameters:
+    def get_model_hyperparameters(self, **kwargs) -> Hyperparameters:
         hyperparameters = self.HYPERPARAMETERS.get(self.architecture)
         if hyperparameters is None:
             raise NotImplementedError(
                 f"'{self.architecture}' not implemented in Architecture class")
-        return hyperparameters()
+        return hyperparameters(**kwargs)
 
-    def get_model_constructor(self) -> Callable[[None], keras.models.Model]:
+    def get_model_constructor(self) -> Callable[[], keras.models.Model]:
         constructor_function = self.CONSTRUCTORS.get(self.architecture)
         if constructor_function is None:
             raise NotImplementedError(

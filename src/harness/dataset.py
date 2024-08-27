@@ -5,41 +5,51 @@ File containing function(s)/classes for loading the dataset.
 Note: There is a bug where this being 
 """
 
-from enum import Enum
 import functools
-import numpy as np
 import os
+from enum import Enum
+
+import numpy as np
 import tensorflow as tf
 
 from src.harness import constants as C
 from src.harness import utils
 
+
 class Datasets(Enum):
-    MNIST: tuple[int, int, int] = (28, 28, 1)  # MNIST images are grayscale, 28x28 pixels
-    CIFAR10: tuple[int, int, int] = (32, 32, 3)  # CIFAR10 images are color (RGB), 32x32 pixels
-    ImageNet: tuple[int, int, int] = (224, 224, 3)  # ImageNet images are color (RGB), typically 224x224 pixels
+    # MNIST images are grayscale, 28x28 pixels
+    MNIST: tuple[int, int, int] = (28, 28, 1)
+    # CIFAR10 images are color (RGB), 32x32 pixels
+    CIFAR10: tuple[int, int, int] = (32, 32, 3)
+    # ImageNet images are color (RGB), typically 224x224 pixels
+    ImageNet: tuple[int, int, int] = (224, 224, 3)
+
 
 class Dataset:
-    
-    def __init__(self, dataset: Datasets, flatten: bool = False):
+
+    def __init__(self, dataset: str | Datasets, flatten: bool = False):
         # Handle if a string is passed in, from cmdline arguments for instance
         if isinstance(dataset, str):
             match dataset.lower():
                 case 'mnist':
-                    dataset = Datasets.MNIST
+                    self.dataset = Datasets.MNIST
                 case 'cifar':
-                    dataset = Datasets.CIFAR10
+                    self.dataset = Datasets.CIFAR10
                 case 'imagenet':
-                    dataset = Datasets.ImageNet
+                    self.dataset = Datasets.ImageNet
 
-        self.dataset: Datasets = dataset
         self.flatten = flatten
         match self.dataset:
             case Datasets.MNIST:
-                self.loader_function = functools.partial(load_and_process_mnist, flatten=flatten)
+                self.loader_function = functools.partial(
+                    load_and_process_mnist, flatten=flatten)
             case Datasets.CIFAR10:
-                self.loader_function = functools.partial(load_and_process_cifar10, flatten=flatten)
-    
+                self.loader_function = functools.partial(
+                    load_and_process_cifar10, flatten=flatten)
+            case _:
+                raise ValueError(
+                    f'Dataset {self.dataset} is not yet supported')
+
     @property
     def input_shape(self):
         """
@@ -48,7 +58,7 @@ class Dataset:
         Returns:
             tuple[int]: Shape of the dataset in length of each dimension.
         """
-        shape: tuple[int] = self.dataset.value
+        shape = self.dataset.value
         if self.flatten:
             return (1, np.prod(shape))  # Flatten only the first two dimensions
         else:
@@ -69,7 +79,7 @@ class Dataset:
                 return 10
             case Datasets.ImageNet:
                 return 1000
-            
+
     @property
     def loader(self):
         """
@@ -80,7 +90,7 @@ class Dataset:
                 split into training and testing sets.
         """
         return self.loader_function
-            
+
     def load(self):
         """
         Method to load the data for a given dataset.
@@ -89,8 +99,8 @@ class Dataset:
             Numpy data array extracted from the loader function.
         """
         return self.loader_function()
-    
-    
+
+
 # ---------------------- Data Loader Functions ----------------------
 
 def load_and_process_mnist(random_seed: int = 0, flatten: bool = False) -> tuple[np.array, np.array, np.array, np.array]:
@@ -108,7 +118,7 @@ def load_and_process_mnist(random_seed: int = 0, flatten: bool = False) -> tuple
     """
     utils.set_seed(random_seed)
     (X_train, Y_train), (X_test, Y_test) = tf.keras.datasets.mnist.load_data()
-    
+
     if flatten:
         # Add a new axis for use in training the model
         X_train: np.array = X_train[:, :, :, np.newaxis]
@@ -131,6 +141,7 @@ def load_and_process_mnist(random_seed: int = 0, flatten: bool = False) -> tuple
 
     return X_train, X_test, Y_train, Y_test
 
+
 def load_and_process_cifar10(random_seed: int = 0, flatten: bool = False) -> tuple[np.array, np.array, np.array, np.array]:
     """
     Function to load and preprocess the CIFAR10 dataset.
@@ -145,7 +156,7 @@ def load_and_process_cifar10(random_seed: int = 0, flatten: bool = False) -> tup
     """
     utils.set_seed(random_seed)
     (X_train, Y_train), (X_test, Y_test) = tf.keras.datasets.cifar10.load_data()
-    
+
     if flatten:
         # Add a new axis for use in training the model
         X_train: np.array = X_train[:, :, :, np.newaxis]
@@ -178,6 +189,5 @@ def load_and_process_imagenet(random_seed: int = 0) -> tuple[np.array, np.array,
     :returns X and Y training and test sets after preprocessing.
     """
     utils.set_seed(random_seed)
-    
+
     # TODO: Add this later
-    

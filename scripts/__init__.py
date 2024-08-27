@@ -28,13 +28,14 @@ sys.path.append('../')
 
 def get_experiment_parameter_constructor(
     model: str,
-    hyperparameters: Hyperparameters,
-    dataset: ds.Datasets,
+    hyperparameters: Hyperparameters | None,
+    dataset: str,
     rewind_rule: str,
     pruning_rule: str,
-    sparsity_percents: List[float],
+    target_sparsity: float,
+    sparsity_strategy: str,
     global_pruning: bool = False,
-) -> Callable[Tuple[int, str], Dict[str, Any]]:
+) -> Callable[[int, str], Dict[str, Any]]:
     """
     Generic function which takes experiment parameters and returns a function
     which acts as a constructor for the dictionary containing experimental
@@ -53,7 +54,8 @@ def get_experiment_parameter_constructor(
             'random_seed': seed,
             'create_model': make_model,
             'dataset': architecture.dataset,
-            'sparsities': sparsity_percents,
+            'target_sparsity': target_sparsity,
+            'sparsity_strategy': get_sparsity_strategy(sparsity_strategy),
             'rewind_rule': get_rewind_rule(rewind_rule),
             'pruning_rule': get_pruning_rule(pruning_rule),
             'hyperparameters': hyperparameters,
@@ -62,6 +64,8 @@ def get_experiment_parameter_constructor(
         }
 
     return inner_function
+
+# Functions which map command line arguments to internal representations
 
 
 def get_log_level(log_level: int) -> int:
@@ -87,7 +91,17 @@ def get_rewind_rule(rewind_rule: str) -> Callable:
         case 'oi':
             return rewind.get_rewind_to_original_init_for
         case _:
-            raise ValueError(f"'{rewind}' is not a valid rewind rule option.")
+            raise ValueError(
+                f"'{rewind_rule}' is not a valid rewind rule option.")
+
+
+def get_sparsity_strategy(sparsity_strategy: str) -> Callable[[str], float]:
+    match sparsity_strategy.lower():
+        case 'default':
+            return pruning.default_sparsity_strategy
+        case _:
+            raise ValueError(
+                f"'{sparsity_strategy}' is not a valid sparsity strategy option.")
 
 
 def get_pruning_rule(pruning_rule: str) -> Callable:
@@ -97,4 +111,5 @@ def get_pruning_rule(pruning_rule: str) -> Callable:
         case 'hm':
             return pruning.high_magnitude_pruning
         case _:
-            raise ValueError(f"'{prune}' is not a valid pruning rule option.")
+            raise ValueError(
+                f"'{pruning_rule}' is not a valid pruning rule option.")

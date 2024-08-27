@@ -3,11 +3,12 @@ Use pure tensorflow training to compare against results from custom training
 loop.
 """
 
+import sys
+
 import tensorflow as tf
 from keras import Sequential
 from keras.layers import Conv2D, Dense, Flatten, Input, MaxPooling2D
 from tensorflow import keras
-import sys
 
 sys.path.append('../')
 

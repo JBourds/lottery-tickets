@@ -15,7 +15,6 @@ import sys
 from typing import List
 
 import numpy as np
-from tensorflow import keras
 
 from scripts import get_experiment_parameter_constructor, get_log_level
 from src.harness import constants as C
@@ -25,15 +24,14 @@ from src.harness import model as mod
 from src.harness import pruning, rewind
 from src.harness.architecture import Hyperparameters
 
-sys.path.append('../')
-
 
 def run_parallel_experiments(
     experiment_directory: str,
     starting_seed: int = 0,
     num_experiments: int = 1,
     num_batches: int = 1,
-    sparsity_percents: List[float] = [],
+    target_sparsity: float = 0.85,
+    sparsity_strategy: str = 'default',
     model: str = 'lenet',
     hyperparameters: Hyperparameters | None = None,
     dataset: str = 'mnist',
@@ -56,8 +54,10 @@ def run_parallel_experiments(
         Number of experiments to run. Defaults to 1.
     num_batches : int, optional
         Number of batches to split the experiments into. Defaults to 1.
-    sparsity_percents : List[float]
-        Sparsity percentages for each round of pruning.
+    target_sparsity : float
+        Desired sparsity overall. 
+    sparsity_strategy : SparsityStrategy
+        Function which maps a layer's name to the amount to prune by.
     model : str, optional
         Model architecture to use. Defaults to 'lenet'.
     hyperparameters : Hyperparameters, optional
@@ -99,7 +99,8 @@ def run_parallel_experiments(
         dataset=dataset,
         rewind_rule=rewind_rule,
         pruning_rule=pruning_rule,
-        sparsity_percents=sparsity_percents,
+        target_sparsity=target_sparsity,
+        sparsity_strategy=sparsity_strategy,
         global_pruning=global_pruning
     )
 
