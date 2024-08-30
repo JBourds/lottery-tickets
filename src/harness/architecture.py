@@ -66,7 +66,7 @@ class Architectures(Enum):
                 'loss', tf.keras.losses.CategoricalCrossentropy),
             accuracy_metric=kwargs.get(
                 'accuracy', tf.keras.metrics.CategoricalAccuracy),
-            epochs=kwargs.get('epochs', 2),
+            epochs=kwargs.get('epochs', 60),
             batch_size=kwargs.get('batch_size', 60),
             eval_freq=kwargs.get('eval_freq', 100),
             early_stopping=kwargs.get('early_stopping', False),
@@ -83,7 +83,7 @@ class Architectures(Enum):
                 'loss', tf.keras.losses.CategoricalCrossentropy),
             accuracy_metric=kwargs.get(
                 'accuracy', tf.keras.metrics.CategoricalAccuracy),
-            epochs=kwargs.get('epochs', 2),
+            epochs=kwargs.get('epochs', 60),
             batch_size=kwargs.get('batch_size', 60),
             eval_freq=kwargs.get('eval_freq', 100),
             early_stopping=kwargs.get('early_stopping', False),
@@ -100,7 +100,7 @@ class Architectures(Enum):
                 'loss', tf.keras.losses.CategoricalCrossentropy),
             accuracy_metric=kwargs.get(
                 'accuracy', tf.keras.metrics.CategoricalAccuracy),
-            epochs=kwargs.get('epochs', 2),
+            epochs=kwargs.get('epochs', 60),
             batch_size=kwargs.get('batch_size', 60),
             eval_freq=kwargs.get('eval_freq', 100),
             early_stopping=kwargs.get('early_stopping', False),
@@ -117,7 +117,7 @@ class Architectures(Enum):
                 'loss', tf.keras.losses.CategoricalCrossentropy),
             accuracy_metric=kwargs.get(
                 'accuracy', tf.keras.metrics.CategoricalAccuracy),
-            epochs=kwargs.get('epochs', 2),
+            epochs=kwargs.get('epochs', 60),
             batch_size=kwargs.get('batch_size', 60),
             eval_freq=kwargs.get('eval_freq', 100),
             early_stopping=kwargs.get('early_stopping', False),

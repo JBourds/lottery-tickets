@@ -42,7 +42,7 @@ def is_prunable(layer: keras.layers.Layer | tf.Variable) -> bool:
     if issubclass(type(layer), keras.layers.Layer):
         prunable_layers = {keras.layers.Conv2D, keras.layers.Dense}
         return type(layer) in prunable_layers
-    elif issubclass(type(layer), tf.Variable):
+    elif 'variable' not in type(layer).__name__:
         return 'bias' not in layer.name.lower()
     raise ValueError(
         f'Provided layer was of type {type(layer)} rather than a Keras layer or TensorFlow Variable')

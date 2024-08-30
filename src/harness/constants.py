@@ -6,13 +6,17 @@ File containing all constants and constant functions.
 
 from enum import Enum
 import functools
+import os
 import tensorflow as tf
 from sys import platform
 
 # Directories
 DATA_DIRECTORY: str = 'data'
 MODEL_DIRECTORY: str = 'models'
-EXPERIMENTS_DIRECTORY: str = 'experiments'
+EXPERIMENTS_DIRECTORY: str = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+    'experiments',
+)
 PLOTS_DIRECTORY: str = 'plots'
 
 PATIENCE: int = 2

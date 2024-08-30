@@ -8,6 +8,7 @@ Date Created: 4/30/24
 """
 
 import argparse
+import datetime
 import functools
 import logging
 import os
@@ -90,9 +91,9 @@ def run_parallel_experiments(
     experiment_directory = os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
         C.EXPERIMENTS_DIRECTORY,
-        experiment_directory if experiment_directory else model
+        f'{experiment_directory if experiment_directory else model} {datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}'
     )
-
+    
     get_experiment_parameters = get_experiment_parameter_constructor(
         model=model,
         hyperparameters=hyperparameters,

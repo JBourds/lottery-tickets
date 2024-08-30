@@ -8,7 +8,7 @@ Author: Jordan Bourdeau
 
 import argparse
 
-from scripts.base import run_parallel_experiments
+from scripts.training.base import run_parallel_experiments
 from src.harness import pruning
 from src.harness.architecture import Architecture
 
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     parser.add_argument('--log_level', type=int, default=2,
                         help='Logging level to use. 0 = Not Set, 1 = Debug, 2 = Info, 3 = Warning, 4 = Error, 5 = Critical.')
 
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
     architecture = Architecture(args.model, args.dataset)
     model = architecture.get_model_constructor()()
     cmdline_hyperparams = {
