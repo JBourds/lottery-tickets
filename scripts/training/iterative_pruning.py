@@ -35,11 +35,11 @@ if __name__ == '__main__':
     #                     help='Loss function to use.')
     parser.add_argument('--eval_freq', type=int, default=100,
                         help='Frequency to test on validation data.')
-    parser.add_argument('--early_stopping', type=bool, default=False,
+    parser.add_argument('--early_stopping', type=bool, default=True,
                         help='Allow training to prematurely exit if improvements are not detected in performance.')
 
     # Experiment params
-    parser.add_argument('--dir', type=str, default='lenet-300-100',
+    parser.add_argument('--dir', type=str, default=None,
                         help='Output directory to store all models and experiment summary.')
     parser.add_argument('--seed', type=int, default=0,
                         help='Starting seed. Defaults to 0.')

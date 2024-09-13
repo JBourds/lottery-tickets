@@ -88,10 +88,14 @@ def run_parallel_experiments(
         max_processes = os.cpu_count()
 
     # Construct the full experiment directory path
-    experiment_directory = os.path.join(
+    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    path = f"{model}_{dataset}_{starting_seed}_seed_{num_experiments}_experiments_{num_batches}_batches_{target_sparsity}_{sparsity_strategy}_sparsity_{pruning_rule}_pruning_{timestamp}"
+    if experiment_directory is not None:
+        path = os.path.join(experiment_directory, path)
+    path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
         C.EXPERIMENTS_DIRECTORY,
-        f'{experiment_directory if experiment_directory else model} {datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}'
+        path,
     )
     
     get_experiment_parameters = get_experiment_parameter_constructor(
@@ -109,8 +113,7 @@ def run_parallel_experiments(
     num_experiments_in_batch = int(np.ceil(num_experiments / num_batches))
     for batch_idx in range(num_batches):
         batch_starting_seed = starting_seed + batch_idx * num_experiments_in_batch
-        batch_directory = os.path.join(
-            experiment_directory, f'batch_{batch_idx}')
+        batch_directory = os.path.join(path, f'batch_{batch_idx}')
 
         # Last batch could be smaller
         if batch_idx == num_batches - 1:
