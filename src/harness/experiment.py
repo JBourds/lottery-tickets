@@ -15,6 +15,11 @@ from typing import Callable, Dict, Tuple
 import multiprocess as mp
 import numpy as np
 import tensorflow as tf
+gpus = tf.config.list_physical_devices('GPU')
+if gpus:
+    for gpu in gpus:
+        tf.config.experimental.set_memory_growth(gpu, True)
+
 from tensorflow import keras
 
 from src.harness import constants as C

@@ -1,20 +1,14 @@
-"""
-scripts/iterative_pruning.py
-
-Command line script used to run experiments.
-
-Author: Jordan Bourdeau
-"""
 
 import argparse
+import datetime
+import os
 
-from scripts.training.base import run_parallel_experiments
-from src.harness import pruning
-from src.harness.architecture import Architecture
+from src.harness import constants as C
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Iterative pruning training script.')
+        description='Script for creating the directory an experiment is run in.')
+    
     # Hyperparams
     parser.add_argument('--epochs', type=int, default=None,
                         help='Number of epochs per training loop.')
@@ -69,35 +63,14 @@ if __name__ == '__main__':
                         help='Logging level to use. 0 = Not Set, 1 = Debug, 2 = Info, 3 = Warning, 4 = Error, 5 = Critical.')
 
     args, unknown = parser.parse_known_args()
-    architecture = Architecture(args.model, args.dataset)
-    model = architecture.get_model_constructor()()
-    cmdline_hyperparams = {
-        'epochs': args.epochs,
-        'batch_size': args.batch_size,
-        'patience': args.patience,
-        'minimum_delta': args.minimum_delta,
-        'learning_rate': args.lr,
-        'eval_freq': args.eval_freq,
-        'early_stopping': args.early_stopping,
-    }
-    cmdline_hyperparams = {key: val for key,
-                           val in cmdline_hyperparams.items() if val is not None}
-    hyperparameters = architecture.get_model_hyperparameters(
-        **cmdline_hyperparams)
 
-    run_parallel_experiments(
-        experiment_directory=args.dir,
-        starting_seed=args.seed,
-        num_experiments=args.experiments,
-        num_batches=args.batches,
-        target_sparsity=args.target_sparsity,
-        sparsity_strategy=args.sparsity_strategy,
-        model=args.model,
-        hyperparameters=hyperparameters,
-        dataset=args.dataset,
-        rewind_rule=args.rewind_rule,
-        pruning_rule=args.pruning_rule,
-        max_processes=args.max_processes,
-        log_level=args.log_level,
-        global_pruning=args.global_pruning,
+
+    # Construct the full experiment directory path
+    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    path = f"{args.model}_{args.dataset}_{args.seed}_seed_{args.experiments}_experiments_{args.batches}_batches_{args.target_sparsity}_{args.sparsity_strategy}_sparsity_{args.pruning_rule}_pruning_{timestamp}"
+    path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))),
+        C.EXPERIMENTS_DIRECTORY,
+        path,
     )
+    print(path)

@@ -1,6 +1,6 @@
 {
   "dggpu": {
-    "env": "conda activate lottery-tickets",
+    "env": "conda activate lt",
     "resources": {
       "time": "2-00:00:00",
       "partition": "dggpu",
@@ -10,7 +10,7 @@
     }
   },
   "bdgpu": {
-    "env": "conda activate lottery-tickets",
+    "env": "conda activate lt",
     "resources": {
       "time": "2-00:00:00",
       "partition": "bdgpu",
@@ -20,7 +20,7 @@
     }
   },
   "dg-multi": {
-    "env": "conda activate lottery-tickets",
+    "env": "conda activate lt",
     "resources": {
       "time": "2-00:00:00",
       "partition": "dggpu",
@@ -30,7 +30,7 @@
     }
   },
   "blue": {
-    "env": "conda activate lottery-tickets",
+    "env": "conda activate lt",
     "resources": {
       "time": "30:00:00",
       "partition": "bluemoon",
@@ -39,7 +39,7 @@
     }
   },
   "short": {
-    "env": "conda activate lottery-tickets",
+    "env": "conda activate lt",
     "resources": {
       "time": "1:00:00",
       "partition": "short",

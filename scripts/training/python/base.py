@@ -17,7 +17,7 @@ from typing import List
 
 import numpy as np
 
-from scripts import get_experiment_parameter_constructor, get_log_level
+from scripts.training.python import get_experiment_parameter_constructor, get_log_level
 from src.harness import constants as C
 from src.harness import dataset as ds
 from src.harness import experiment
@@ -27,7 +27,7 @@ from src.harness.architecture import Hyperparameters
 
 
 def run_parallel_experiments(
-    experiment_directory: str,
+    path: str,
     starting_seed: int = 0,
     num_experiments: int = 1,
     num_batches: int = 1,
@@ -47,7 +47,7 @@ def run_parallel_experiments(
 
     Parameters
     ----------
-    experiment_directory: str
+    path: str
         Directory to store all models and experiment summaries.
     starting_seed : int, optional
         The initial seed for random number generation. Defaults to 0.
@@ -87,17 +87,6 @@ def run_parallel_experiments(
     if max_processes is None:
         max_processes = os.cpu_count()
 
-    # Construct the full experiment directory path
-    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    path = f"{model}_{dataset}_{starting_seed}_seed_{num_experiments}_experiments_{num_batches}_batches_{target_sparsity}_{sparsity_strategy}_sparsity_{pruning_rule}_pruning_{timestamp}"
-    if experiment_directory is not None:
-        path = os.path.join(experiment_directory, path)
-    path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-        C.EXPERIMENTS_DIRECTORY,
-        path,
-    )
-    
     get_experiment_parameters = get_experiment_parameter_constructor(
         model=model,
         hyperparameters=hyperparameters,
