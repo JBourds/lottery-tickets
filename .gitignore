@@ -1,4 +1,5 @@
 .empty/
+slurm*
 logs/
 checkpoints/
 paper-code/

@@ -237,8 +237,9 @@ def training_loop(
             continue
         break
 
+    best_loss = np.min(validation_losses[validation_losses != 0])
     logging.info(
-        f'Best Validation Accuracy and Loss: {np.max(validation_accuracies)}, {np.min(validation_losses)}')
+        f'Best Validation Accuracy and Loss: {np.max(validation_accuracies)}, {best_loss}')
 
     final_parameters = [tensor.numpy()
                         for tensor in copy.deepcopy(model.trainable_weights)]

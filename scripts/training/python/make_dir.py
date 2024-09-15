@@ -64,7 +64,6 @@ if __name__ == '__main__':
 
     args, unknown = parser.parse_known_args()
 
-
     # Construct the full experiment directory path
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     path = f"{args.model}_{args.dataset}_{args.seed}_seed_{args.experiments}_experiments_{args.batches}_batches_{args.target_sparsity}_{args.sparsity_strategy}_sparsity_{args.pruning_rule}_pruning_{timestamp}"

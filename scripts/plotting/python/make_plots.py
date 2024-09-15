@@ -26,5 +26,5 @@ if __name__ == "__main__":
     parser.add_argument('--dir', type=str, default=None,
                         help='Output directory to store plots in.')
 
-
-    make_plots("", "", 1)
+    args, unknown = parser.parse_known_args() 
+    make_plots(args.dir, ".", 1)

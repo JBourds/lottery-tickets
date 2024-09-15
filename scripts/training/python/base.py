@@ -85,7 +85,7 @@ def run_parallel_experiments(
     model name if not provided.
     """
     if max_processes is None:
-        max_processes = os.cpu_count()
+        max_processes = 1
 
     get_experiment_parameters = get_experiment_parameter_constructor(
         model=model,

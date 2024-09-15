@@ -29,9 +29,10 @@ def make_plots(
     target_directory: str,
     max_num_batches: int,
 ):
-    summary = load.get_batch_summaries(batch_directory, max_num_batches=max_num_batches)
-    print("Hello world!")
-    x = np.arange(10)
-    y = np.arange(10)
-    plt.plot(x, y)
-    plt.savefig('test')
+    # Hardcoded to use only the first one for now
+    summaries = list(load.get_batch_summaries(batch_directory, max_num_batches=max_num_batches))[0]
+    path = os.path.join(C.PLOTS_DIRECTORY, 'early_stopping_iteration.png')
+    gp.plot_early_stopping(summary, save_location=path)
+    print(summaries) 
+    
+    
