@@ -15,6 +15,8 @@ from typing import Callable, Dict, Tuple
 import multiprocess as mp
 import numpy as np
 import tensorflow as tf
+# Signal to Tensorflow that it can allocate memory as it goes
+# rather than all at once.
 gpus = tf.config.list_physical_devices('GPU')
 if gpus:
     for gpu in gpus:
@@ -55,18 +57,16 @@ def run_experiments(
             directory then produces all the parameters which get unpacked into the function
             responsible for running the experiment.
         max_processes (int | None): Integer value for the maximum number of
-            processes which are attempted to be run in parallel. Defaults to
-            the number of CPU cores.
+            processes which are attempted to be run in parallel. Defaults to 1.
         log_level (int): Log level to use.
     Returns:
         history.ExperimentSummary: Object containing information about all trained models.
     """
 
     if max_processes is None:
-        max_processes = os.cpu_count()
+        max_processes = 1
 
-    # Set CPU affinity to use all available CPU cores
-    # and keep each thread scheduled to the same core
+    # Set CPU affinity to keep each thread scheduled to the same core
     os.environ['OMP_NUM_THREADS'] = str(max_processes)
     os.environ['KMP_BLOCKTIME'] = '1'
     os.environ['KMP_SETTINGS'] = '1'
@@ -211,6 +211,13 @@ def run_iterative_pruning_experiment(
 
         # Reset unpruned weights to original values.
         rewind.rewind_model_weights(model, mask_model, rewind_rule)
+
+        # Testing conditions to verify correctness
+        # initial = mod.load_model(random_seed, pruning_step=0, initial=True, directory=experiment_directory) 
+        # rewound_weights = [w * mask for w, mask in zip(model.get_weights(), mask_model.get_weights())]
+        # initial_weights = [w * mask for w, mask in zip(initial.get_weights(), mask_model.get_weights())]
+        # assert all([(rewound == initial).all() for rewound, initial in zip(rewound_weights, initial_weights)])
+        
         pruning_step += 1
 
     experiment_data.stop_timer()

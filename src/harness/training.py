@@ -161,8 +161,8 @@ def training_loop(
     logging.info(f'Batch Size: {hp.batch_size}')
     logging.info(f'Step {pruning_step} of Iterative Magnitude Pruning')
 
+    # Batch counter won't always fit cleanly within an epoch
     batch_counter = 0
-
     for epoch in range(hp.epochs):
         # Shuffle training data using pruning step as a seed
         tf.random.shuffle(X_train, seed=pruning_step)

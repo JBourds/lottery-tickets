@@ -7,7 +7,7 @@ Author: Jordan Bourdeau
 """
 
 import argparse
-import functools
+from functools import partial
 import logging
 import os
 import sys
@@ -56,7 +56,7 @@ def get_experiment_parameter_constructor(
             'dataset': architecture.dataset,
             'target_sparsity': target_sparsity,
             'sparsity_strategy': get_sparsity_strategy(sparsity_strategy),
-            'rewind_rule': get_rewind_rule(rewind_rule),
+            'rewind_rule': get_rewind_rule(rewind_rule, seed=seed, directory=directory),
             'pruning_rule': get_pruning_rule(pruning_rule),
             'hyperparameters': hyperparameters,
             'global_pruning': global_pruning,
@@ -86,10 +86,10 @@ def get_log_level(log_level: int) -> int:
             raise ValueError("Unknown log level '{log_level}'.")
 
 
-def get_rewind_rule(rewind_rule: str) -> Callable:
+def get_rewind_rule(rewind_rule: str, *args, **kwargs) -> Callable:
     match rewind_rule:
         case 'oi':
-            return rewind.get_rewind_to_original_init_for
+            return rewind.get_rewind_to_original_init_for(*args, **kwargs)
         case _:
             raise ValueError(
                 f"'{rewind_rule}' is not a valid rewind rule option.")
