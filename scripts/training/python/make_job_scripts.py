@@ -18,14 +18,14 @@ cd {os.path.join(TRAINING_DIRECTORY, 'python')}
 if [[ $* == *--vacc* ]]; then
     echo 'Queueing job to VACC'
     export PYTHONPATH=$PYTHONPATH:{RUN_DIRECTORY}
-    rundir=$(python3 make_dir.py --model={model} --dataset={dataset})
+    rundir=$(python3 make_dir.py --model={model} --dataset={dataset} "$@")
     mkdir -p $rundir
     echo $rundir
     slaunch dggpu --rundir=$rundir iterative_pruning.py --model={model} --dataset={dataset} --rundir=$rundir "$@"
 else
     echo 'Queueing job locally'
     export PYTHONPATH=$PYTHONPATH:{RUN_DIRECTORY}
-    rundir=$(python3 make_dir.py --model={model} --dataset={dataset})
+    rundir=$(python3 make_dir.py --model={model} --dataset={dataset} "$@")
     mkdir -p $rundir
     python3 iterative_pruning.py --model={model} --dataset={dataset} --rundir=$rundir "$@"
 fi"""
