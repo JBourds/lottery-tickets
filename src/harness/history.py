@@ -52,12 +52,20 @@ def get_experiments(
     tdatafile: str = C.TRIAL_DATAFILE,
 ) -> List[Generator[TrialData, None, None]]: 
     def get_trials(epath: str) -> Generator[TrialData, None, None]:
+        """
+        Function which returns the loaded pieces of trial data in order from an
+        experiment directory as a generator function.
+        
+        Assumes everything after the trial prefix is a number specifying the order.
+        """
         trial_paths = [
             os.path.join(epath, path, tdatafile) for path in os.listdir(epath)
             if path.startswith(tprefix)
             and tdatafile in os.listdir(os.path.join(epath, path))
         ]
-        for tpath in trial_paths:
+        
+        for tpath in sorted(trial_paths, 
+            key=lambda path: int(os.path.dirname(os.path.normpath(path)).split(tprefix)[-1])):
             print(tpath)
             yield TrialData.load_from(tpath)
         
