@@ -12,7 +12,10 @@ from sys import platform
 
 # Directories
 DATA_DIRECTORY: str = 'data'
-MODEL_DIRECTORY: str = 'models'
+MODELS_DIRECTORY: str = 'models'
+EXPERIMENT_PREFIX: str = 'model'
+TRIAL_PREFIX: str = 'trial'
+TRIAL_DATAFILE: str = 'trial_data.pkl'
 EXPERIMENTS_DIRECTORY: str = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
     'experiments',

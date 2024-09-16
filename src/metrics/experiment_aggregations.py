@@ -1,14 +1,12 @@
 """
 experiment_aggregations.py
 
-Module containing functions for aggregating across experiment data. Basically just 
-named functions applying some kind of Numpy aggregation within the context of values 
-mapped from an ExperimentSummary object's experiments into a 2D array with the
-dimension: `# Experiments, # Trials/Pruning Rounds`.
+Module containing functions for aggregating across experiment data. 
 
 Author: Jordan Bourdeau
-Date Created: 5/1/24
 """
+
+from typing import Generator, List
 
 import numpy as np
 
@@ -40,7 +38,7 @@ def std_overall(array: np.ndarray) -> float:
 # ------------------------- Aggregated Over Experiments -------------------------
 
 def aggregate_across_experiments(
-    summary: history.ExperimentSummary, 
+    summaries: List[Generator[history.TrialData, None, None]], 
     trial_aggregation: callable, 
     experiment_aggregation: callable = mean_over_experiments,
     ) -> any:
@@ -49,7 +47,8 @@ def aggregate_across_experiments(
     using user-defined functions to aggregate trial and experiment data.
     
     Parameters:
-        summary (callable): `ExperimentSummary` object being aggregated over.
+        summaries (List[Generator[history.TrialData, None, None]]): List of 
+            generator objects to produce trial data.
         trial_aggregation (callable): Function which returns a single value when
             called on a `TrialData` object.
         experiment_aggregation (callable): Function which aggregates across all
@@ -60,24 +59,25 @@ def aggregate_across_experiments(
             will likely be a 1D array aggregating over all the trials from the 
             same pruning step.
     """
-    trials_aggregated = t_agg.aggregate_across_trials(summary, trial_aggregation)
+    trials_aggregated = t_agg.aggregate_across_trials(summaries, trial_aggregation)
     experiment_aggregated = [experiment_aggregation(trials) for trials in trials_aggregated]
         
     return experiment_aggregated
     
-def get_sparsities(summary: history.ExperimentSummary) -> list[float]:
+def get_sparsities(summaries: List[Generator[history.TrialData, None, None]]) -> list[float]:
     """
     Function used to retrieve the sparsities from an experiment summary.
 
     Args:
-        summary (history.ExperimentSummary): `ExperimentSummary` object.
+        summaries (List[Generator[history.TrialData, None, None]]): List of 
+            generator objects to produce trial data.
 
     Returns:
         list[float]: List of sparsities as percentages corresponding to each
             trial.
     """
     return aggregate_across_experiments(
-        summary=summary,
+        summaries=summaries,
         trial_aggregation=t_agg.get_sparsity_percentage,
         experiment_aggregation=mean_over_experiments,
     )

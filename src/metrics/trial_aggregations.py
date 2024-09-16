@@ -7,7 +7,7 @@ Author: Jordan Bourdeau
 Date Created: 5/1/24
 """
 
-from typing import Union
+from typing import Any, Callable, Generator, List, Union
 
 import numpy as np
 
@@ -298,43 +298,42 @@ def _get_weight_density(weights: list[np.ndarray], masks: list[np.ndarray]) -> n
 
 
 def aggregate_across_trials(
-    summary: history.ExperimentSummary,
-    trial_aggregation: callable,
-) -> list[list]:
+    experiments: List[Generator[history.TrialData, None, None]],
+    trial_aggregation: Callable[[history.TrialData], Any],
+) -> List[List[Any]]:
     """
     Method used to aggregate over all the trials within a summary
     using a user-defined function to aggregate trial data.
 
-    Args:
-        summary (callable): `ExperimentSummary` object being aggregated over.
-        trial_aggregation (Callable): Function which returns a single value when
-            called on a `TrialData` object.
+    @param experiments (List[Generator[history.TrialData, None, None]]): List
+        containing generator functions for every experiment where the generators
+        produce trial data objects one at a time. This minimizes the amount of data
+        which needs to be in memory at once.
+    @param trial_aggreagtion (Callable[[history.TrialData], Any]): Function which
+        takes in a single trial's data and computes an aggregate statistic from it.
 
-    Returns:
-        list[list]: A 2D list where each inner list contains the aggregated values
-            gathered from every trial object.
+    @returns List[List[Any]]): A NxM array (list) where `N` corresponds to the number
+        of experiments and `M` corresponds to the number of trials in each experiment
+        (required # pruning steps + 1).
 
-            e.g.
+        e.g.
 
-            [
-                [2.5, 2.3, ..., 2.5],   # All aggregated values gathered from trial index = 0
-                [2.5, 2.3, ..., 2.5],   # All aggregated values gathered from trial index = 1
-                ...
-            ]
+        [
+            [2.5, 2.3, ..., 2.5],   # All aggregated values gathered from trial index = 0
+            [2.5, 2.3, ..., 2.5],   # All aggregated values gathered from trial index = 1
+            ...
+        ]
     """
-    trials_aggregated: dict = {}
+    aggregated_data = []
     # Iterate across experiments
-    for experiment in summary.experiments.values():
+    for e_index, experiment in enumerate(experiments):
         # Iterate over trials within an experiment
-        for trial in experiment.trials.values():
-            pruning_step: int = t_agg.get_pruning_step(trial)
-            if pruning_step in trials_aggregated.keys():
-                trials_aggregated.get(pruning_step).append(
-                    (trial_aggregation(trial)))
-            else:
-                trials_aggregated[pruning_step] = [trial_aggregation(trial)]
+        for t_index, trial in enumerate(experiment):
+            if t_index == 0:
+                aggregated_data.append([])
+            aggregated_data[e_index].append(trial_aggregation(trial))
 
-    return list(trials_aggregated.values())
+    return aggregated_data
 
 # ------------------------- Private Helper Methods -------------------------
 

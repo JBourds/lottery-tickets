@@ -26,11 +26,10 @@ from src.harness import pruning, rewind
 from src.harness.architecture import Hyperparameters
 
 
-def run_parallel_experiments(
+def run_experiments(
     path: str,
     starting_seed: int = 0,
     num_experiments: int = 1,
-    num_batches: int = 1,
     target_sparsity: float = 0.85,
     sparsity_strategy: str = 'default',
     model: str = 'lenet',
@@ -38,7 +37,6 @@ def run_parallel_experiments(
     dataset: str = 'mnist',
     rewind_rule: str = 'oi',
     pruning_rule: str = 'lm',
-    max_processes: int | None = None,
     log_level: int = 2,
     global_pruning: bool = False
 ) -> None:
@@ -53,8 +51,6 @@ def run_parallel_experiments(
         The initial seed for random number generation. Defaults to 0.
     num_experiments : int, optional
         Number of experiments to run. Defaults to 1.
-    num_batches : int, optional
-        Number of batches to split the experiments into. Defaults to 1.
     target_sparsity : float
         Desired sparsity overall. 
     sparsity_strategy : SparsityStrategy
@@ -69,24 +65,11 @@ def run_parallel_experiments(
         Rule for rewinding weights. Defaults to 'oi' (original initialization).
     pruning_rule : str, optional
         Rule for pruning. Defaults to 'lm' (low magnitude pruning).
-    max_processes : int, optional
-        Maximum number of parallel processes. Defaults to the number of CPU cores.
     log_level : int, optional
         Logging level. Defaults to 2 (Info).
     global_pruning : bool, optional
         Whether to use global pruning (True) or layerwise pruning (False). Defaults to False.
-
-    Notes
-    -----
-    This function sets up the necessary parameters and runs the experiments in parallel batches.
-    Each batch runs a subset of the total experiments, with seeds adjusted for each batch.
-
-    The experiments are saved in the specified output directory, which is generated based on the 
-    model name if not provided.
     """
-    if max_processes is None:
-        max_processes = 1
-
     get_experiment_parameters = get_experiment_parameter_constructor(
         model=model,
         hyperparameters=hyperparameters,
@@ -98,23 +81,11 @@ def run_parallel_experiments(
         global_pruning=global_pruning
     )
 
-    # Perform parallelized training in evenly split batches
-    num_experiments_in_batch = int(np.ceil(num_experiments / num_batches))
-    for batch_idx in range(num_batches):
-        batch_starting_seed = starting_seed + batch_idx * num_experiments_in_batch
-        batch_directory = os.path.join(path, f'batch_{batch_idx}')
-
-        # Last batch could be smaller
-        if batch_idx == num_batches - 1:
-            num_experiments_in_batch = num_experiments - \
-                batch_idx * num_experiments_in_batch
-
-        experiment.run_experiments(
-            starting_seed=batch_starting_seed,
-            num_experiments=num_experiments_in_batch,
-            experiment_directory=batch_directory,
-            experiment=experiment.run_iterative_pruning_experiment,
-            get_experiment_parameters=get_experiment_parameters,
-            max_processes=max_processes,
-            log_level=get_log_level(log_level),
-        )
+    experiment.run_experiments(
+        starting_seed=starting_seed,
+        num_experiments=num_experiments,
+        experiment_directory=path,
+        experiment=experiment.run_iterative_pruning_experiment,
+        get_experiment_parameters=get_experiment_parameters,
+        log_level=get_log_level(log_level),
+    )

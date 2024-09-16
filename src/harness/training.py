@@ -123,10 +123,8 @@ def training_loop(
     # Extract input and target for training and test/validation set
     X_train, X_test, Y_train, Y_test = dataset.load()
 
-    initial_parameters = [tensor.numpy()
-                          for tensor in copy.deepcopy(model.trainable_weights)]
-    masks = [tensor.numpy for tensor in copy.deepcopy(
-        mask_model.trainable_weights)]
+    initial_parameters = [copy.deepcopy(arr) for arr in model.get_weights()]
+    masks = [copy.deepcopy(arr) for arr in mask_model.get_weights()]
 
     # Calculate the number of batches and create arrays to keep track of batch
     # loss/accuracies while iterating over batches before it goes into training loss/accuracies
@@ -241,9 +239,8 @@ def training_loop(
     logging.info(
         f'Best Validation Accuracy and Loss: {np.max(validation_accuracies)}, {best_loss}')
 
-    final_parameters = [tensor.numpy()
-                        for tensor in copy.deepcopy(model.trainable_weights)]
-
+    final_parameters = [copy.deepcopy(arr) for arr in model.get_weights()]
+    
     # Compile training round data
     trial_data = history.TrialData(
         pruning_step,
@@ -291,9 +288,9 @@ def train(
 
     # Stop the trial data's timer and save it to the target directory
     trial_data.stop_timer()
-    trial_data_directory: str = os.path.join(output_directory, paths.get_model_directory(
+    trial_data_directory = os.path.join(output_directory, paths.get_model_directory(
         random_seed, pruning_step, trial_data=True))
-    trial_data.save_to(trial_data_directory, 'trial_data.pkl')
+    trial_data.save_to(trial_data_directory, C.TRIAL_DATAFILE)
 
     # Save network final weights and masks to its folder in the appropriate trial folder
     mod.save_model(model, random_seed, pruning_step,

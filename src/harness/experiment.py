@@ -8,25 +8,21 @@ Date: 3/17/24
 """
 
 import functools
+import gc
 import logging
-import os
-from typing import Callable, Dict, Tuple
-
 import multiprocess as mp
 import numpy as np
+import os
 import tensorflow as tf
-# Signal to Tensorflow that it can allocate memory as it goes
-# rather than all at once.
 gpus = tf.config.list_physical_devices('GPU')
 if gpus:
     for gpu in gpus:
         tf.config.experimental.set_memory_growth(gpu, True)
-
 from tensorflow import keras
+from typing import Callable, Dict, Tuple
 
 from src.harness import constants as C
 from src.harness import dataset as ds
-from src.harness import history
 from src.harness import model as mod
 from src.harness import paths, pruning, rewind
 from src.harness import training as train
@@ -38,14 +34,12 @@ def run_experiments(
     starting_seed: int,
     num_experiments: int,
     experiment_directory: str,
-    experiment: Callable[[Dict], history.ExperimentData],
+    experiment: Callable[[Dict], None],
     get_experiment_parameters: Callable[[int, str], Dict],
-    max_processes: int | None = None,
     log_level: int = logging.INFO,
-) -> history.ExperimentSummary:
+):
     """
     Main function which runs experiments with provided configurations.
-    Optionally performs multiprocessing parallelism to speed up training.
 
     Args:
         starting_seed (int): Starting random seed to use.
@@ -56,37 +50,15 @@ def run_experiments(
         get_experiment_parameters (callable): Function which takes in the seed and experiment
             directory then produces all the parameters which get unpacked into the function
             responsible for running the experiment.
-        max_processes (int | None): Integer value for the maximum number of
-            processes which are attempted to be run in parallel. Defaults to 1.
         log_level (int): Log level to use.
     Returns:
-        history.ExperimentSummary: Object containing information about all trained models.
+        (None): Saves all relevant files as it performs training.
     """
-
-    if max_processes is None:
-        max_processes = 1
-
-    # Set CPU affinity to keep each thread scheduled to the same core
-    os.environ['OMP_NUM_THREADS'] = str(max_processes)
-    os.environ['KMP_BLOCKTIME'] = '1'
-    os.environ['KMP_SETTINGS'] = '1'
-    os.environ['KMP_AFFINITY'] = 'granularity=fine,verbose,compact,1,0'
+    
+    os.environ["TF_GPU_ALLOCATOR"] = "cuda_malloc_async"
+    os.environ["TF_CPP_VMODULE"] = "gpu_process_state=10,gpu_cudamallocasync_allocator=10"
 
     paths.create_path(experiment_directory)
-    experiment_summary: history.ExperimentSummary = history.ExperimentSummary()
-    experiment_summary.start_timer()
-
-    def run_single_experiment(experiment_arguments: Dict) -> Tuple[int, history.ExperimentData]:
-        """
-        Helper function which unpacks experiment arguments into a call to the function.
-        Sets logging for the specific experiment, since each experiment runs in
-        its own process.
-        """
-        logging.basicConfig()
-        logging.getLogger().setLevel(log_level)
-        experiment_data: history.ExperimentData = experiment(
-            **experiment_arguments)
-        return experiment_data
 
     # Prepare arguments for multiprocessing
     random_seeds = list(range(starting_seed, starting_seed + num_experiments))
@@ -95,18 +67,13 @@ def run_experiments(
     experiment_args = [partial_get_experiment_parameters(
         seed) for seed in random_seeds]
 
-    # Run experiments in parallel and collect the results
-    with mp.get_context('spawn').Pool(max_processes) as pool:
-        experiment_results: list[history.ExperimentData] = list(
-            pool.map(run_single_experiment, experiment_args))
-
-    # Fill the experiment summary object, stop its timer, and save it
-    experiment_summary.experiments = {
-        seed: experiment_result for seed, experiment_result in zip(random_seeds, experiment_results)}
-    experiment_summary.stop_timer()
-    experiment_summary.save_to(experiment_directory, 'experiment_summary.pkl')
-    return experiment_summary
-
+    logging.basicConfig()
+    logging.getLogger().setLevel(log_level)
+    for args in experiment_args:
+        experiment(**args)
+        # Prevent GPU memory from fragmenting
+        tf.keras.backend.clear_session()
+        gc.collect()
 
 def run_iterative_pruning_experiment(
     hyperparameters: Hyperparameters,
@@ -119,7 +86,7 @@ def run_iterative_pruning_experiment(
     rewind_rule: Callable,
     global_pruning: bool = False,
     experiment_directory: str = './',
-) -> history.ExperimentData:
+):
     """
     Function used to run the pruning experiements for a given random seed.
     Will perform iterative pruning given a specified pruning technique
@@ -138,15 +105,9 @@ def run_iterative_pruning_experiment(
         global_pruning (bool, optional): Boolean flag for whether pruning is done globally
             or layerwise. Defaults to False.
         experiment_directory (str): Path to place all experimental data.
-
-    Returns:
-        history.ExperimentData: Object containing information about all the training rounds produced in the experiment.
     """
     # Set seed for reproducability
     utils.set_seed(random_seed)
-
-    experiment_data = history.ExperimentData()
-    experiment_data.start_timer()
 
     # Make models and save them
     model = create_model()
@@ -171,8 +132,6 @@ def run_iterative_pruning_experiment(
             output_directory=experiment_directory,
         )
 
-        experiment_data.add_trial(trial_data)
-
         X_train, _, _, _ = dataset.load()
         iteration_count = np.sum(trial_data.train_accuracies != 0)
 
@@ -191,12 +150,12 @@ def run_iterative_pruning_experiment(
             f'Layer {index}, '
             + f'Total Params: {total}, '
             + f'Nonzero Params: {nonzero}, '
-            + f'Sparsity: {nonzero / total:.2f}%'
+            + f'Sparsity: {nonzero / total:%}'
             for index, (total, nonzero)
             in enumerate(utils.count_total_and_nonzero_params_per_layer(model))
         ]
         logging.info(
-            'Layer sparsities:\n'
+            'Layer sparsities:\n\t'
             + '\n\t'.join(layer_strings)
         )
 
@@ -219,6 +178,3 @@ def run_iterative_pruning_experiment(
         # assert all([(rewound == initial).all() for rewound, initial in zip(rewound_weights, initial_weights)])
         
         pruning_step += 1
-
-    experiment_data.stop_timer()
-    return experiment_data

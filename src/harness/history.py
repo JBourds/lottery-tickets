@@ -12,9 +12,11 @@ import os
 import sys
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Callable, Generator, List
 
 import numpy as np
 
+from src.harness import constants as C
 from src.harness import mixins
 
 
@@ -22,12 +24,9 @@ from src.harness import mixins
 class TrialData(mixins.PickleMixin, mixins.TimerMixin):
     """
     Class containing data from a single round of training.
-
-    Parameters:
-    :param pruning_step:    (int) Integer for the step in pruning. 
-    :param initial_weights: (list[np.ndarray]) Initial weights of the model.
-    :param final_weights:   (list[np.ndarray]) Final weights of the model.
-    :param masks:           (list[np.ndarray]) List of mask model weights (binary mask).
+    Includes a few metrics from training, the before/after
+    weights, and the masks which were applied during training.
+    Also includes the pruning step this was from.
     """
     pruning_step: int
 
@@ -45,65 +44,27 @@ class TrialData(mixins.PickleMixin, mixins.TimerMixin):
     validation_accuracies: np.array
 
 
-class ExperimentData(mixins.PickleMixin, mixins.TimerMixin):
+def get_experiments(
+    root: str,
+    models_dir: str = C.MODELS_DIRECTORY, 
+    eprefix: str = C.EXPERIMENT_PREFIX, 
+    tprefix: str = C.TRIAL_PREFIX, 
+    tdatafile: str = C.TRIAL_DATAFILE,
+) -> List[Generator[TrialData, None, None]]: 
+    def get_trials(epath: str) -> Generator[TrialData, None, None]:
+        trial_paths = [
+            os.path.join(epath, path, tdatafile) for path in os.listdir(epath)
+            if path.startswith(tprefix)
+            and tdatafile in os.listdir(os.path.join(epath, path))
+        ]
+        for tpath in trial_paths:
+            print(tpath)
+            yield TrialData.load_from(tpath)
+        
+    models_directory = os.path.join(root, models_dir)
+    experiment_paths = [
+        os.path.join(models_directory, path) for path in os.listdir(models_directory)
+        if path.startswith(eprefix)
+    ]
+    return [get_trials(epath) for epath in experiment_paths]
 
-    def __init__(self):
-        """
-        Class which stores the data from an experiment 
-        (list of `TrialData` objects which is of length N, where N is the # of pruning steps).
-        """
-        self.trials: dict[int: TrialData] = {}
-
-    def get_trial_count(self) -> int:
-        """
-        Function to return the number of trials in an experiment.
-
-        Returns:
-            int: Number of trials.
-        """
-        return len(self.trials)
-
-    def add_trials(self, trials: list[TrialData]):
-        """
-        Method used to add a list `TrialData` objects to the internal representation.
-
-        :param trials: List of `TrialData` objects being added.
-        """
-        for trial in trials:
-            self.add_trial(trial)
-
-    def add_trial(self, trial: TrialData):
-        """
-        Method used to add a `TrialData` object to the internal representation.
-
-        :param trial: `TrialData` object being added.
-        """
-        self.trials[trial.pruning_step] = trial
-
-
-class ExperimentSummary(mixins.PickleMixin, mixins.TimerMixin):
-
-    def __init__(self):
-        """
-        Class which stores data from many experiments in a dictionary, where the key
-        is the random seed used for the experiment and the value is an `ExperimentData` object.
-        """
-        self.experiments: dict[int: ExperimentData] = {}
-
-    def add_experiment(self, seed: int, experiment: ExperimentData):
-        """
-        Method to add a new experiment to the internal dictionary.
-
-        :param seed:        Integer for the random seed used in the experiment.
-        :param experiment: `Experiment` object to store.
-        """
-        self.experiments[seed] = experiment
-
-    def get_experiment_count(self) -> int:
-        """
-        Function to return the number of experiments in a summary.
-
-        Returns:
-            int: Number of experiments.
-        """
-        return len(self.experiments)

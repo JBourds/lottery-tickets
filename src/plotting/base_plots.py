@@ -11,7 +11,7 @@ import copy
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import norm
-from typing import Generator
+from typing import Generator, List
 
 from src.harness import history
 from src.metrics import experiment_aggregations as e_agg
@@ -19,61 +19,8 @@ from src.metrics import trial_aggregations as t_agg
 
 # ------------------------- Public Base Plotting Functions -------------------------
 
-def plot_aggregated_summary_ci_across_batches(
-    summaries: Generator[history.ExperimentSummary, None, None],
-    get_x: callable,
-    aggregate_trials: callable,
-    confidence: float = 0.95,
-    legend: str = None,
-    show_ci_legend: bool = True,
-    show_max_point: bool = False,
-    show_min_point: bool = False,
-):
-    """
-    Function which plots the aggregated summary for an experiment
-    using a defined function to get the x and one to aggregate trials.
-
-    Args:
-        summaries (Generator[history.ExperimentSummary]): Generator or iterable which yields batch summaries.
-        get_x (callable): Function which gets called on the summary to get x values.
-        aggregate_trials (callable): Function which gets called on the summary to produce a 2D array of some
-            aggregated trial values.
-        confidence (float, optional): Confidence interval level to plot. Defaults to 0.95.
-        legend (str, optional): Legend to plot for value being plotted. Defaults to None.
-        show_ci_legend (bool, optional): Flag for whether confidnce interval legend is shown. Defaults to True.
-        show_max_point (bool, optional): Flag for whether max value point gets shown. Defaults to False.
-        show_min_point (bool, optional): Flag for whether min value point gets shown. Defaults to False.
-    """
-    
-    aggregated_trial_data: list[list[float]] = []
-    for batch_index, batch_summary in enumerate(summaries):
-        # We want the raw aggregated trial data here
-        aggregated_batch_data: list[list[float]] = t_agg.aggregate_across_trials(batch_summary, aggregate_trials)
-        
-        # Only need to get X value once
-        if batch_index == 0:
-            x: list[float] = get_x(batch_summary)
-            aggregated_trial_data = aggregated_batch_data
-        else:
-            for trial_n_data, batch_trial_n_data in zip(aggregated_trial_data, aggregated_batch_data):
-                trial_n_data += copy.deepcopy(batch_trial_n_data)
-                   
-        # Deallocate the batch summary so we don't run out of memory
-        del batch_summary
-        
-    aggregated_trial_data: np.ndarray = np.array(aggregated_trial_data)
-    _aggregate_and_plot_ci(
-        x=x, 
-        y_2d=aggregated_trial_data, 
-        confidence=confidence, 
-        legend=legend, 
-        show_ci_legend=show_ci_legend, 
-        show_max_point=show_max_point, 
-        show_min_point=show_min_point
-    )
-
 def plot_aggregated_summary_ci(
-    summary: history.ExperimentSummary,
+    experiments: List[Generator[history.TrialData, None, None]],
     get_x: callable,
     aggregate_trials: callable,
     confidence: float = 0.95,
@@ -87,7 +34,8 @@ def plot_aggregated_summary_ci(
     using a defined function to get the x and one to aggregate trials.
 
     Args:
-        summary (history.ExperimentSummary): `ExperimentSummary` object containing information about training.
+        summaries (List[Generator[history.TrialData, None, None]]): List of generators which yield data from
+            individual trials.
         get_x (callable): Function which gets called on the summary to get x values.
         aggregate_trials (callable): Function which gets called on the summary to produce a 2D array of some
             aggregated trial values.
@@ -98,8 +46,8 @@ def plot_aggregated_summary_ci(
         show_min_point (bool, optional): Flag for whether min value point gets shown. Defaults to False.
     """
     
-    x: list[float] = get_x(summary)
-    aggregated_trial_data: np.ndarray = np.array(t_agg.aggregate_across_trials(summary, aggregate_trials))
+    x: List[float] = get_x(summary)
+    aggregated_trial_data: np.ndarray = np.array(t_agg.aggregate_across_trials(experiments, aggregate_trials))
     
     _aggregate_and_plot_ci(
         x=x, 
@@ -114,7 +62,7 @@ def plot_aggregated_summary_ci(
 # ------------------------- Private Helper Functions -------------------------
 
 def _aggregate_and_plot_ci(
-    x: list[float],
+    x: List[float],
     y_2d: np.ndarray,
     confidence: float = 0.95,
     legend: str = None,
@@ -127,7 +75,7 @@ def _aggregate_and_plot_ci(
     and includes confidence intervals over the y-axis values.
 
     Args:
-        x (list[float]): List of floating point values to plot on x axis.
+        x (List[float]): List of floating point values to plot on x axis.
         y_2d (np.ndarray[float]): 2D array of floating point values to aggregate.
             Dimensions are `# Trials, # Experiments`.
         aggregate_y (callable): Function for aggregating the values across 2D array
@@ -176,7 +124,7 @@ def _annotate_extreme_points(
         plt.axvline(x=xmin, color='b', linestyle='--', label=f'Min: ({xmin:.2f}, {ymin:.2f})')
 
 def _plot_line_graph_with_confidence_interval(
-    x: list[float], 
+    x: List[float], 
     y: np.ndarray,
     std_y: np.array,
     num_samples: int,
@@ -191,8 +139,8 @@ def _plot_line_graph_with_confidence_interval(
     each y point.
 
     Args:
-        x (list[float]): Floating point x values to plot.
-        y (list[float]): Floating point y values to plot, where each y value corresponds to some aggregation
+        x (List[float]): Floating point x values to plot.
+        y (List[float]): Floating point y values to plot, where each y value corresponds to some aggregation
             over a sample. Dimensions are `# Trials Per Experiment, # Experimnents`.
         std_y (np.array[float]): Array of floating points values of length N where N is the number of points to plot.
             Each value corresponds to the standard deviation of the sample the y point was averaged over.

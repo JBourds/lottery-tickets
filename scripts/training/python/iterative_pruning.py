@@ -8,7 +8,7 @@ Author: Jordan Bourdeau
 
 import argparse
 
-from scripts.training.python.base import run_parallel_experiments
+from scripts.training.python.base import run_experiments
 from src.harness import pruning
 from src.harness.architecture import Architecture
 
@@ -45,8 +45,6 @@ if __name__ == '__main__':
                         help='Starting seed. Defaults to 0.')
     parser.add_argument('--experiments', type=int, default=1,
                         help='Number of experiments. Defaults to 1.')
-    parser.add_argument('--batches', type=int, default=1,
-                        help='Number of batches to split training into')
     parser.add_argument('--target_sparsity', type=float, default=0.85,
                         help='Target sparsity. Defaults to 85% sparse (1 step).')
     parser.add_argument('--sparsity_strategy', type=str, default='default',
@@ -59,8 +57,6 @@ if __name__ == '__main__':
                         help='Rule for rewinding weights. "oi" rewinds to original weight initialization.')
     parser.add_argument('--pruning_rule', type=str, default='lm',
                         help='Rule for pruning weights. "lm" prunes low magnitude weights.')
-    parser.add_argument('--max_processes', type=int, default=None,
-                        help='Max number of processes to run in tandem. Defaults to total number of CPU cores.')
     parser.add_argument('--global_pruning', type=bool, default=False,
                         help='Boolean flag for whether to use global pruning. False by default.')
 
@@ -85,11 +81,10 @@ if __name__ == '__main__':
     hyperparameters = architecture.get_model_hyperparameters(
         **cmdline_hyperparams)
 
-    run_parallel_experiments(
+    run_experiments(
         path=args.rundir,
         starting_seed=args.seed,
         num_experiments=args.experiments,
-        num_batches=args.batches,
         target_sparsity=args.target_sparsity,
         sparsity_strategy=args.sparsity_strategy,
         model=args.model,
@@ -97,7 +92,6 @@ if __name__ == '__main__':
         dataset=args.dataset,
         rewind_rule=args.rewind_rule,
         pruning_rule=args.pruning_rule,
-        max_processes=args.max_processes,
         log_level=args.log_level,
         global_pruning=args.global_pruning,
     )
