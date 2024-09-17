@@ -36,7 +36,7 @@ def get_model_directory(
     Returns:
         str: Model directory.
     """
-    output_directory: str = os.path.join(parent_directory, f'{experiment_prefix}_{seed}')
+    output_directory: str = os.path.join(parent_directory, f'{experiment_prefix}{seed}')
     if not experiment_data:
         trial_directory: str = initial_dir(output_directory) if initial else trial_dir(output_directory, pruning_step)
         target_directory: str = trial_directory if trial_data else mask_dir(trial_directory) if masks else weights_dir(trial_directory)

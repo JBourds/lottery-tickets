@@ -6,12 +6,15 @@ Module containing functions for aggregating across experiment data.
 Author: Jordan Bourdeau
 """
 
-from typing import Generator, List
+from typing import Any, Callable, Generator, List
 
 import numpy as np
 
 from src.harness import history
 from src.metrics import trial_aggregations as t_agg
+
+AggregatedTrials = List[List[Any]]
+AggregatedExperiments = List[Any]
 
 # ------------------------- Mean -------------------------
 
@@ -39,45 +42,21 @@ def std_overall(array: np.ndarray) -> float:
 
 def aggregate_across_experiments(
     summaries: List[Generator[history.TrialData, None, None]], 
-    trial_aggregation: callable, 
-    experiment_aggregation: callable = mean_over_experiments,
-    ) -> any:
+    trial_aggregations: List[Callable[[history.TrialData], Any]], 
+    experiment_aggregations: List[Callable[[AggregatedTrials], AggregatedExperiments]],
+    ) -> List[AggregatedExperiments]:
     """
-    Method used to aggregate over all the experiments within a summary
-    using user-defined functions to aggregate trial and experiment data.
-    
-    Parameters:
-        summaries (List[Generator[history.TrialData, None, None]]): List of 
-            generator objects to produce trial data.
-        trial_aggregation (callable): Function which returns a single value when
-            called on a `TrialData` object.
-        experiment_aggregation (callable): Function which aggregates across all
-            the data produced by aggregating over all the trial data.  
-
-    Returns:
-        any: Can return any type depending on how the aggregation is performed but
-            will likely be a 1D array aggregating over all the trials from the 
-            same pruning step.
+    Function which first aggregates over a 2D array of dimensions `N` x `M` where `N` is the
+    number of experiments and `M` are the number of trials (rounds of iterative pruning)
+    and applies each aggregating function specified in the list of trial aggregations. This
+    step will return an `A` x `N` x `M` array where `A` is equal to the number of trial
+    aggregations performed, and the type of each list is whatever the type output by the trial
+    aggregation. Then, an experiment aggregation is applied over corresponding values from
+    each trial across experiments, effectively collapsing the second dimension and outputting
+    a `B` x `A` x `M` dimension array, where `B` is the number of experiment aggregations.
     """
     trials_aggregated = t_agg.aggregate_across_trials(summaries, trial_aggregation)
-    experiment_aggregated = [experiment_aggregation(trials) for trials in trials_aggregated]
-        
-    return experiment_aggregated
-    
-def get_sparsities(summaries: List[Generator[history.TrialData, None, None]]) -> list[float]:
-    """
-    Function used to retrieve the sparsities from an experiment summary.
-
-    Args:
-        summaries (List[Generator[history.TrialData, None, None]]): List of 
-            generator objects to produce trial data.
-
-    Returns:
-        list[float]: List of sparsities as percentages corresponding to each
-            trial.
-    """
-    return aggregate_across_experiments(
-        summaries=summaries,
-        trial_aggregation=t_agg.get_sparsity_percentage,
-        experiment_aggregation=mean_over_experiments,
-    )
+    aggregated_data = []
+    for e_agg in experiment_aggregations:
+        aggregated_data.append([e_agg(trial_agg) for trial_agg in trials_aggregated])
+    return aggregated_data

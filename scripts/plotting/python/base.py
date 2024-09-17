@@ -48,8 +48,18 @@ def make_plots(
     print("Creating plots")
     # Hardcoded to use only the first one for now
     experiments = history.get_experiments(root, models_dir, eprefix, tprefix, tdata)
-    data = t_agg.aggregate_across_trials(experiments, t_agg.get_global_average_magnitude)
-    print(data)
+    aggregations = [
+        t_agg.get_best_loss,
+        t_agg.get_sparsity_percentage,
+        t_agg.get_early_stopping_iteration,
+    ]
+    best_loss, sparsity_percent, early_stopping_iter = t_agg.aggregate_across_trials(experiments, aggregations)
+    print('Best Loss')
+    print(best_loss)
+    print('Sparsity %')
+    print(sparsity_percent)
+    print('Early Stopping Iteration')
+    print(early_stopping_iter)
     
 
     

@@ -23,9 +23,6 @@ from src.harness import model as mod
 from src.harness import pruning, rewind
 from src.harness.architecture import Architecture, Hyperparameters
 
-sys.path.append('../')
-
-
 def get_experiment_parameter_constructor(
     model: str,
     hyperparameters: Hyperparameters | None,

@@ -81,7 +81,11 @@ def get_best_loss(trial: history.TrialData, train: bool = False) -> float:
     Returns:
         float: Best model accuracy from within a round of iterative pruning.
     """
-    return np.min(trial.train_losses if train else trial.validation_losses)
+    arr = trial.train_losses if train else trial.validation_losses
+    if np.argmax(arr == 0) != len(arr) - 1:
+        return 0
+    arr = arr[arr != 0]
+    return np.min(arr)
 
 # ------------------------- Accuracy Metrics -------------------------
 
@@ -124,13 +128,13 @@ def _get_average_magnitude(
     trial: history.TrialData,
     layerwise: bool = False,
     use_initial_weights: bool = False,
-) -> Union[float, list[float]]:
+) -> Union[float, List[float]]:
     """
     Function used to get the average magnitude of parameters, either 
     globally across all layers or layerwise.
 
     Returns:
-        Union[float, list[float]]: Single float or list of floats depending on whether it performs
+        Union[float, List[float]]: Single float or list of floats depending on whether it performs
             calculations globally or by layer.
     """
     return _perform_operation_globally_or_layerwise(
@@ -141,13 +145,13 @@ def _get_average_magnitude(
     )
 
 
-def _get_average_parameter_magnitude(weights: list[np.ndarray], masks: list[np.ndarray]) -> float:
+def _get_average_parameter_magnitude(weights: List[np.ndarray], masks: List[np.ndarray]) -> float:
     """
     Private function which computes the average magnitude in a list of unmasked weights.
 
     Args:   
-        weights: (list[np.ndarray]): List of Numpy arrays for the weights in each layer being included.
-        masks: (list[np.ndarray]): List of Numpy arrays for the masks in each layer being included.
+        weights: (List[np.ndarray]): List of Numpy arrays for the weights in each layer being included.
+        masks: (List[np.ndarray]): List of Numpy arrays for the masks in each layer being included.
 
     Returns:
         float: Average parameter magnitude of the unmasked weights.
@@ -157,7 +161,7 @@ def _get_average_parameter_magnitude(weights: list[np.ndarray], masks: list[np.n
     assert np.all([w.shape == m.shape for w, m in zip(weights, masks)]
                   ), 'Weights and masks must all be the same shape'
 
-    unmasked_weights: list[np.ndarray] = [w[mask]
+    unmasked_weights: List[np.ndarray] = [w[mask]
                                           for w, mask in zip(weights, masks)]
     unmasked_weight_sum_magnitude: float = np.sum(
         [np.sum(np.abs(w)) for w in unmasked_weights])
@@ -187,7 +191,7 @@ def get_global_percent_positive_weights(trial: history.TrialData, use_initial_we
 def get_layerwise_percent_negative_weights(trial: history.TrialData, use_initial_weights: bool = False) -> float:
     """
     Returns:
-        list[float]: Negative percent of the unpruned weights stored by layer in the network.
+        List[float]: Negative percent of the unpruned weights stored by layer in the network.
     """
     return 100 - get_layerwise_percent_positive_weights(trial=trial, use_initial_weights=use_initial_weights)
 
@@ -195,7 +199,7 @@ def get_layerwise_percent_negative_weights(trial: history.TrialData, use_initial
 def get_layerwise_percent_positive_weights(trial: history.TrialData, use_initial_weights: bool = False) -> float:
     """
     Returns:
-        list[float]: Positive percent of the unpruned weights stored by layer in the network.
+        List[float]: Positive percent of the unpruned weights stored by layer in the network.
     """
     return _get_positive_weight_ratio(trial=trial, layerwise=True, use_initial_weights=use_initial_weights) * 100
 
@@ -204,13 +208,13 @@ def _get_positive_weight_ratio(
     trial: history.TrialData,
     layerwise: bool = False,
     use_initial_weights: bool = False
-) -> Union[float, list[float]]:
+) -> Union[float, List[float]]:
     """
     Function used to get the positive weight ratio, either globally across all layers or
     layerwise.
 
     Returns:
-        Union[float, list[float]]: Single float or list of floats depending on whether it performs
+        Union[float, List[float]]: Single float or list of floats depending on whether it performs
             calculations globally or by layer.
     """
     return _perform_operation_globally_or_layerwise(
@@ -221,13 +225,13 @@ def _get_positive_weight_ratio(
     )
 
 
-def _get_ratio_of_unmasked_positive_weights(weights: list[np.ndarray], masks: list[np.ndarray]) -> float:
+def _get_ratio_of_unmasked_positive_weights(weights: List[np.ndarray], masks: List[np.ndarray]) -> float:
     """
     Private function which computes the proportion of unmasked positive weights.
 
     Args:   
-        weights: (list[np.ndarray]): List of Numpy arrays for the weights in each layer being included.
-        masks: (list[np.ndarray]): List of Numpy arrays for the masks in each layer being included.
+        weights: (List[np.ndarray]): List of Numpy arrays for the weights in each layer being included.
+        masks: (List[np.ndarray]): List of Numpy arrays for the masks in each layer being included.
 
     Returns:
         float: Proportion of postive parameters in the unmasked weights.
@@ -253,12 +257,12 @@ def _get_weight_density(
     trial: history.TrialData,
     layerwise: bool = False,
     use_initial_weights: bool = False,
-) -> Union[float, list[float]]:
+) -> Union[float, List[float]]:
     """
     Function used to get a density plot of weight distributions,
 
     Returns:
-        Union[float, list[float]]: Single float or list of floats depending on whether it performs
+        Union[float, List[float]]: Single float or list of floats depending on whether it performs
             calculations globally or by layer.
     """
     return _perform_operation_globally_or_layerwise(
@@ -269,13 +273,13 @@ def _get_weight_density(
     )
 
 
-def _get_weight_density(weights: list[np.ndarray], masks: list[np.ndarray]) -> np.array:
+def _get_weight_density(weights: List[np.ndarray], masks: List[np.ndarray]) -> np.array:
     """
     Private function which computes a density plot of weights.
 
     Args:   
-        weights: (list[np.ndarray]): List of Numpy arrays for the weights in each layer being included.
-        masks: (list[np.ndarray]): List of Numpy arrays for the masks in each layer being included.
+        weights: (List[np.ndarray]): List of Numpy arrays for the weights in each layer being included.
+        masks: (List[np.ndarray]): List of Numpy arrays for the masks in each layer being included.
 
     Returns:
         np.array[float]: Density plot of weights.
@@ -299,7 +303,7 @@ def _get_weight_density(weights: list[np.ndarray], masks: list[np.ndarray]) -> n
 
 def aggregate_across_trials(
     experiments: List[Generator[history.TrialData, None, None]],
-    trial_aggregation: Callable[[history.TrialData], Any],
+    trial_aggregations: List[Callable[[history.TrialData], Any]],
 ) -> List[List[Any]]:
     """
     Method used to aggregate over all the trials within a summary
@@ -309,29 +313,20 @@ def aggregate_across_trials(
         containing generator functions for every experiment where the generators
         produce trial data objects one at a time. This minimizes the amount of data
         which needs to be in memory at once.
-    @param trial_aggreagtion (Callable[[history.TrialData], Any]): Function which
+    @param trial_aggreagtions (List[Callable[[history.TrialData], Any]]): Functions which
         takes in a single trial's data and computes an aggregate statistic from it.
 
-    @returns List[List[Any]]): A NxM array (list) where `N` corresponds to the number
-        of experiments and `M` corresponds to the number of trials in each experiment
+    @returns List[List[List[Any]]]): A `N` x `M` x `A`  array (list) where `A` is the number of aggregations,
+        `N` is the number of experiments and `M` corresponds to the number of trials in each experiment
         (required # pruning steps + 1).
-
-        e.g.
-
-        [
-            [2.5, 2.3, ..., 2.5],   # All aggregated values gathered from trial index = 0
-            [2.5, 2.3, ..., 2.5],   # All aggregated values gathered from trial index = 1
-            ...
-        ]
     """
-    aggregated_data = []
-    # Iterate across experiments
+    aggregated_data = [[] for _ in trial_aggregations]
     for e_index, experiment in enumerate(experiments):
-        # Iterate over trials within an experiment
         for t_index, trial in enumerate(experiment):
-            if t_index == 0:
-                aggregated_data.append([])
-            aggregated_data[e_index].append(trial_aggregation(trial))
+            for agg_index, aggregation in enumerate(trial_aggregations):
+                if t_index == 0:
+                    aggregated_data[agg_index].append([])
+                aggregated_data[agg_index][e_index].append(aggregation(trial))
 
     return aggregated_data
 
@@ -358,8 +353,8 @@ def _perform_operation_globally_or_layerwise(
         any: Returns type depends on the operation.
     """
     # Convert masks into boolean Numpy array for indexing, and convert weights into Numpy array as well
-    masks: list[np.ndarray] = [mask.astype(bool) for mask in trial.masks]
-    weights: list[np.ndarray] = trial.initial_weights if use_initial_weights else trial.final_weights
+    masks = [mask.astype(bool) for mask in trial.masks]
+    weights = trial.initial_weights if use_initial_weights else trial.final_weights
     weights = [w for w in weights]
 
     if layerwise:

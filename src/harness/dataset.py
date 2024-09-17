@@ -103,20 +103,18 @@ class Dataset:
 
 # ---------------------- Data Loader Functions ----------------------
 
-def load_and_process_mnist(random_seed: int = 0, flatten: bool = False) -> tuple[np.array, np.array, np.array, np.array]:
+def load_and_process_mnist(flatten: bool = False) -> tuple[np.array, np.array, np.array, np.array]:
     """
     Function to load and preprocess the MNIST dataset.
     Source: https://colab.research.google.com/github/maticvl/dataHacker/blob/master/CNN/LeNet_5_TensorFlow_2_0_datahacker.ipynb#scrollTo=UA2ehjxgF7bY
 
     Args:
-        random_seed (int, optional): Random seed to set for dataset shuffling. Defaults to 0.
         flatten (bool, optional): Boolean flag for whether data should be flattened to 1 dimension.
             False by default.
 
     Returns:
         tuple[np.array, np.array, np.array, np.array]: X and Y training and test sets after preprocessing.
     """
-    utils.set_seed(random_seed)
     (X_train, Y_train), (X_test, Y_test) = tf.keras.datasets.mnist.load_data()
 
     if flatten:
@@ -142,19 +140,17 @@ def load_and_process_mnist(random_seed: int = 0, flatten: bool = False) -> tuple
     return X_train, X_test, Y_train, Y_test
 
 
-def load_and_process_cifar10(random_seed: int = 0, flatten: bool = False) -> tuple[np.array, np.array, np.array, np.array]:
+def load_and_process_cifar10(flatten: bool = False) -> tuple[np.array, np.array, np.array, np.array]:
     """
     Function to load and preprocess the CIFAR10 dataset.
 
     Args:
-        random_seed (int, optional): Random seed to set for dataset shuffling. Defaults to 0.
         flatten (bool, optional): Boolean flag for whether data should be flattened to 1 dimension.
             False by default.
 
     Returns:
         tuple[np.array, np.array, np.array, np.array]: X and Y training and test sets after preprocessing.
     """
-    utils.set_seed(random_seed)
     (X_train, Y_train), (X_test, Y_test) = tf.keras.datasets.cifar10.load_data()
 
     if flatten:
@@ -179,15 +175,3 @@ def load_and_process_cifar10(random_seed: int = 0, flatten: bool = False) -> tup
 
     return X_train, X_test, Y_train, Y_test
 
-
-def load_and_process_imagenet(random_seed: int = 0) -> tuple[np.array, np.array, np.array, np.array]:
-    """
-    Function to load and preprocess the ImageNet dataset.
-
-    :param random_seed: Random seed to set for dataset shuffling.
-
-    :returns X and Y training and test sets after preprocessing.
-    """
-    utils.set_seed(random_seed)
-
-    # TODO: Add this later

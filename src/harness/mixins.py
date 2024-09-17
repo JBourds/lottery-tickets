@@ -37,6 +37,7 @@ class PickleMixin:
         Returns:
             object: The loaded object.
         """
+        print("Loading")
         with open(filepath, 'rb') as file:
             return pickle.load(file)
 

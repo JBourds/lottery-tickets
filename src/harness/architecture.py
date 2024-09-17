@@ -129,23 +129,20 @@ class Architectures(Enum):
     def create_lenet_300_100(
         input_shape: Tuple[int, ...],
         num_classes: int,
-        initializer: tf.initializers.Initializer = tf.initializers.GlorotNormal(),
     ) -> keras.Model:
         """
         Function for creating LeNet-300-100 model.
 
         :param input_shape: Expected input shape for images.
         :param num_classes: Number of potential classes to predict.
-        :param initializer: Initializer used to set weights at the beginning
 
         :returns: Compiled LeNet-300-100 architecture.
         """
         model = Sequential([
             Input(input_shape),
-            Dense(300, activation='relu', kernel_initializer=initializer),
-            Dense(100, activation='relu', kernel_initializer=initializer),
-            Dense(num_classes, activation='softmax',
-                  kernel_initializer=initializer),
+            Dense(300, activation='relu'),
+            Dense(100, activation='relu'),
+            Dense(num_classes, activation='softmax'),
         ], name="LeNet-300-100")
 
         # Explicitly build the model to initialize weights
@@ -157,7 +154,6 @@ class Architectures(Enum):
     def create_conv2(
             input_shape: Tuple[int, ...],
             num_classes: int,
-            initializer: tf.initializers.Initializer = tf.initializers.GlorotNormal(),
     ) -> keras.Model:
         model = Sequential([
             Input(input_shape),
@@ -181,7 +177,6 @@ class Architectures(Enum):
     def create_conv4(
             input_shape: Tuple[int, ...],
             num_classes: int,
-            initializer: tf.initializers.Initializer = tf.initializers.GlorotNormal(),
     ) -> keras.Model:
         model = Sequential([
             Input(input_shape),
@@ -211,7 +206,6 @@ class Architectures(Enum):
     def create_conv6(
             input_shape: Tuple[int, ...],
             num_classes: int,
-            initializer: tf.initializers.Initializer = tf.initializers.GlorotNormal(),
     ) -> keras.Model:
         model = Sequential([
             Input(input_shape),

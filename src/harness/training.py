@@ -275,8 +275,6 @@ def train(
     :returns Model, masked model, and training round objects with the final trained model and the training summary.
     """
 
-    utils.set_seed(random_seed)
-
     # Run the training loop
     trial_data = training_loop(
         pruning_step,

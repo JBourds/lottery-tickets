@@ -2,16 +2,13 @@ import os
 import pickle
 
 from src.harness import history
+from src.metrics import trial_aggregations as t_agg
 
-p = 'experiments/lenet/models/model_0/trial0/trial_data.pkl'
-
-path = 'experiments/lenet/'
+path = 'experiments/lenet_mnist_10'
 trial_data = history.get_experiments(path)
+experiment_aggs = []
 for experiment in trial_data:
     for trial in experiment:
-        for key, t in zip(trial.__dict__.keys(), map(type, trial.__dict__.values())):
-            print(key, t)
-            if t == list:
-                print(type(trial.__dict__[key][0]))
+        print(trial.final_weights[-1]) 
         
 

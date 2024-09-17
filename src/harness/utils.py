@@ -23,6 +23,7 @@ def set_seed(random_seed: int):
 
     :param random_seed: Integer values for the random seed to set.
     """
+    print("Seed set to ", random_seed)
     os.environ['PYTHONHASHSEED'] = str(random_seed)
     random.seed(random_seed)
     np.random.seed(random_seed)
