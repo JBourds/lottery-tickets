@@ -42,24 +42,19 @@ def save_plot(location: str):
 # ------------------------- Plots for Single Experiment Summary -------------------------
         
 def plot_early_stopping(
-    experiments: List[Generator[history.TrialData, None, None]], 
+    x: np.ndarray,
+    y_mean: np.ndarray,
+    y_std: np.ndarray,
+    num_samples: int,
     save_location: str = None,
-    ):
-    """
-    Function which plots the best training/test at the point at which
-    early stopping occurs.
-
-    Args:
-        experiments (List[Generator[history.TrialData, None, None]]): List of generator functions to produce individual pieces of trial data.
-        save_location (str, optional): String to save plot to if it is not None.
-    """
-    
+):
     # Early Stopping
     plt.figure(figsize=(8,6))
     bp.plot_aggregated_summary_ci(
-        experiments=experiments, 
-        get_x=e_agg.get_sparsities,
-        aggregate_trials=t_agg.get_early_stopping_iteration, 
+        x=x,
+        y_mean=y_mean,
+        y_std=y_std,
+        num_samples=num_samples,
         legend='Early Stopping Iteration',
         show_min_point=True,
     )
@@ -68,36 +63,28 @@ def plot_early_stopping(
     plt.gca().set_xlabel('Sparsity (% Unpruned Weights)')
     plt.gca().legend()
     plt.gca().grid()
-    caption: str = f'Each iteration corresponds to a batch of size {C.BATCH_SIZE}'
+    caption = f'Each iteration corresponds to a batch of size {C.BATCH_SIZE}'
     plt.figtext(0.5, 0.01, caption, wrap=True, horizontalalignment='center', fontsize=12)
     save_plot(save_location)
-    plt.show()
-
+    
 def plot_best_accuracy_at_early_stopping(
-    experiments: List[Generator[history.TrialData, None, None]], 
+    x: np.ndarray,
+    y_mean: np.ndarray,
+    y_std: np.ndarray,
+    num_samples: int,
     train: bool = False,
     save_location: str = None,
-    ):
-    """
-    Function which plots the best training/test at the point at which
-    early stopping occurs.
-
-    Args:
-        experiments (List[Generator[history.TrialData, None, None]]): List of generator functions to produce individual pieces of trial data.
-        train (bool, optional): Boolean flag for whether to use train or test accuracy. 
-            Defaults to False.
-        save_location (str, optional): String to save plot to if it is not None.
-    """
-    best_accuracy: callable = functools.partial(t_agg.get_best_accuracy_percent, train=train)
+):
     accuracy_status: str = 'Train' if train else 'Test'
     
     # Best Accuracy at Early Stopping
     plt.figure(figsize=(8,6))
     bp.plot_aggregated_summary_ci(
-        experiments=experiments, 
-        get_x=e_agg.get_sparsities,
-        aggregate_trials=best_accuracy, 
-        legend='Test Accuracy',
+        x=x,
+        y_mean=y_mean,
+        y_std=y_std,
+        num_samples=num_samples,
+        legend=f'{accuracy_status} Accuracy',
         show_max_point=True,
     )
     plt.gca().yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}%'))
@@ -107,36 +94,26 @@ def plot_best_accuracy_at_early_stopping(
     plt.gca().legend()
     plt.gca().grid()
     save_plot(save_location)
-    plt.show()
-    
+        
 def plot_sign_proportion(
-    experiments: List[Generator[history.TrialData, None, None]], 
+    x: np.ndarray,
+    y_mean: np.ndarray,
+    y_std: np.ndarray,
+    num_samples: int,
     use_initial_weights: bool = False, 
     find_positive_proportion: bool = True,
     save_location: str = None,
-    ):
-    """
-    Plot the percentage of positive or negative masked weights over iterative pruning.
-
-    Args:
-        experiments (List[Generator[history.TrialData, None, None]]): List of generator functions to produce individual pieces of trial data.
-        use_initial_weights (bool, optional): Flag for using initial weights. Defaults to False.
-        find_positive_proportion (bool, optional): Flag for finding positive or negative proportion. 
-            Defaults to True (positive proportion).
-        save_location (str, optional): String to save plot to if it is not None.
-    """
-    sign_function: callable = t_agg.get_global_percent_positive_weights if find_positive_proportion else t_agg.get_global_percent_negative_weights
-    proportion_of_weights_function: callable = functools.partial(sign_function, use_initial_weights=use_initial_weights)
-    
+):
     sign: str = 'Positive' if find_positive_proportion else 'Negative'
     mask_status: str = 'Initial' if use_initial_weights else 'Final'
     
     # Global Initial Weight Proportion Positive Weights
     plt.figure(figsize=(8,6))
     bp.plot_aggregated_summary_ci(
-        experiments=experiments, 
-        get_x=e_agg.get_sparsities,
-        aggregate_trials=proportion_of_weights_function,
+        x=x,
+        y_mean=y_mean,
+        y_std=y_std,
+        num_samples=num_samples,
     )
     plt.gca().yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}%'))
     plt.gca().set_title(f'Percentage of {sign} Masked {mask_status} Weights Over Iterative Pruning')
@@ -145,75 +122,65 @@ def plot_sign_proportion(
     plt.gca().legend()
     plt.gca().grid()
     save_plot(save_location)
-    plt.show()
-    
-def plot_average_magnitude(
-    experiments: List[Generator[history.TrialData, None, None]], 
-    use_initial_weights: bool = False,
-    plot_both: bool = False, 
-    save_location: str = None,
-    ):
-    """
-    Plot the average magnitude of masked weights over iterative pruning.
-
-    Args:
-        experiments (List[Generator[history.TrialData, None, None]]): List of generator functions to produce individual pieces of trial data.
-        use_initial_weights (bool, optional): Flag for using initial weights. Defaults to False.
-        plot_both (bool, optional): Flag for plotting both sets of weights. Defaults to False.
-        save_location (str, optional): String to save plot to if it is not None.
-    """
-    
-    magnitude_function: callable = functools.partial(t_agg.get_global_average_magnitude, use_initial_weights=use_initial_weights)
-    mask_status: str = 'Initial' if use_initial_weights else 'Final'
-    
-    # Global Initial Weight Proportion Positive Weights
-    plt.figure(figsize=(8,6))
-    bp.plot_aggregated_summary_ci(
-        experiments=experiments, 
-        get_x=e_agg.get_sparsities,
-        aggregate_trials=magnitude_function, 
-        legend=f'{mask_status} Weights', 
-        show_ci_legend=not plot_both),
-    if plot_both:
-        second_mask_status: str = 'Final' if use_initial_weights else 'Initial'
-        second_magnitude_function: callable = functools.partial(t_agg.get_global_average_magnitude, use_initial_weights=not use_initial_weights)
-        bp.plot_aggregated_summary_ci(
-            experiments=experiments, 
-            get_x=e_agg.get_sparsities,
-            aggregate_trials=second_magnitude_function, 
-            legend=f'{second_mask_status} Weights'
-        )
-        # If we plot this twice, it inverts x axis twice
-        plt.gca().invert_xaxis()
-
-    plt.gca().yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}'))
-    plt.gca().set_title(f'Average Magnitude of Masked {mask_status} Weights Over Iterative Pruning')
-    plt.gca().set_ylabel('Average Magnitude')
-    plt.gca().set_xlabel('Sparsity (% Unpruned Weights)')
-    plt.gca().legend()
-    plt.gca().grid()
-    save_plot(save_location)
-    plt.show()
-    
+        
+# TODO: Add special handling for this plot
+#def plot_average_magnitude(
+#    x: np.ndarray,
+#    y_mean: np.ndarray,
+#    y_std: np.ndarray,
+#    num_samples: int,
+#    
+#    use_initial_weights: bool = False,
+#    plot_both: bool = False, 
+#    save_location: str = None,
+#):
+#    magnitude_function: callable = functools.partial(t_agg.get_global_average_magnitude, use_initial_weights=use_initial_weights)
+#    mask_status: str = 'Initial' if use_initial_weights else 'Final'
+#    
+#    # Global Initial Weight Proportion Positive Weights
+#    plt.figure(figsize=(8,6))
+#    bp.plot_aggregated_summary_ci(
+#        experiments=experiments, 
+#        get_x=e_agg.get_sparsities,
+#        aggregate_trials=magnitude_function, 
+#        legend=f'{mask_status} Weights', 
+#        show_ci_legend=not plot_both),
+#    if plot_both:
+#        second_mask_status: str = 'Final' if use_initial_weights else 'Initial'
+#        second_magnitude_function: callable = functools.partial(t_agg.get_global_average_magnitude, use_initial_weights=not use_initial_weights)
+#        bp.plot_aggregated_summary_ci(
+#            experiments=experiments, 
+#            get_x=e_agg.get_sparsities,
+#            aggregate_trials=second_magnitude_function, 
+#            legend=f'{second_mask_status} Weights'
+#        )
+#        # If we plot this twice, it inverts x axis twice
+#        plt.gca().invert_xaxis()
+#
+#    plt.gca().yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}'))
+#    plt.gca().set_title(f'Average Magnitude of Masked {mask_status} Weights Over Iterative Pruning')
+#    plt.gca().set_ylabel('Average Magnitude')
+#    plt.gca().set_xlabel('Sparsity (% Unpruned Weights)')
+#    plt.gca().legend()
+#    plt.gca().grid()
+#    save_plot(save_location)
+        
 def plot_loss_before_training(
-    experiments: List[Generator[history.TrialData, None, None]],
+    x: np.ndarray,
+    y_mean: np.ndarray,
+    y_std: np.ndarray,
+    num_samples: int,
     save_location: str = None,
-    ):
-    """
-    Plot the loss from reset or masked initial weights.
-
-    Args:
-        experiments (List[Generator[history.TrialData, None, None]]): List of generator functions to produce individual pieces of trial data.
-        save_location (str, optional): String to save plot to if it is not None.
-    """
+):
     loss_before_training: callable = t_agg.get_loss_before_training
 
     # Global Initial Weight Proportion Positive Weights
     plt.figure(figsize=(8,6))
     bp.plot_aggregated_summary_ci(
-        experiments=experiments, 
-        get_x=e_agg.get_sparsities,
-        aggregate_trials=loss_before_training, 
+        x=x,
+        y_mean=y_mean,
+        y_std=y_std,
+        num_samples=num_samples,
         show_min_point=True,
     )
     plt.gca().yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}'))
@@ -223,27 +190,23 @@ def plot_loss_before_training(
     plt.gca().legend()
     plt.gca().grid()
     save_plot(save_location)
-    plt.show()
-    
+        
 def plot_accuracy_before_training(
-    experiments: List[Generator[history.TrialData, None, None]],
+    x: np.ndarray,
+    y_mean: np.ndarray,
+    y_std: np.ndarray,
+    num_samples: int,
     save_location: str = None,
-    ):
-    """
-    Plot the loss from reset or masked initial weights.
-
-    Args:
-        experiments (List[Generator[history.TrialData, None, None]]): List of generator functions to produce individual pieces of trial data.
-        save_location (str, optional): String to save plot to if it is not None.
-    """
+):
     accuracy_before_training: callable = t_agg.get_accuracy_before_training
 
     # Global Initial Weight Proportion Positive Weights
     plt.figure(figsize=(8,6))
     bp.plot_aggregated_summary_ci(
-        experiments=experiments, 
-        get_x=e_agg.get_sparsities,
-        aggregate_trials=accuracy_before_training,
+        x=x,
+        y_mean=y_mean,
+        y_std=y_std,
+        num_samples=num_samples,
         show_max_point=True,
     )
     plt.gca().yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}%'))
@@ -253,5 +216,4 @@ def plot_accuracy_before_training(
     plt.gca().legend()
     plt.gca().grid()
     save_plot(save_location)
-    plt.show()
-    
+        

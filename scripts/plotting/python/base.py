@@ -17,6 +17,7 @@ from typing import Generator
 
 from src.harness import constants as C
 from src.harness import history
+from src.harness import paths
 from src.metrics import experiment_aggregations as e_agg
 from src.metrics import trial_aggregations as t_agg
 
@@ -45,7 +46,6 @@ def make_plots(
 
     @returns (None): Saves plots to specified directory.
     """
-    # Hardcoded to use only the first one for now
     experiments = history.get_experiments(root, models_dir, eprefix, tprefix, tdata)
     trial_aggregations = [
         ('pruning_step', t_agg.get_pruning_step),
@@ -63,6 +63,8 @@ def make_plots(
     experiment_aggregations = [
         ('mean', e_agg.mean_over_experiments),
         ('std', e_agg.std_over_experiments), 
+        ('0th', e_agg.nth_experiment),
+        ('num_samples', e_agg.num_samples),
     ]
     results = {}
     t_functions = [f for _, f in trial_aggregations]
@@ -72,5 +74,21 @@ def make_plots(
         results[e_name] = {}
         for ((t_name, _), t_data) in zip(trial_aggregations, e_data):
             results[e_name][t_name] = t_data 
-    from pprint import pprint
-    pprint(results)
+    
+    plot_params = [
+        {'name': 'stop_iter', 'x': ('0th', 'pruning_step'), 'func': gp.plot_early_stopping},
+        {'name': 'global_pos_percent', 'x': ('0th', 'pruning_step'), 'func': gp.plot_sign_proportion},
+        {'name': 'best_val_acc', 'x': ('0th', 'pruning_step'), 'func': gp.plot_best_accuracy_at_early_stopping},
+        {'name': 'loss_before_training', 'x': ('0th', 'pruning_step'), 'func': gp.plot_loss_before_training},
+        {'name': 'acc_before_training', 'x': ('0th', 'pruning_step'), 'func': gp.plot_accuracy_before_training},
+    ] 
+
+    for params in plot_params:
+        save_location = os.path.join(root, plots_dir, params['name'])
+        e_key, t_key = params['x']
+        x = results[e_key][t_key]
+        y_mean = results['mean'][params['name']]
+        y_std = results['std'][params['name']]
+        num_samples = results['num_samples'][params['name']]
+        params['func'](x=x, y_mean=y_mean, y_std=y_std, num_samples=num_samples, save_location=save_location)
+         

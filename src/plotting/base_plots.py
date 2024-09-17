@@ -20,9 +20,10 @@ from src.metrics import trial_aggregations as t_agg
 # ------------------------- Public Base Plotting Functions -------------------------
 
 def plot_aggregated_summary_ci(
-    experiments: List[Generator[history.TrialData, None, None]],
-    get_x: callable,
-    aggregate_trials: callable,
+    x: np.ndarray,
+    y_mean: np.ndarray,
+    y_std: np.ndarray,
+    num_samples: int,
     confidence: float = 0.95,
     legend: str = None,
     show_ci_legend: bool = True,
@@ -34,11 +35,9 @@ def plot_aggregated_summary_ci(
     using a defined function to get the x and one to aggregate trials.
 
     Args:
-        summaries (List[Generator[history.TrialData, None, None]]): List of generators which yield data from
-            individual trials.
-        get_x (callable): Function which gets called on the summary to get x values.
-        aggregate_trials (callable): Function which gets called on the summary to produce a 2D array of some
-            aggregated trial values.
+        x (np.ndarray[float]): X values to plot.
+        y_mean (np.ndarray[float]): Y values to use for the mean.
+        y_std (np.ndarray[float]): Y values to use for the standard deviation at each point.
         confidence (float, optional): Confidence interval level to plot. Defaults to 0.95.
         legend (str, optional): Legend to plot for value being plotted. Defaults to None.
         show_ci_legend (bool, optional): Flag for whether confidnce interval legend is shown. Defaults to True.
@@ -46,52 +45,10 @@ def plot_aggregated_summary_ci(
         show_min_point (bool, optional): Flag for whether min value point gets shown. Defaults to False.
     """
     
-    x: List[float] = get_x(summary)
-    aggregated_trial_data: np.ndarray = np.array(t_agg.aggregate_across_trials(experiments, aggregate_trials))
-    
-    _aggregate_and_plot_ci(
-        x=x, 
-        y_2d=aggregated_trial_data, 
-        confidence=confidence, 
-        legend=legend, 
-        show_ci_legend=show_ci_legend, 
-        show_max_point=show_max_point, 
-        show_min_point=show_min_point
-    )
-
-# ------------------------- Private Helper Functions -------------------------
-
-def _aggregate_and_plot_ci(
-    x: List[float],
-    y_2d: np.ndarray,
-    confidence: float = 0.95,
-    legend: str = None,
-    show_ci_legend: bool = True,
-    show_max_point: bool = False,
-    show_min_point: bool = False,
-    ):
-    """
-    Function which creates the base line graph for an experiment summary
-    and includes confidence intervals over the y-axis values.
-
-    Args:
-        x (List[float]): List of floating point values to plot on x axis.
-        y_2d (np.ndarray[float]): 2D array of floating point values to aggregate.
-            Dimensions are `# Trials, # Experiments`.
-        aggregate_y (callable): Function for aggregating the values across 2D array
-          which will go on the y-axis. Examples would be test/train accuracy, early stopping iteration, etc.
-        
-        NOTE: See `_plot_line_graph_with_confidence_interval` for other argument information.       
-    """
-    # Compute y-axis values aggregated over experiments along with their standard deviation
-    num_samples: int = y_2d.shape[1]
-    aggregated_values: np.array = e_agg.mean_over_trials(y_2d)
-    aggregated_std: np.array = e_agg.std_over_trials(y_2d)
-    
     _plot_line_graph_with_confidence_interval(
         x=x, 
-        y=aggregated_values, 
-        std_y=aggregated_std, 
+        y=y_mean, 
+        y_std=y_std, 
         num_samples=num_samples,
         confidence=confidence, 
         legend=legend, 
@@ -126,7 +83,7 @@ def _annotate_extreme_points(
 def _plot_line_graph_with_confidence_interval(
     x: List[float], 
     y: np.ndarray,
-    std_y: np.array,
+    y_std: np.array,
     num_samples: int,
     confidence: float = 0.95,
     legend: str = None,
@@ -142,7 +99,7 @@ def _plot_line_graph_with_confidence_interval(
         x (List[float]): Floating point x values to plot.
         y (List[float]): Floating point y values to plot, where each y value corresponds to some aggregation
             over a sample. Dimensions are `# Trials Per Experiment, # Experimnents`.
-        std_y (np.array[float]): Array of floating points values of length N where N is the number of points to plot.
+        y_std (np.array[float]): Array of floating points values of length N where N is the number of points to plot.
             Each value corresponds to the standard deviation of the sample the y point was averaged over.
         num_samples (int): Integer for the number of samples. Used in confidence interval calculation.
         confidence (float, optional): Confidence level to use when plotting confidence intervals.
@@ -162,11 +119,11 @@ def _plot_line_graph_with_confidence_interval(
       raise ValueError('Confidence must be between 0 and 1')
     
     # Make sure these are all Numpy arrays
-    std_y: np.array = np.array(std_y)
+    y_std: np.array = np.array(y_std)
     
     # Calculate Z-score and standard error to make confidence interval
     z_score: float = norm.ppf((1 + confidence) / 2)
-    confidence_interval: np.array = z_score * std_y  / np.sqrt(num_samples)
+    confidence_interval: np.array = z_score * y_std  / np.sqrt(num_samples)
     
     plt.plot(x, y, label=legend)
     plt.gca().invert_xaxis()

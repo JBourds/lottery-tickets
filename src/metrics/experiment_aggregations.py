@@ -18,10 +18,10 @@ AggregatedExperiments = List[Any]
 
 # ------------------------- Mean -------------------------
 
-def mean_over_experiments(array: np.ndarray) -> float:
+def mean_over_experiments(array: np.ndarray) -> np.ndarray[float]:
     return np.mean(array, axis=0)
 
-def mean_over_trials(array: np.ndarray) -> float:
+def mean_over_trials(array: np.ndarray) -> np.ndarray[float]:
     return np.mean(array, axis=1)
 
 def mean_overall(array: np.ndarray) -> float:
@@ -29,14 +29,23 @@ def mean_overall(array: np.ndarray) -> float:
 
 # ------------------------- Standard Deviation -------------------------
 
-def std_over_experiments(array: np.ndarray) -> float:
+def std_over_experiments(array: np.ndarray) -> np.ndarray[float]:
     return np.std(array, axis=0)
 
-def std_over_trials(array: np.ndarray) -> float:
+def std_over_trials(array: np.ndarray) -> np.ndarray[float]:
     return np.std(array, axis=1)
 
 def std_overall(array: np.ndarray) -> float:
     return np.std(array)
+
+# ------------------------- Misc -------------------------
+
+def nth_experiment(array: np.ndarray, n: int = 0) -> np.ndarray[Any]:
+    return array[n]
+
+def num_samples(array: np.ndarray) -> np.ndarray[Any]:
+    array = np.array(array)
+    return np.array([array.shape[0] for _ in range(array.shape[1])])
 
 # ------------------------- Aggregated Over Experiments -------------------------
 

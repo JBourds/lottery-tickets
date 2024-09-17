@@ -66,7 +66,6 @@ def get_experiments(
         
         for tpath in sorted(trial_paths, 
             key=lambda path: int(os.path.dirname(os.path.normpath(path)).split(tprefix)[-1])):
-            print(tpath)
             yield TrialData.load_from(tpath)
         
     models_directory = os.path.join(root, models_dir)
