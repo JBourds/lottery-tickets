@@ -45,21 +45,32 @@ def make_plots(
 
     @returns (None): Saves plots to specified directory.
     """
-    print("Creating plots")
     # Hardcoded to use only the first one for now
     experiments = history.get_experiments(root, models_dir, eprefix, tprefix, tdata)
-    aggregations = [
-        t_agg.get_best_loss,
-        t_agg.get_sparsity_percentage,
-        t_agg.get_early_stopping_iteration,
+    trial_aggregations = [
+        ('pruning_step', t_agg.get_pruning_step),
+        ('loss_before_training', t_agg.get_loss_before_training),
+        ('acc_before_training', t_agg.get_accuracy_before_training),
+        ('global_pos_percent', t_agg.get_global_percent_positive_weights),
+        ('layer_pos_percent', t_agg.get_layerwise_percent_positive_weights),
+        ('global_avg_mag', t_agg.get_global_average_magnitude),
+        ('layer_avg_mag', t_agg.get_layerwise_average_magnitude),
+        ('best_val_acc', t_agg.get_best_accuracy_percent),
+        ('best_val_loss', t_agg.get_best_loss),
+        ('sparsity', t_agg.get_sparsity_percentage),
+        ('stop_iter', t_agg.get_early_stopping_iteration),
     ]
-    best_loss, sparsity_percent, early_stopping_iter = t_agg.aggregate_across_trials(experiments, aggregations)
-    print('Best Loss')
-    print(best_loss)
-    print('Sparsity %')
-    print(sparsity_percent)
-    print('Early Stopping Iteration')
-    print(early_stopping_iter)
-    
-
-    
+    experiment_aggregations = [
+        ('mean', e_agg.mean_over_experiments),
+        ('std', e_agg.std_over_experiments), 
+    ]
+    results = {}
+    t_functions = [f for _, f in trial_aggregations]
+    e_functions = [f for _, f in experiment_aggregations]
+    data = e_agg.aggregate_across_experiments(experiments, t_functions, e_functions)
+    for ((e_name, _), e_data) in zip(experiment_aggregations, data):
+        results[e_name] = {}
+        for ((t_name, _), t_data) in zip(trial_aggregations, e_data):
+            results[e_name][t_name] = t_data 
+    from pprint import pprint
+    pprint(results)

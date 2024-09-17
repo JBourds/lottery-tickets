@@ -82,7 +82,7 @@ def get_best_loss(trial: history.TrialData, train: bool = False) -> float:
         float: Best model accuracy from within a round of iterative pruning.
     """
     arr = trial.train_losses if train else trial.validation_losses
-    if np.argmax(arr == 0) != len(arr) - 1:
+    if np.argmax(arr[:--1] == 0) != 0:
         return 0
     arr = arr[arr != 0]
     return np.min(arr)
@@ -224,7 +224,6 @@ def _get_positive_weight_ratio(
         use_initial_weights=use_initial_weights
     )
 
-
 def _get_ratio_of_unmasked_positive_weights(weights: List[np.ndarray], masks: List[np.ndarray]) -> float:
     """
     Private function which computes the proportion of unmasked positive weights.
@@ -249,54 +248,6 @@ def _get_ratio_of_unmasked_positive_weights(weights: List[np.ndarray], masks: Li
                                   for w, mask in zip(weights, masks)])
 
     return total_positive / total_nonzero
-
-# ------------------------- Density -------------------------
-
-
-def _get_weight_density(
-    trial: history.TrialData,
-    layerwise: bool = False,
-    use_initial_weights: bool = False,
-) -> Union[float, List[float]]:
-    """
-    Function used to get a density plot of weight distributions,
-
-    Returns:
-        Union[float, List[float]]: Single float or list of floats depending on whether it performs
-            calculations globally or by layer.
-    """
-    return _perform_operation_globally_or_layerwise(
-        trial=trial,
-        operation=_get_weight_density,
-        layerwise=layerwise,
-        use_initial_weights=use_initial_weights
-    )
-
-
-def _get_weight_density(weights: List[np.ndarray], masks: List[np.ndarray]) -> np.array:
-    """
-    Private function which computes a density plot of weights.
-
-    Args:   
-        weights: (List[np.ndarray]): List of Numpy arrays for the weights in each layer being included.
-        masks: (List[np.ndarray]): List of Numpy arrays for the masks in each layer being included.
-
-    Returns:
-        np.array[float]: Density plot of weights.
-    """
-    assert len(weights) == len(
-        masks), 'Weight and mask arrays must be the same length.'
-    assert np.all([w.shape == m.shape for w, m in zip(weights, masks)]
-                  ), 'Weights and masks must all be the same shape'
-
-    # Flatten the weights according to the masks
-    unmasked_weights = np.concatenate(
-        [w[mask].flatten() for w, mask in zip(weights, masks)])
-
-    # Compute the density plot of target weights
-    density, bins = np.histogram(unmasked_weights, bins=20, density=True)
-
-    return density, bins
 
 # ------------------------- Aggregate Over Trials -------------------------
 
@@ -361,6 +312,6 @@ def _perform_operation_globally_or_layerwise(
         # Since the private method expects a list, just make each entry into a list of 1 element
         masks = [[m] for m in masks]
         weights = [[w] for w in weights]
-        return list(map(operation, zip(weights, masks)))
+        return [operation(w, m) for w, m in zip(weights, masks)]
 
     return operation(weights, masks)

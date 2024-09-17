@@ -1,4 +1,5 @@
 .empty/
+*.swp
 slurm*
 logs/
 checkpoints/

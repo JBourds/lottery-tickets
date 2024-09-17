@@ -55,7 +55,7 @@ def aggregate_across_experiments(
     each trial across experiments, effectively collapsing the second dimension and outputting
     a `B` x `A` x `M` dimension array, where `B` is the number of experiment aggregations.
     """
-    trials_aggregated = t_agg.aggregate_across_trials(summaries, trial_aggregation)
+    trials_aggregated = t_agg.aggregate_across_trials(summaries, trial_aggregations)
     aggregated_data = []
     for e_agg in experiment_aggregations:
         aggregated_data.append([e_agg(trial_agg) for trial_agg in trials_aggregated])
