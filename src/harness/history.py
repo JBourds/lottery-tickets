@@ -29,6 +29,8 @@ class TrialData(mixins.PickleMixin, mixins.TimerMixin):
     Also includes the pruning step this was from.
     """
     pruning_step: int
+    architecture: str
+    dataset: str
 
     # Model parameters
     initial_weights: list[np.ndarray]

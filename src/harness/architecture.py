@@ -12,7 +12,7 @@ import functools
 from dataclasses import dataclass
 from enum import Enum
 from sys import platform
-from typing import Callable, Tuple
+from typing import Callable, List, Tuple
 
 import tensorflow as tf
 from keras import Sequential
@@ -53,9 +53,8 @@ class Architectures(Enum):
     CONV_2 = 'conv2'
     CONV_4 = 'conv4'
     CONV_6 = 'conv6'
-
+    
     # --------------- Hyperparameters ---------------
-    @staticmethod
     def lenet_300_100_hyperparameters(**kwargs) -> Hyperparameters:
         return Hyperparameters(
             patience=kwargs.get('patience', 5),
@@ -143,7 +142,7 @@ class Architectures(Enum):
             Dense(300, activation='relu'),
             Dense(100, activation='relu'),
             Dense(num_classes, activation='softmax'),
-        ], name="LeNet-300-100")
+        ], name="lenet")
 
         # Explicitly build the model to initialize weights
         if platform == 'darwin':
@@ -166,7 +165,7 @@ class Architectures(Enum):
             Dense(4086, activation='relu'),
             Dense(4086, activation='relu'),
             Dense(num_classes, activation='softmax'),
-        ], name="Conv-2")
+        ], name="conv3")
 
         # Explicitly build the model to initialize weights
         if platform == 'darwin':
@@ -195,7 +194,7 @@ class Architectures(Enum):
             Dense(4086, activation='relu'),
             Dense(num_classes, activation='softmax'),
 
-        ], name="Conv-4")
+        ], name="conv4")
 
         # Explicitly build the model to initialize weights
         if platform == 'darwin':
@@ -228,7 +227,7 @@ class Architectures(Enum):
             Dense(4086, activation='relu'),
             Dense(4086, activation='relu'),
             Dense(num_classes, activation='softmax'),
-        ], name="Conv-6")
+        ], name="conv6")
 
         # Explicitly build the model to initialize weights
         if platform == 'darwin':
@@ -251,6 +250,42 @@ class Architecture:
         Architectures.CONV_4: Architectures.conv4_hyperparameters,
         Architectures.CONV_6: Architectures.conv6_hyperparameters,
     }
+
+    LAYERS = {
+        Architectures.LENET: [
+            "Dense 1 (300)", "Bias 1", 
+            "Dense 2 (100)", "Bias 2", 
+            "Output", "Bias 3",
+        ],
+        Architectures.CONV_2: [
+            "Conv 1", "Bias 1", 
+            "Conv 2", "Bias 2", 
+            "Dense 1 (4086)", "Bias 3", 
+            "Dense 2 (4086)", "Bias 4", 
+            "Output", "Bias 5",
+        ],
+        Architectures.CONV_4: [
+            "Conv 1", "Bias1", 
+            "Conv 2", "Bias2", 
+            "Conv 3", "Bias3", 
+            "Conv 4", "Bias4", 
+            "Dense 1 (4086)", "Bias 5", 
+            "Dense 2 (4086)", "Bias 6", 
+            "Output", "Bias 7",
+        ],
+        Architectures.CONV_6: [
+            "Conv 1", "Bias 1", 
+            "Conv 2", "Bias 2", 
+            "Conv 3", "Bias 3", 
+            "Conv 4", "Bias 4", 
+            "Conv 5", "Bias 5", 
+            "Conv 6", "Bias 6", 
+            "Dense 1 (4086)", "Bias 7", 
+            "Dense 1 (4086)", "Bias 8", 
+            "Output", "Bias 9",
+        ],
+    }
+
 
     def __init__(self, architecture: str, dataset: ds.Datasets | str):
         self.architecture = Architectures(architecture.lower())
@@ -284,3 +319,12 @@ class Architecture:
             raise NotImplementedError(
                 f"'{self.architecture}' not implemented in Architecture class")
         return functools.partial(constructor_function, self.dataset.input_shape, self.dataset.num_classes)
+
+    @staticmethod
+    def get_model_layers(architecture: str) -> List[str]:
+        architecture = Architectures(architecture)
+        layers = Architecture.LAYERS.get(architecture)
+        if layers is None:
+            raise NotImplementedError(
+                f"'{architecture}' not implemented in Architecture class")
+        return layers

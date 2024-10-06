@@ -6,9 +6,9 @@ Module containing functions for aggregating across experiment data.
 Author: Jordan Bourdeau
 """
 
-from typing import Any, Callable, Generator, List
-
+import logging
 import numpy as np
+from typing import Any, Callable, Generator, List
 
 from src.harness import history
 from src.metrics import trial_aggregations as t_agg
@@ -67,5 +67,12 @@ def aggregate_across_experiments(
     trials_aggregated = t_agg.aggregate_across_trials(summaries, trial_aggregations)
     aggregated_data = []
     for e_agg in experiment_aggregations:
-        aggregated_data.append([e_agg(trial_agg) for trial_agg in trials_aggregated])
+        data = []
+        for trial_agg in trials_aggregated:
+            try:
+                data.append(e_agg(trial_agg))
+            except:
+                # Not all aggregations will be compatable (e.g., Numeric operations over string)
+                data.append(None)
+        aggregated_data.append(data)
     return aggregated_data

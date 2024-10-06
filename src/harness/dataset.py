@@ -37,7 +37,7 @@ class Dataset:
                     self.dataset = Datasets.CIFAR10
                 case 'imagenet':
                     self.dataset = Datasets.ImageNet
-
+        self.name = dataset.lower()
         self.flatten = flatten
         match self.dataset:
             case Datasets.MNIST:

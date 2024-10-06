@@ -11,8 +11,28 @@ from typing import Any, Callable, Generator, List, Union
 
 import numpy as np
 
+from src.harness import architecture
 from src.harness import history
 from src.metrics import trial_aggregations as t_agg
+
+
+# ------------------------- Model Information -------------------------
+
+def get_layer_names(trial: history.TrialData) -> List[str]:
+    # Temporary for use with TrialData objects that didn't have this
+    try:
+        arch = trial.architecture
+    except Exception as e:
+        arch = "conv2"
+    return architecture.Architecture.get_model_layers(arch)
+
+def get_dataset(trial: history.TrialData) -> str:
+    # Temporary for use with TrialData objects that didn't have this
+    try:
+        dataset = trial.dataset
+    except Exception as e:
+        dataset = "cifar"
+    return dataset
 
 # ------------------------- Sparsity -------------------------
 
@@ -128,13 +148,13 @@ def _get_average_magnitude(
     trial: history.TrialData,
     layerwise: bool = False,
     use_initial_weights: bool = False,
-) -> Union[float, List[float]]:
+) -> Union[float, np.ndarray[float]]:
     """
     Function used to get the average magnitude of parameters, either 
     globally across all layers or layerwise.
 
     Returns:
-        Union[float, List[float]]: Single float or list of floats depending on whether it performs
+        Union[float, np.ndarray[float]]: Single float or list of floats depending on whether it performs
             calculations globally or by layer.
     """
     return _perform_operation_globally_or_layerwise(
@@ -188,18 +208,18 @@ def get_global_percent_positive_weights(trial: history.TrialData, use_initial_we
     return _get_positive_weight_ratio(trial=trial, layerwise=False, use_initial_weights=use_initial_weights) * 100
 
 
-def get_layerwise_percent_negative_weights(trial: history.TrialData, use_initial_weights: bool = False) -> float:
+def get_layerwise_percent_negative_weights(trial: history.TrialData, use_initial_weights: bool = False) -> np.ndarray[float]:
     """
     Returns:
-        List[float]: Negative percent of the unpruned weights stored by layer in the network.
+        np.ndarray[float]: Negative percent of the unpruned weights stored by layer in the network.
     """
     return 100 - get_layerwise_percent_positive_weights(trial=trial, use_initial_weights=use_initial_weights)
 
 
-def get_layerwise_percent_positive_weights(trial: history.TrialData, use_initial_weights: bool = False) -> float:
+def get_layerwise_percent_positive_weights(trial: history.TrialData, use_initial_weights: bool = False) -> np.ndarray[float]:
     """
     Returns:
-        List[float]: Positive percent of the unpruned weights stored by layer in the network.
+        np.ndarray[float]: Positive percent of the unpruned weights stored by layer in the network.
     """
     return _get_positive_weight_ratio(trial=trial, layerwise=True, use_initial_weights=use_initial_weights) * 100
 
@@ -208,13 +228,13 @@ def _get_positive_weight_ratio(
     trial: history.TrialData,
     layerwise: bool = False,
     use_initial_weights: bool = False
-) -> Union[float, List[float]]:
+) -> Union[float, np.ndarray[float]]:
     """
     Function used to get the positive weight ratio, either globally across all layers or
     layerwise.
 
     Returns:
-        Union[float, List[float]]: Single float or list of floats depending on whether it performs
+        Union[float, np.ndarray[float]]: Single float or list of floats depending on whether it performs
             calculations globally or by layer.
     """
     return _perform_operation_globally_or_layerwise(
@@ -312,6 +332,6 @@ def _perform_operation_globally_or_layerwise(
         # Since the private method expects a list, just make each entry into a list of 1 element
         masks = [[m] for m in masks]
         weights = [[w] for w in weights]
-        return [operation(w, m) for w, m in zip(weights, masks)]
+        return np.array([operation(w, m) for w, m in zip(weights, masks)])
 
     return operation(weights, masks)

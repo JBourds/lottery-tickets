@@ -23,6 +23,7 @@ from src.metrics import trial_aggregations as t_agg
 
 from src.plotting import base_plots as bp
 from src.plotting import global_plots as gp
+from src.plotting import layerwise_plots as lp
 
     
 def make_plots(
@@ -52,19 +53,21 @@ def make_plots(
         ('loss_before_training', t_agg.get_loss_before_training),
         ('acc_before_training', t_agg.get_accuracy_before_training),
         ('global_pos_percent', t_agg.get_global_percent_positive_weights),
+        ('layer_names', t_agg.get_layer_names),
         ('layer_pos_percent', t_agg.get_layerwise_percent_positive_weights),
         ('global_avg_mag', t_agg.get_global_average_magnitude),
         ('layer_avg_mag', t_agg.get_layerwise_average_magnitude),
         ('best_val_acc', t_agg.get_best_accuracy_percent),
         ('best_val_loss', t_agg.get_best_loss),
         ('sparsity', t_agg.get_sparsity_percentage),
-        ('stop_iter', t_agg.get_early_stopping_iteration),
+        ('early_stopping', t_agg.get_early_stopping_iteration),
     ]
     experiment_aggregations = [
         ('mean', e_agg.mean_over_experiments),
         ('std', e_agg.std_over_experiments), 
         ('0th', e_agg.nth_experiment),
         ('num_samples', e_agg.num_samples),
+        ('values', lambda x: x),
     ]
     results = {}
     t_functions = [f for _, f in trial_aggregations]
@@ -74,13 +77,23 @@ def make_plots(
         results[e_name] = {}
         for ((t_name, _), t_data) in zip(trial_aggregations, e_data):
             results[e_name][t_name] = t_data 
-    
+
     plot_params = [
-        {'name': 'stop_iter', 'x': ('0th', 'sparsity'), 'func': gp.plot_early_stopping},
+        {'name': 'early_stopping', 'x': ('0th', 'sparsity'), 'func': gp.plot_early_stopping},
         {'name': 'global_pos_percent', 'x': ('0th', 'sparsity'), 'func': gp.plot_sign_proportion},
         {'name': 'best_val_acc', 'x': ('0th', 'sparsity'), 'func': gp.plot_best_accuracy_at_early_stopping},
         {'name': 'loss_before_training', 'x': ('0th', 'sparsity'), 'func': gp.plot_loss_before_training},
         {'name': 'acc_before_training', 'x': ('0th', 'sparsity'), 'func': gp.plot_accuracy_before_training},
+        {'name': 'layer_pos_percent', 'x': ('0th', 'sparsity'), 'func': lp.plot_layerwise_positive_sign_proportion, 
+         'kwargs': {
+            'layer_names': results['0th']['layer_names'][0]
+         }
+        },
+        {'name': 'layer_avg_mag', 'x': ('0th', 'sparsity'), 'func': lp.plot_layerwise_average_magnitude, 
+         'kwargs': {
+            'layer_names': results['0th']['layer_names'][0]
+         }
+        },
     ] 
 
     for params in plot_params:
@@ -90,5 +103,6 @@ def make_plots(
         y_mean = results['mean'][params['name']]
         y_std = results['std'][params['name']]
         num_samples = results['num_samples'][params['name']]
-        params['func'](x=x, y_mean=y_mean, y_std=y_std, num_samples=num_samples, save_location=save_location)
+        kwargs = params.get('kwargs', {})
+        params['func'](x, y_mean, y_std, num_samples=num_samples, save_location=save_location, **kwargs)
          

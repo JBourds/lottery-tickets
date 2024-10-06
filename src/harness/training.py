@@ -244,6 +244,8 @@ def training_loop(
     # Compile training round data
     trial_data = history.TrialData(
         pruning_step,
+        model.name,  # Equivalent to string in architecture
+        dataset.name,
         initial_parameters,
         final_parameters,
         masks,
