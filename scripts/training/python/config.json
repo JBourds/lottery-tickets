@@ -6,7 +6,7 @@
       "partition": "dggpu",
       "gres": "gpu:1",
       "cpus-per-task": 1,
-      "mem": "16G"
+      "mem": "32G"
     }
   },
   "bdgpu": {

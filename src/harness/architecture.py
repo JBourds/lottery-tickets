@@ -58,8 +58,8 @@ class Architectures(Enum):
     @staticmethod
     def lenet_300_100_hyperparameters(**kwargs) -> Hyperparameters:
         return Hyperparameters(
-            patience=kwargs.get('patience', 2),
-            minimum_delta=kwargs.get('minimum_delta', 0.01),
+            patience=kwargs.get('patience', 5),
+            minimum_delta=kwargs.get('minimum_delta', 0.001),
             learning_rate=kwargs.get('learning_rate', 1.2e-3),
             optimizer=kwargs.get('optimizer', Adam),
             loss_function=kwargs.get(
@@ -75,8 +75,8 @@ class Architectures(Enum):
     @staticmethod
     def conv2_hyperparameters(**kwargs) -> Hyperparameters:
         return Hyperparameters(
-            patience=kwargs.get('patience', 2),
-            minimum_delta=kwargs.get('minimum_delta', 0.01),
+            patience=kwargs.get('patience', 5),
+            minimum_delta=kwargs.get('minimum_delta', 0.001),
             learning_rate=kwargs.get('learning_rate', 2e-4),
             optimizer=kwargs.get('optimizer', Adam),
             loss_function=kwargs.get(
@@ -92,8 +92,8 @@ class Architectures(Enum):
     @staticmethod
     def conv4_hyperparameters(**kwargs) -> Hyperparameters:
         return Hyperparameters(
-            patience=kwargs.get('patience', 2),
-            minimum_delta=kwargs.get('minimum_delta', 0.01),
+            patience=kwargs.get('patience', 5),
+            minimum_delta=kwargs.get('minimum_delta', 0.001),
             learning_rate=kwargs.get('learning_rate', 3e-4),
             optimizer=kwargs.get('optimizer', Adam),
             loss_function=kwargs.get(
@@ -109,8 +109,8 @@ class Architectures(Enum):
     @staticmethod
     def conv6_hyperparameters(**kwargs) -> Hyperparameters:
         return Hyperparameters(
-            patience=kwargs.get('patience', 2),
-            minimum_delta=kwargs.get('minimum_delta', 0.01),
+            patience=kwargs.get('patience', 5),
+            minimum_delta=kwargs.get('minimum_delta', 0.001),
             learning_rate=kwargs.get('learning_rate', 3e-4),
             optimizer=kwargs.get('optimizer', Adam),
             loss_function=kwargs.get(

@@ -13,11 +13,7 @@ import logging
 import multiprocess as mp
 import numpy as np
 import os
-import tensorflow as tf
-gpus = tf.config.list_physical_devices('GPU')
-if gpus:
-    for gpu in gpus:
-        tf.config.experimental.set_memory_growth(gpu, True)
+
 from tensorflow import keras
 from typing import Callable, Dict, Tuple
 
@@ -30,51 +26,6 @@ from src.harness import utils
 from src.harness.architecture import Hyperparameters
 
 
-def run_experiments(
-    starting_seed: int,
-    num_experiments: int,
-    experiment_directory: str,
-    experiment: Callable[[Dict], None],
-    get_experiment_parameters: Callable[[int, str], Dict],
-    log_level: int = logging.INFO,
-):
-    """
-    Main function which runs experiments with provided configurations.
-
-    Args:
-        starting_seed (int): Starting random seed to use.
-        num_experiments (int): Number of experiments to run with the
-            specified configuration.
-        experiment_directory (str): String directory for where to put the experiment results.
-        experiment (callable): Function to run a single experiment.
-        get_experiment_parameters (callable): Function which takes in the seed and experiment
-            directory then produces all the parameters which get unpacked into the function
-            responsible for running the experiment.
-        log_level (int): Log level to use.
-    Returns:
-        (None): Saves all relevant files as it performs training.
-    """
-    
-    os.environ["TF_GPU_ALLOCATOR"] = "cuda_malloc_async"
-    os.environ["TF_CPP_VMODULE"] = "gpu_process_state=10,gpu_cudamallocasync_allocator=10"
-
-    paths.create_path(experiment_directory)
-
-    # Prepare arguments for multiprocessing
-    random_seeds = list(range(starting_seed, starting_seed + num_experiments))
-    partial_get_experiment_parameters = functools.partial(
-        get_experiment_parameters, directory=experiment_directory)
-    experiment_args = [partial_get_experiment_parameters(
-        seed) for seed in random_seeds]
-
-    logging.basicConfig()
-    logging.getLogger().setLevel(log_level)
-    for args in experiment_args:
-        experiment(**args)
-        # Prevent GPU memory from fragmenting
-        tf.keras.backend.clear_session()
-        gc.collect()
-
 def run_iterative_pruning_experiment(
     hyperparameters: Hyperparameters,
     random_seed: int,
@@ -86,6 +37,7 @@ def run_iterative_pruning_experiment(
     rewind_rule: Callable,
     global_pruning: bool = False,
     experiment_directory: str = './',
+    log_level: int = logging.INFO,
 ):
     """
     Function used to run the pruning experiements for a given random seed.
@@ -106,8 +58,20 @@ def run_iterative_pruning_experiment(
             or layerwise. Defaults to False.
         experiment_directory (str): Path to place all experimental data.
     """
+    logging.basicConfig()
+    logging.getLogger().setLevel(log_level)
+
     # Set seed for reproducability
     utils.set_seed(random_seed)
+
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
+    import tensorflow as tf
+    gpus = tf.config.list_physical_devices('GPU')
+    logging.info(f"GPUS: {gpus}")
+    if gpus:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
 
     # Make models and save them
     model = create_model()

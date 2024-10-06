@@ -11,7 +11,10 @@ import argparse
 import datetime
 import functools
 import logging
+import multiprocess as mp
+mp.set_start_method('spawn', force=True)
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import sys
 from typing import List
 
@@ -22,7 +25,9 @@ from src.harness import constants as C
 from src.harness import dataset as ds
 from src.harness import experiment
 from src.harness import model as mod
-from src.harness import pruning, rewind
+from src.harness import paths
+from src.harness import pruning
+from src.harness import rewind
 from src.harness.architecture import Hyperparameters
 
 
@@ -37,7 +42,7 @@ def run_experiments(
     dataset: str = 'mnist',
     rewind_rule: str = 'oi',
     pruning_rule: str = 'lm',
-    log_level: int = 2,
+    log_level: int = logging.INFO,
     global_pruning: bool = False
 ) -> None:
     """
@@ -81,11 +86,15 @@ def run_experiments(
         global_pruning=global_pruning
     )
 
-    experiment.run_experiments(
-        starting_seed=starting_seed,
-        num_experiments=num_experiments,
-        experiment_directory=path,
-        experiment=experiment.run_iterative_pruning_experiment,
-        get_experiment_parameters=get_experiment_parameters,
-        log_level=get_log_level(log_level),
-    )
+    paths.create_path(path)
+    random_seeds = list(range(starting_seed, starting_seed + num_experiments))
+    partial_get_experiment_parameters = functools.partial(
+        get_experiment_parameters, directory=path)
+    experiment_kwargs = [partial_get_experiment_parameters(
+        seed) for seed in random_seeds]
+
+    for kwargs in experiment_kwargs:
+        # kwargs["log_level"] = log_level
+        p = mp.Process(target=experiment.run_iterative_pruning_experiment, kwargs=kwargs)
+        p.start()
+        p.join()  

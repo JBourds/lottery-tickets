@@ -76,11 +76,11 @@ def make_plots(
             results[e_name][t_name] = t_data 
     
     plot_params = [
-        {'name': 'stop_iter', 'x': ('0th', 'pruning_step'), 'func': gp.plot_early_stopping},
-        {'name': 'global_pos_percent', 'x': ('0th', 'pruning_step'), 'func': gp.plot_sign_proportion},
-        {'name': 'best_val_acc', 'x': ('0th', 'pruning_step'), 'func': gp.plot_best_accuracy_at_early_stopping},
-        {'name': 'loss_before_training', 'x': ('0th', 'pruning_step'), 'func': gp.plot_loss_before_training},
-        {'name': 'acc_before_training', 'x': ('0th', 'pruning_step'), 'func': gp.plot_accuracy_before_training},
+        {'name': 'stop_iter', 'x': ('0th', 'sparsity'), 'func': gp.plot_early_stopping},
+        {'name': 'global_pos_percent', 'x': ('0th', 'sparsity'), 'func': gp.plot_sign_proportion},
+        {'name': 'best_val_acc', 'x': ('0th', 'sparsity'), 'func': gp.plot_best_accuracy_at_early_stopping},
+        {'name': 'loss_before_training', 'x': ('0th', 'sparsity'), 'func': gp.plot_loss_before_training},
+        {'name': 'acc_before_training', 'x': ('0th', 'sparsity'), 'func': gp.plot_accuracy_before_training},
     ] 
 
     for params in plot_params:
