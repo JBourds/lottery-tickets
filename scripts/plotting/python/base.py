@@ -81,13 +81,25 @@ def make_plots(
     plot_params = [
         {'name': 'early_stopping', 'x': ('0th', 'sparsity'), 'func': gp.plot_early_stopping},
         {'name': 'global_pos_percent', 'x': ('0th', 'sparsity'), 'func': gp.plot_sign_proportion},
-        {'name': 'best_val_acc', 'x': ('0th', 'sparsity'), 'func': gp.plot_best_accuracy_at_early_stopping},
-        {'name': 'loss_before_training', 'x': ('0th', 'sparsity'), 'func': gp.plot_loss_before_training},
-        {'name': 'acc_before_training', 'x': ('0th', 'sparsity'), 'func': gp.plot_accuracy_before_training},
+        {'name': 'best_val_acc', 'x': ('0th', 'sparsity'), 'func': gp.plot_accuracy,
+            'kwargs': {
+                'title': 'Best Validation Accuracy at Early Stopping',
+            },
+        },
+        {'name': 'loss_before_training', 'x': ('0th', 'sparsity'), 'func': gp.plot_loss,
+            'kwargs': {
+                'title': 'Loss Before Training',
+            },
+        },
+        {'name': 'acc_before_training', 'x': ('0th', 'sparsity'), 'func': gp.plot_accuracy,
+            'kwargs': {
+                'title': 'Accuracy From Masked Weights Before Training',
+            },
+        },
         {'name': 'layer_pos_percent', 'x': ('0th', 'sparsity'), 'func': lp.plot_layerwise_positive_sign_proportion, 
-         'kwargs': {
-            'layer_names': results['0th']['layer_names'][0]
-         }
+            'kwargs': {
+                'layer_names': results['0th']['layer_names'][0]
+            },
         },
         {'name': 'layer_avg_mag', 'x': ('0th', 'sparsity'), 'func': lp.plot_layerwise_average_magnitude, 
          'kwargs': {

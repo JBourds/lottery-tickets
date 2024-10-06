@@ -52,34 +52,6 @@ def plot_early_stopping(
     plt.figtext(0.5, 0.01, caption, wrap=True, horizontalalignment='center', fontsize=12)
     save_plot(save_location)
 
-def plot_best_accuracy_at_early_stopping(
-    x: np.ndarray,
-    y_mean: np.ndarray,
-    y_std: np.ndarray,
-    num_samples: int,
-    train: bool = False,
-    save_location: str = None,
-):
-    accuracy_status: str = 'Train' if train else 'Test'
-    
-    plt.figure(figsize=(8, 6))
-    bp.plot_aggregated_summary_ci(
-        x=x,
-        y_mean=y_mean,
-        y_std=y_std,
-        num_samples=num_samples,
-        legend=f'{accuracy_status} Accuracy',
-        show_max_point=True,
-    )
-    plt.gca().yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}%'))
-    plt.gca().xaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}%'))
-    plt.gca().set_title(f'Best {accuracy_status} Accuracy at Early Stopping Point Over Iterative Pruning')
-    plt.gca().set_ylabel('Accuracy %')
-    plt.gca().set_xlabel('Sparsity (% Unpruned Weights)')
-    plt.gca().legend()
-    plt.gca().grid()
-    save_plot(save_location)
-        
 def plot_sign_proportion(
     x: np.ndarray,
     y_mean: np.ndarray,
@@ -108,11 +80,14 @@ def plot_sign_proportion(
     plt.gca().grid()
     save_plot(save_location)
         
-def plot_loss_before_training(
+def plot_loss(
     x: np.ndarray,
     y_mean: np.ndarray,
     y_std: np.ndarray,
     num_samples: int,
+    title: str = "Loss",
+    y_label: str = "Loss",
+    x_label: str = "Sparsity (% Unpruned Weights)",
     save_location: str = None,
 ):
     plt.figure(figsize=(8, 6))
@@ -124,18 +99,21 @@ def plot_loss_before_training(
         show_min_point=True,
     )
     plt.gca().xaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}%'))
-    plt.gca().set_title('Untrained and Masked Initial Weights Loss')
-    plt.gca().set_ylabel('Loss')
-    plt.gca().set_xlabel('Sparsity (% Unpruned Weights)')
+    plt.gca().set_title(title)
+    plt.gca().set_ylabel(y_label)
+    plt.gca().set_xlabel(x_label)
     plt.gca().legend()
     plt.gca().grid()
     save_plot(save_location)
         
-def plot_accuracy_before_training(
+def plot_accuracy(
     x: np.ndarray,
     y_mean: np.ndarray,
     y_std: np.ndarray,
     num_samples: int,
+    title: str = "Unmasked Weight Accuracy",
+    y_label: str = "Accuracy (%)",
+    x_label: str = "Sparsity (% Unpruned Weights)",
     save_location: str = None,
 ):
     plt.figure(figsize=(8, 6))
@@ -148,9 +126,9 @@ def plot_accuracy_before_training(
     )
     plt.gca().yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}%'))
     plt.gca().xaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}%'))
-    plt.gca().set_title('Untrained and Masked Initial Weights Accuracy')
-    plt.gca().set_ylabel('Accuracy (%)')
-    plt.gca().set_xlabel('Sparsity (% Unpruned Weights)')
+    plt.gca().set_title(title)
+    plt.gca().set_ylabel(y_label)
+    plt.gca().set_xlabel(x_label)
     plt.gca().legend()
     plt.gca().grid()
     save_plot(save_location)
