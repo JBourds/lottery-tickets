@@ -25,10 +25,10 @@ from . import save_plot
 
 def plot_layerwise_average_magnitude(
     x: np.ndarray,
+    num_samples: int,
     layer_means: np.ndarray[np.ndarray],
     layer_std: np.ndarray[np.ndarray],
     layer_names: List[str],
-    num_samples: int,
     save_location: str = None,
 ):
     
@@ -50,10 +50,10 @@ def plot_layerwise_average_magnitude(
 
 def plot_layerwise_positive_sign_proportion(
     x: np.ndarray,
+    num_samples: int,
     layer_means: np.ndarray[np.ndarray],
     layer_std: np.ndarray[np.ndarray],
     layer_names: List[str],
-    num_samples: int,
     save_location: str = None,
 ):
     
@@ -76,10 +76,10 @@ def plot_layerwise_positive_sign_proportion(
 
 def _plot_over_layers(
     x: np.ndarray,
+    num_samples: int,
     layer_means: np.ndarray[np.ndarray],
     layer_std: np.ndarray[np.ndarray],
     layer_names: List[str],
-    num_samples: int,
     title: str = "Title",
     x_label: str = "X",
     y_label: str = "Y",

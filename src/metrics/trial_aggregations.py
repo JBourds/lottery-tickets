@@ -128,26 +128,45 @@ def get_best_accuracy_percent(trial: history.TrialData, train: bool = False) -> 
 # ------------------------- Magnitude Metrics -------------------------
 
 
-def get_global_average_magnitude(trial: history.TrialData, use_initial_weights: bool = False) -> float:
+def get_global_average_magnitude(
+    trial: history.TrialData,
+    use_initial_weights: bool = False,
+    use_masked_weights: bool = False,
+) -> float:
     """
     Returns:
         float: Average magnitude of unpruned weights across the entire network.
     """
-    return _get_average_magnitude(trial=trial, layerwise=False, use_initial_weights=use_initial_weights)
+    return _get_average_magnitude(
+        trial=trial,
+        layerwise=False,
+        use_initial_weights=use_initial_weights,
+        use_masked_weights=use_masked_weights
+    )
 
 
-def get_layerwise_average_magnitude(trial: history.TrialData, use_initial_weights: bool = False) -> float:
+def get_layerwise_average_magnitude(
+    trial: history.TrialData,
+    use_initial_weights: bool = False,
+    use_masked_weights: bool = False,
+) -> float:
     """
     Returns:
         float: Average magnitude of unpruned weights by layer.
     """
-    return _get_average_magnitude(trial=trial, layerwise=True, use_initial_weights=use_initial_weights)
+    return _get_average_magnitude(
+        trial=trial,
+        layerwise=True,
+        use_initial_weights=use_initial_weights,
+        use_masked_weights=use_masked_weights
+    )
 
 
 def _get_average_magnitude(
     trial: history.TrialData,
     layerwise: bool = False,
     use_initial_weights: bool = False,
+    use_masked_weights: bool = False,
 ) -> Union[float, np.ndarray[float]]:
     """
     Function used to get the average magnitude of parameters, either 
@@ -161,7 +180,8 @@ def _get_average_magnitude(
         trial=trial,
         operation=_get_average_parameter_magnitude,
         layerwise=layerwise,
-        use_initial_weights=use_initial_weights
+        use_initial_weights=use_initial_weights,
+        use_masked_weights=use_masked_weights,
     )
 
 
@@ -186,48 +206,86 @@ def _get_average_parameter_magnitude(weights: List[np.ndarray], masks: List[np.n
     unmasked_weight_sum_magnitude: float = np.sum(
         [np.sum(np.abs(w)) for w in unmasked_weights])
     unmasked_weight_count: int = np.sum([np.size(w) for w in unmasked_weights])
+    
+    if unmasked_weight_count == 0:
+        return 0
 
     return unmasked_weight_sum_magnitude / unmasked_weight_count
 
 # ------------------------- Sign Proportion Metrics -------------------------
 
 
-def get_global_percent_negative_weights(trial: history.TrialData, use_initial_weights: bool = False) -> float:
+def get_global_percent_negative_weights(
+    trial: history.TrialData,
+    use_initial_weights: bool = False,
+    use_masked_weights: bool = False,
+) -> float:
     """
     Returns:
         float: Negative percent of the unpruned weights stored across layers in the network.
     """
-    return 100 - get_global_percent_positive_weights(trial=trial, use_initial_weights=use_initial_weights)
+    return 100 - get_global_percent_positive_weights(
+        trial=trial, 
+        use_initial_weights=use_initial_weights,
+        use_masked_weights=use_masked_weights,
+    )
 
 
-def get_global_percent_positive_weights(trial: history.TrialData, use_initial_weights: bool = False) -> float:
+def get_global_percent_positive_weights(
+    trial: history.TrialData, 
+    use_initial_weights: bool = False,
+    use_masked_weights: bool = False,
+) -> float:
     """
     Returns:
         float: Positive percent of the unpruned weights stored across layers in the network.
     """
-    return _get_positive_weight_ratio(trial=trial, layerwise=False, use_initial_weights=use_initial_weights) * 100
+    return 100 * _get_positive_weight_ratio(
+        trial=trial, 
+        layerwise=False, 
+        use_initial_weights=use_initial_weights,
+        use_masked_weights=use_masked_weights,
+    )
 
 
-def get_layerwise_percent_negative_weights(trial: history.TrialData, use_initial_weights: bool = False) -> np.ndarray[float]:
+def get_layerwise_percent_negative_weights(
+	trial: history.TrialData,
+	use_initial_weights: bool = False,
+	use_masked_weights: bool = False,
+) -> np.ndarray[float]:
     """
     Returns:
         np.ndarray[float]: Negative percent of the unpruned weights stored by layer in the network.
     """
-    return 100 - get_layerwise_percent_positive_weights(trial=trial, use_initial_weights=use_initial_weights)
+    return 100 - get_layerwise_percent_positive_weights(
+        trial=trial, 
+        use_initial_weights=use_initial_weights,
+        use_masked_weights=use_masked_weights,
+    )
 
 
-def get_layerwise_percent_positive_weights(trial: history.TrialData, use_initial_weights: bool = False) -> np.ndarray[float]:
+def get_layerwise_percent_positive_weights(
+	trial: history.TrialData,
+	use_initial_weights: bool = False,
+	use_masked_weights: bool = False,
+) -> np.ndarray[float]:
     """
     Returns:
         np.ndarray[float]: Positive percent of the unpruned weights stored by layer in the network.
     """
-    return _get_positive_weight_ratio(trial=trial, layerwise=True, use_initial_weights=use_initial_weights) * 100
+    return 100 * _get_positive_weight_ratio(
+        trial=trial, 
+        layerwise=True, 
+        use_initial_weights=use_initial_weights,
+        use_masked_weights=use_masked_weights,
+    )
 
 
 def _get_positive_weight_ratio(
     trial: history.TrialData,
     layerwise: bool = False,
-    use_initial_weights: bool = False
+    use_initial_weights: bool = False,
+    use_masked_weights: bool = False,
 ) -> Union[float, np.ndarray[float]]:
     """
     Function used to get the positive weight ratio, either globally across all layers or
@@ -241,7 +299,8 @@ def _get_positive_weight_ratio(
         trial=trial,
         operation=_get_ratio_of_unmasked_positive_weights,
         layerwise=layerwise,
-        use_initial_weights=use_initial_weights
+        use_initial_weights=use_initial_weights,
+        use_masked_weights=use_masked_weights,
     )
 
 def _get_ratio_of_unmasked_positive_weights(weights: List[np.ndarray], masks: List[np.ndarray]) -> float:
@@ -266,6 +325,9 @@ def _get_ratio_of_unmasked_positive_weights(weights: List[np.ndarray], masks: Li
         [np.sum(w[mask] >= 0) for w, mask in zip(weights, masks)])
     total_nonzero: float = np.sum([np.size(w[mask])
                                   for w, mask in zip(weights, masks)])
+    
+    if total_nonzero == 0:
+        return 1
 
     return total_positive / total_nonzero
 
@@ -309,6 +371,7 @@ def _perform_operation_globally_or_layerwise(
     operation: callable,
     layerwise: bool = False,
     use_initial_weights: bool = False,
+    use_masked_weights: bool = False,
 ) -> any:
     """
     Function used to get the average magnitude of parameters, either 
@@ -319,18 +382,20 @@ def _perform_operation_globally_or_layerwise(
         layerwise (bool, optional): Get proportion for each layer. Defaults to False.
         use_initial_weights (bool, optional): Use initial, masked weights or final trained weights. 
             Defaults to False.
+        use_masked_weights (Optional[bool]): Flag for whether operation should be performed on the
+            masked weights instead (just flips boolean array).
 
     Returns:
         any: Returns type depends on the operation.
     """
     # Convert masks into boolean Numpy array for indexing, and convert weights into Numpy array as well
-    masks = [mask.astype(bool) for mask in trial.masks]
+    masks = [np.logical_not(mask) if use_masked_weights else mask.astype(bool) for mask in trial.masks]
     weights = trial.initial_weights if use_initial_weights else trial.final_weights
     weights = [w for w in weights]
 
     if layerwise:
         # Since the private method expects a list, just make each entry into a list of 1 element
-        masks = [[m] for m in masks]
+        masks = [[np.logical_not(mask) if use_masked_weights else mask.astype(bool)] for mask in masks]
         weights = [[w] for w in weights]
         return np.array([operation(w, m) for w, m in zip(weights, masks)])
 

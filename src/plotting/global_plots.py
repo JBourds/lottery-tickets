@@ -28,9 +28,9 @@ from . import save_plot
         
 def plot_early_stopping(
     x: np.ndarray,
+    num_samples: int,
     y_mean: np.ndarray,
     y_std: np.ndarray,
-    num_samples: int,
     save_location: str = None,
 ):
     plt.figure(figsize=(8, 6))
@@ -52,28 +52,79 @@ def plot_early_stopping(
     plt.figtext(0.5, 0.01, caption, wrap=True, horizontalalignment='center', fontsize=12)
     save_plot(save_location)
 
+def plot_magnitude(
+    x: np.ndarray,
+    num_samples: int,
+    unmasked_y: np.ndarray,
+    unmasked_std: np.ndarray,
+    masked_y: np.ndarray = None,
+    masked_std: np.ndarray = None,
+    find_positive_proportion: bool = True,
+    save_location: str = None,
+):
+    """
+    Plot to compare the magnitude of the initial values for weights which have been masked off
+    against those which have not.
+    """
+    plt.figure(figsize=(8, 6))
+    bp.plot_aggregated_summary_ci(
+        x=x,
+        y_mean=unmasked_y,
+        y_std=unmasked_std,
+        num_samples=num_samples,
+        legend="Unmasked Weights",
+    )
+    include_masked = masked_y is not None and masked_std is not None
+    if include_masked:
+        bp.plot_aggregated_summary_ci(
+            x=x,
+            y_mean=masked_y,
+            y_std=masked_std,
+            num_samples=num_samples,
+            legend="Masked Weights",
+            invert_x=False,
+        )
+    plt.gca().xaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}%'))
+    plt.gca().set_title(f'Magnitude of ' + ' Weights Split by Mask' if include_masked else ' Of Trained Weights')
+    plt.gca().set_ylabel(f'Magnitude')
+    plt.gca().set_xlabel('Sparsity (% Unpruned Weights)')
+    plt.gca().legend()
+    plt.gca().grid()
+    save_plot(save_location)
+
 def plot_sign_proportion(
     x: np.ndarray,
-    y_mean: np.ndarray,
-    y_std: np.ndarray,
     num_samples: int,
-    use_initial_weights: bool = False, 
+    unmasked_y: np.ndarray,
+    unmasked_std: np.ndarray,
+    masked_y: np.ndarray = None,
+    masked_std: np.ndarray = None,
     find_positive_proportion: bool = True,
     save_location: str = None,
 ):
     sign: str = 'Positive' if find_positive_proportion else 'Negative'
-    mask_status: str = 'Initial' if use_initial_weights else 'Final'
     
     plt.figure(figsize=(8, 6))
     bp.plot_aggregated_summary_ci(
         x=x,
-        y_mean=y_mean,
-        y_std=y_std,
+        y_mean=unmasked_y,
+        y_std=unmasked_std,
         num_samples=num_samples,
+        legend="Unmasked Weights",
     )
+    include_masked = masked_y is not None and masked_std is not None
+    if include_masked:
+        bp.plot_aggregated_summary_ci(
+            x=x,
+            y_mean=masked_y,
+            y_std=masked_std,
+            num_samples=num_samples,
+            legend="Masked Weights",
+            invert_x=False,
+        )
     plt.gca().yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}%'))
     plt.gca().xaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}%'))
-    plt.gca().set_title(f'Percentage of {sign} Masked {mask_status} Weights Over Iterative Pruning')
+    plt.gca().set_title(f'Percentage of {sign} ' + ' Weights Split by Mask' if include_masked else ' Of Trained Weights')
     plt.gca().set_ylabel(f'Proportion of {sign} Weights')
     plt.gca().set_xlabel('Sparsity (% Unpruned Weights)')
     plt.gca().legend()
@@ -82,9 +133,9 @@ def plot_sign_proportion(
         
 def plot_loss(
     x: np.ndarray,
+    num_samples: int,
     y_mean: np.ndarray,
     y_std: np.ndarray,
-    num_samples: int,
     title: str = "Loss",
     y_label: str = "Loss",
     x_label: str = "Sparsity (% Unpruned Weights)",
@@ -108,9 +159,9 @@ def plot_loss(
         
 def plot_accuracy(
     x: np.ndarray,
+    num_samples: int,
     y_mean: np.ndarray,
     y_std: np.ndarray,
-    num_samples: int,
     title: str = "Unmasked Weight Accuracy",
     y_label: str = "Accuracy (%)",
     x_label: str = "Sparsity (% Unpruned Weights)",

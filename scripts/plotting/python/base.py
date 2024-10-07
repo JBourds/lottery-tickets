@@ -48,39 +48,53 @@ def make_plots(
     @returns (None): Saves plots to specified directory.
     """
     experiments = history.get_experiments(root, models_dir, eprefix, tprefix, tdata)
-    trial_aggregations = [
-        ('pruning_step', t_agg.get_pruning_step),
-        ('loss_before_training', t_agg.get_loss_before_training),
-        ('acc_before_training', t_agg.get_accuracy_before_training),
-        ('global_pos_percent', t_agg.get_global_percent_positive_weights),
-        ('layer_names', t_agg.get_layer_names),
-        ('layer_pos_percent', t_agg.get_layerwise_percent_positive_weights),
-        ('global_avg_mag', t_agg.get_global_average_magnitude),
-        ('layer_avg_mag', t_agg.get_layerwise_average_magnitude),
-        ('best_val_acc', t_agg.get_best_accuracy_percent),
-        ('best_val_loss', t_agg.get_best_loss),
-        ('sparsity', t_agg.get_sparsity_percentage),
-        ('early_stopping', t_agg.get_early_stopping_iteration),
-    ]
-    experiment_aggregations = [
-        ('mean', e_agg.mean_over_experiments),
-        ('std', e_agg.std_over_experiments), 
-        ('0th', e_agg.nth_experiment),
-        ('num_samples', e_agg.num_samples),
-        ('values', lambda x: x),
-    ]
+    trial_aggregations = {
+        'pruning_step': t_agg.get_pruning_step,
+        'loss_before_training': t_agg.get_loss_before_training,
+        'acc_before_training': t_agg.get_accuracy_before_training,
+        'layer_names': t_agg.get_layer_names,
+        'best_val_acc': t_agg.get_best_accuracy_percent,
+        'best_val_loss': t_agg.get_best_loss,
+        'sparsity': t_agg.get_sparsity_percentage,
+        'early_stopping': t_agg.get_early_stopping_iteration,
+
+        # Compare the masked/unmasked initial weights against each other to see if there is a trend from the initialization
+        # in addition to what the values do once trained
+        
+        'final_positive_percent': t_agg.get_global_percent_positive_weights,
+        'initial_positive_percent': functools.partial(t_agg.get_global_percent_positive_weights, use_initial_weights=True),
+        'masked_initial_positive_percent': functools.partial(t_agg.get_global_percent_positive_weights, use_initial_weights=True, use_masked_weights=True),
+
+        'final_avg_mag': t_agg.get_global_average_magnitude,
+        'initial_avg_mag': functools.partial(t_agg.get_global_average_magnitude, use_initial_weights=True),
+        'masked_initial_avg_mag': functools.partial(t_agg.get_global_average_magnitude, use_initial_weights=True, use_masked_weights=True),
+        
+        # Layerwise metrics
+        'layer_pos_percent': t_agg.get_layerwise_percent_positive_weights,
+        'layer_avg_mag': t_agg.get_layerwise_average_magnitude,
+    }
+    experiment_aggregations = {
+        'mean': e_agg.mean_over_experiments,
+        'std': e_agg.std_over_experiments, 
+        '0th': e_agg.nth_experiment,
+        'num_samples': e_agg.num_samples,
+        'values': lambda x: x,
+    }
     results = {}
-    t_functions = [f for _, f in trial_aggregations]
-    e_functions = [f for _, f in experiment_aggregations]
+    t_functions = [f for f in trial_aggregations.values()]
+    e_functions = [f for f in experiment_aggregations.values()]
     data = e_agg.aggregate_across_experiments(experiments, t_functions, e_functions)
-    for ((e_name, _), e_data) in zip(experiment_aggregations, data):
+    for e_name, e_data in zip(experiment_aggregations.keys(), data):
         results[e_name] = {}
-        for ((t_name, _), t_data) in zip(trial_aggregations, e_data):
+        for t_name, t_data in zip(trial_aggregations.keys(), e_data):
             results[e_name][t_name] = t_data 
 
     plot_params = [
         {'name': 'early_stopping', 'x': ('0th', 'sparsity'), 'func': gp.plot_early_stopping},
-        {'name': 'global_pos_percent', 'x': ('0th', 'sparsity'), 'func': gp.plot_sign_proportion},
+        {'name': 'final_positive_percent', 'x': ('0th', 'sparsity'), 'func': gp.plot_sign_proportion},
+        {'name': 'initial_positive_percent', 'x': ('0th', 'sparsity'), 'func': gp.plot_sign_proportion},
+        {'name': 'final_avg_mag', 'x': ('0th', 'sparsity'), 'func': gp.plot_magnitude},
+        {'name': 'initial_avg_mag', 'x': ('0th', 'sparsity'), 'func': gp.plot_magnitude},
         {'name': 'best_val_acc', 'x': ('0th', 'sparsity'), 'func': gp.plot_accuracy,
             'kwargs': {
                 'title': 'Best Validation Accuracy at Early Stopping',
@@ -102,9 +116,9 @@ def make_plots(
             },
         },
         {'name': 'layer_avg_mag', 'x': ('0th', 'sparsity'), 'func': lp.plot_layerwise_average_magnitude, 
-         'kwargs': {
-            'layer_names': results['0th']['layer_names'][0]
-         }
+             'kwargs': {
+                'layer_names': results['0th']['layer_names'][0]
+             }
         },
     ] 
 
@@ -115,6 +129,16 @@ def make_plots(
         y_mean = results['mean'][params['name']]
         y_std = results['std'][params['name']]
         num_samples = results['num_samples'][params['name']]
+        args = [x, num_samples, y_mean, y_std]
+        
+        # Either we are plotting one line, or comparing masked vs. unmasked (or plotting layerwise)
+        masked_key = 'masked_' + params['name']
+        if trial_aggregations.get(masked_key) is not None:
+            masked_mean = results['mean'][masked_key] 
+            masked_std = results['std'][masked_key] 
+            masked_samples = results['num_samples'][masked_key]
+            args += [masked_mean, masked_std]
         kwargs = params.get('kwargs', {})
-        params['func'](x, y_mean, y_std, num_samples=num_samples, save_location=save_location, **kwargs)
+        kwargs['save_location'] = save_location
+        params['func'](*args, **kwargs)
          
