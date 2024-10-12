@@ -6,7 +6,7 @@ OUTPUT_DIRECTORY = os.path.join(TRAINING_DIRECTORY, 'shell')
 RUN_DIRECTORY = os.path.dirname(os.path.dirname(TRAINING_DIRECTORY))
 
 models = ['lenet', 'conv2', 'conv4', 'conv6']
-datasets = ['mnist', 'cifar'] 
+datasets = ['mnist', 'fashion_mnist', 'cifar'] 
 
 for model in models:
     for dataset in datasets:

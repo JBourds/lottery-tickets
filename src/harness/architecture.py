@@ -11,6 +11,7 @@ Author: Jordan Bourdeau
 import functools
 from dataclasses import dataclass
 from enum import Enum
+import numpy as np
 from sys import platform
 from typing import Callable, List, Tuple
 
@@ -287,12 +288,15 @@ class Architecture:
     }
 
 
-    def __init__(self, architecture: str, dataset: ds.Datasets | str):
+    def __init__(self, architecture: str, dataset: str):
         self.architecture = Architectures(architecture.lower())
         if not self._supported(self.architecture):
             raise ValueError(
                 f"'{self.architecture}' is not a supported architecture")
         self.dataset = ds.Dataset(dataset, flatten=not self.convolutional())
+
+    def load_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        return self.dataset.load()
 
     def convolutional(self) -> bool:
         return self._convolutional(self.architecture)

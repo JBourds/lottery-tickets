@@ -11,6 +11,7 @@ from enum import Enum
 
 import numpy as np
 import tensorflow as tf
+from typing import Literal
 
 from src.harness import constants as C
 from src.harness import utils
@@ -19,36 +20,35 @@ from src.harness import utils
 class Datasets(Enum):
     # MNIST images are grayscale, 28x28 pixels
     MNIST: tuple[int, int, int] = (28, 28, 1)
+    # Fashion MNIST are same as MNIST but for fashion
+    FASHION_MNIST: tuple[int, int, int] = (28, 28, 1)
     # CIFAR10 images are color (RGB), 32x32 pixels
     CIFAR10: tuple[int, int, int] = (32, 32, 3)
     # ImageNet images are color (RGB), typically 224x224 pixels
     ImageNet: tuple[int, int, int] = (224, 224, 3)
 
-
 class Dataset:
 
-    def __init__(self, dataset: str | Datasets, flatten: bool = False):
-        # Handle if a string is passed in, from cmdline arguments for instance
-        if isinstance(dataset, str):
-            match dataset.lower():
-                case 'mnist':
-                    self.dataset = Datasets.MNIST
-                case 'cifar':
-                    self.dataset = Datasets.CIFAR10
-                case 'imagenet':
-                    self.dataset = Datasets.ImageNet
+    def __init__(self, dataset: Datasets, flatten: bool = False):
         self.name = dataset.lower()
-        self.flatten = flatten
-        match self.dataset:
-            case Datasets.MNIST:
+        match self.name:
+            case 'mnist':
+                self.dataset = Datasets.MNIST
                 self.loader_function = functools.partial(
                     load_and_process_mnist, flatten=flatten)
-            case Datasets.CIFAR10:
+            case 'fashion_mnist':
+                self.dataset = Datasets.FASHION_MNIST
+                self.loader_function = functools.partial(
+                    load_and_process_fashion_mnist, flatten=flatten)
+            case 'cifar':
+                self.dataset = Datasets.CIFAR10
                 self.loader_function = functools.partial(
                     load_and_process_cifar10, flatten=flatten)
+            case 'imagenet':
+                self.dataset = Datasets.ImageNet
             case _:
-                raise ValueError(
-                    f'Dataset {self.dataset} is not yet supported')
+                raise ValueError(f"{name} is not a supported dataset")
+        self.flatten = flatten
 
     @property
     def input_shape(self):
@@ -74,6 +74,8 @@ class Dataset:
         """
         match self.dataset:
             case Datasets.MNIST:
+                return 10
+            case Datasets.FASHION_MNIST:
                 return 10
             case Datasets.CIFAR10:
                 return 10
@@ -139,6 +141,41 @@ def load_and_process_mnist(flatten: bool = False) -> tuple[np.array, np.array, n
 
     return X_train, X_test, Y_train, Y_test
 
+
+def load_and_process_fashion_mnist(flatten: bool = False) -> tuple[np.array, np.array, np.array, np.array]:
+    """
+    Function to load and preprocess the Fashion  MNIST dataset.
+
+    Args:
+        flatten (bool, optional): Boolean flag for whether data should be flattened to 1 dimension.
+            False by default.
+
+    Returns:
+        tuple[np.array, np.array, np.array, np.array]: X and Y training and test sets after preprocessing.
+    """
+    (X_train, Y_train), (X_test, Y_test) = tf.keras.datasets.fashion_mnist.load_data()
+
+    if flatten:
+        # Add a new axis for use in training the model
+        X_train: np.array = X_train[:, :, :, np.newaxis]
+        X_test: np.array = X_test[:, :, :, np.newaxis]
+
+        # Reshape labels
+        X_train = X_train.reshape((X_train.shape[0], 1, -1))
+        X_test = X_test.reshape((X_test.shape[0], 1, -1))
+        Y_train = Y_train.reshape((Y_train.shape[0], 1, -1))
+        Y_test = Y_test.reshape((Y_test.shape[0], 1, -1))
+
+    # Convert class vectors to binary class matrices.
+    num_classes: int = 10
+    Y_train: np.array = tf.keras.utils.to_categorical(Y_train, num_classes)
+    Y_test: np.array = tf.keras.utils.to_categorical(Y_test, num_classes)
+
+    # Data normalization
+    X_train = X_train.astype('float32') / 255
+    X_test = X_test.astype('float32') / 255
+
+    return X_train, X_test, Y_train, Y_test
 
 def load_and_process_cifar10(flatten: bool = False) -> tuple[np.array, np.array, np.array, np.array]:
     """
