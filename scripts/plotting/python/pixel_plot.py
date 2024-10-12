@@ -29,17 +29,6 @@ initial = history.TrialData.load_from(start_path)
 final = history.TrialData.load_from(end_path)
 
 
-def pixel_plot_filters(
-    fig: plt.Figure,
-    X: np.ndarray,
-    name: str,
-):
-    fig.suptitle(name)
-    filter_rows, filter_columns, num_filters = X.shape
-    nrows, ncols = np.ceil(np.sqrt(num_filters)), np.floor(np.sqrt(num_filters))
-    fig, axes = fig.subplots((nrows, ncols))
-    
-
 def pixel_plot_2d(
     ax: plt.Axes,
     X: np.ndarray,
@@ -56,7 +45,7 @@ def pixel_plot_2d(
     ax.set_title(name)
     ax.set_xlabel("Column")
     ax.set_ylabel("Row")
-    cax = ax.matshow(X, cmap="viridis", interpolation="none", aspect="equal", vmin=min_value, vmax=max_value)
+    cax = ax.matshow(X, cmap="viridis", vmin=min_value, vmax=max_value)
     plt.setp(ax.get_xticklabels(), rotation=30, horizontalalignment="right")
 
     if colorbar:
@@ -95,8 +84,7 @@ def pixel_plot_filter(
         composite_array[start_row:start_row + filter_size, start_col:start_col + filter_size] = filters[:, :, i]
 
     # Plot the composite array
-    im = ax.imshow(composite_array, cmap='viridis', interpolation='none', 
-                   aspect='equal', vmin=vmin, vmax=vmax)
+    im = ax.imshow(composite_array, cmap='viridis', vmin=vmin, vmax=vmax)
 
 
     # Draw red borders around the filters using vlines and hlines
@@ -122,7 +110,7 @@ def pixel_plot_filter(
     ax.axis("off")
 
 def create_pixel_plot(layer: np.ndarray, name: str, suptitle: str = "") -> plt.Figure:
-    fig = plt.figure(figsize=(12, 6))
+    fig = plt.figure(figsize=(6, 8), constrained_layout=True)
     fig.suptitle(suptitle)
 
     search = name.lower()
@@ -138,8 +126,6 @@ def create_pixel_plot(layer: np.ndarray, name: str, suptitle: str = "") -> plt.F
         pixel_plot_filter(fig.gca(), layer, name)
     else:
         raise ValueError("Unsupported layer")
-
-    plt.tight_layout()
     
     return fig
 
