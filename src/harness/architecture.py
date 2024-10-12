@@ -165,7 +165,7 @@ class Architectures(Enum):
             Dense(4086, activation='relu'),
             Dense(4086, activation='relu'),
             Dense(num_classes, activation='softmax'),
-        ], name="conv3")
+        ], name="conv2")
 
         # Explicitly build the model to initialize weights
         if platform == 'darwin':

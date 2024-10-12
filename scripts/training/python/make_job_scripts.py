@@ -33,3 +33,11 @@ fi"""
             script.write(contents)   
         os.chmod(file, 0o775)
 
+filepath = os.path.join(OUTPUT_DIRECTORY, 'run_all.sh')
+with open(filepath, 'w') as outfile:
+    contents = ""
+    for model in models:
+        for dataset in datasets:
+            contents += os.path.join(OUTPUT_DIRECTORY, model + '_' + dataset + '.sh') + ' "$@ &"\n'
+    outfile.write(contents)
+os.chmod(filepath, 0o775)
