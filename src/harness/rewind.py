@@ -42,7 +42,7 @@ def rewind_model_weights(
         *rewind_args: Arguments to pass into the rewind rule.
     """
     rewind_rule(model, *rewind_args)
-    masked_weights: list[np.ndarray] = [weights * masks for weights, masks in zip(model.get_weights(), mask_model.get_weights())]
+    masked_weights = [weights * masks for weights, masks in zip(model.get_weights(), mask_model.get_weights())]
     model.set_weights(masked_weights)
     
 def rewind_to_random_init(
@@ -94,7 +94,7 @@ def get_rewind_to_original_init_for(seed: int, directory: str = './') -> callabl
         Args:
             model (keras.Model): Keras model to rewind weights for.
         """
-        original_model: keras.Model = mod.load_model(seed, initial=True, directory=directory)
+        original_model = mod.load_model(seed, initial=True, directory=directory)
         model.set_weights(original_model.get_weights())
         
     return rewind_to_original_init

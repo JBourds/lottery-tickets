@@ -16,6 +16,7 @@ from datetime import datetime
 
 import numpy as np
 import tensorflow as tf
+from typing import List
 
 from src.harness import constants as C
 from src.harness import dataset as ds
@@ -103,6 +104,7 @@ def test_step(
 
 
 def training_loop(
+    random_seed: int,
     pruning_step: int,
     model: tf.keras.Model,
     mask_model: tf.keras.Model,
@@ -123,7 +125,6 @@ def training_loop(
     # Extract input and target for training and test/validation set
     X_train, X_test, Y_train, Y_test = dataset.load()
 
-    initial_parameters = [copy.deepcopy(arr) for arr in model.get_weights()]
     masks = [copy.deepcopy(arr) for arr in mask_model.get_weights()]
 
     # Calculate the number of batches and create arrays to keep track of batch
@@ -243,10 +244,10 @@ def training_loop(
     
     # Compile training round data
     trial_data = history.TrialData(
+        random_seed,
         pruning_step,
         model.name,  # Equivalent to string in architecture
         dataset.name,
-        initial_parameters,
         final_parameters,
         masks,
         loss_before_training,
@@ -279,6 +280,7 @@ def train(
 
     # Run the training loop
     trial_data = training_loop(
+        random_seed,
         pruning_step,
         model,
         mask_model,

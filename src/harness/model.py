@@ -33,8 +33,8 @@ def load_model(
 
     :returns: Model object with weights loaded and callbacks to use when fitting the model.
     """
-    filepath: str = os.path.join(directory, paths.get_model_filepath(seed, pruning_step, masks, initial))
-    model: tf.keras.Model = keras.models.load_model(filepath)
+    filepath = os.path.join(directory, paths.get_model_filepath(seed, pruning_step, masks, initial))
+    model = keras.models.load_model(filepath)
     return model
 
 def save_model(
@@ -56,9 +56,9 @@ def save_model(
     :param directory:    Parent directory to look for.
     """
     
-    model_directory: str = os.path.join(directory, paths.get_model_directory(seed, pruning_step, masks, initial))
+    model_directory = os.path.join(directory, paths.get_model_directory(seed, pruning_step, masks, initial))
     paths.create_path(model_directory)
-    filepath: str = os.path.join(directory, paths.get_model_filepath(seed, pruning_step, masks, initial))
+    filepath = os.path.join(directory, paths.get_model_filepath(seed, pruning_step, masks, initial))
         
     # Save the initial weights in an 'initial' directory in the top-level of the model directory
     model.save(filepath, overwrite=True)
@@ -88,6 +88,6 @@ def create_masked_nn(create_nn: callable, *args) -> tf.keras.Model:
 
     :returns: Stripped model with masks initialized to all 1s.
     """
-    model: tf.keras.Model = create_nn(*args)
+    model = create_nn(*args)
     initialize_mask_model(model)
     return model

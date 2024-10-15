@@ -17,8 +17,10 @@ from typing import Callable, Generator, List
 
 import numpy as np
 
+from src.harness import architecture as arch
 from src.harness import constants as C
 from src.harness import mixins
+from src.harness import utils
 
 
 @dataclass
@@ -29,12 +31,12 @@ class TrialData(mixins.PickleMixin, mixins.TimerMixin):
     weights, and the masks which were applied during training.
     Also includes the pruning step this was from.
     """
+    random_seed: int
     pruning_step: int
     architecture: str
     dataset: str
 
     # Model parameters
-    initial_weights: list[np.ndarray]
     final_weights: list[np.ndarray]
     masks: list[np.ndarray]
 
@@ -46,6 +48,16 @@ class TrialData(mixins.PickleMixin, mixins.TimerMixin):
     validation_losses: np.array
     validation_accuracies: np.array
 
+    @property
+    def initial_weights(self) -> List[np.ndarray]:
+        """
+        Computed property for backwards compatability and less repeated
+        storage on disk.
+        """
+        a = arch.Architecture(self.architecture, self.dataset)
+        loader = a.get_model_constructor()
+        utils.set_seed(self.random_seed)
+        return loader().get_weights()
 
 def get_trials(
     epath: str,
@@ -86,5 +98,5 @@ def get_experiments(
         os.path.join(models_directory, path) for path in os.listdir(models_directory)
         if path.startswith(eprefix)
     ]
-    return [partial(get_trials, epath, tprefix=tprefix, tdatafile=tdatafile) for epath in experiment_paths]
+    return [partial(get_trials, epath, tprefix=tprefix, tdatafile=tdatafile)() for epath in experiment_paths]
 

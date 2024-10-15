@@ -85,7 +85,7 @@ def plot_magnitude(
             invert_x=False,
         )
     plt.gca().xaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}%'))
-    plt.gca().set_title(f'Magnitude of ' + ' Weights Split by Mask' if include_masked else ' Of Trained Weights')
+    plt.gca().set_title(f'Magnitude of' + (' Weights Split by Mask' if include_masked else ' Of Trained Weights'))
     plt.gca().set_ylabel(f'Magnitude')
     plt.gca().set_xlabel('Sparsity (% Unpruned Weights)')
     plt.gca().legend()
@@ -124,7 +124,7 @@ def plot_sign_proportion(
         )
     plt.gca().yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}%'))
     plt.gca().xaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}%'))
-    plt.gca().set_title(f'Percentage of {sign} ' + ' Weights Split by Mask' if include_masked else ' Of Trained Weights')
+    plt.gca().set_title(f'Percentage of {sign}' + (' Weights Split by Mask' if include_masked else ' Of Trained Weights'))
     plt.gca().set_ylabel(f'Proportion of {sign} Weights')
     plt.gca().set_xlabel('Sparsity (% Unpruned Weights)')
     plt.gca().legend()

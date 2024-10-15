@@ -201,11 +201,9 @@ def _get_average_parameter_magnitude(weights: List[np.ndarray], masks: List[np.n
     assert np.all([w.shape == m.shape for w, m in zip(weights, masks)]
                   ), 'Weights and masks must all be the same shape'
 
-    unmasked_weights: List[np.ndarray] = [w[mask]
-                                          for w, mask in zip(weights, masks)]
-    unmasked_weight_sum_magnitude: float = np.sum(
-        [np.sum(np.abs(w)) for w in unmasked_weights])
-    unmasked_weight_count: int = np.sum([np.size(w) for w in unmasked_weights])
+    unmasked_weights = [w[mask] for w, mask in zip(weights, masks)]
+    unmasked_weight_sum_magnitude = np.sum([np.sum(np.abs(w)) for w in unmasked_weights])
+    unmasked_weight_count: int = np.sum([np.sum(w) for w in masks])
     
     if unmasked_weight_count == 0:
         return 0
