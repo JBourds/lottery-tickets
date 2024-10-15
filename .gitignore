@@ -14,3 +14,4 @@ testing_experiment/
 lottery-ticket/
 experiments/
 plots/
+*.swo

@@ -105,6 +105,11 @@ def make_plots(
                 'title': 'Loss Before Training',
             },
         },
+        {'name': 'best_val_loss', 'x': ('0th', 'sparsity'), 'func': gp.plot_loss,
+            'kwargs': {
+                'title': 'Best Validation Loss',
+            },
+        },
         {'name': 'acc_before_training', 'x': ('0th', 'sparsity'), 'func': gp.plot_accuracy,
             'kwargs': {
                 'title': 'Accuracy From Masked Weights Before Training',
