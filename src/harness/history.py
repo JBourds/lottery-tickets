@@ -23,14 +23,6 @@ from src.harness import mixins
 from src.harness import utils
 
 @dataclass
-class SeededInitData(mixins.PickleMixin, mixins.TimerMixin):
-    """
-    Experiment-specific wrapper for trial data.
-    """
-    trial_data: TrialData
-    seeded_init_data: Dict 
-
-@dataclass
 class TrialData(mixins.PickleMixin, mixins.TimerMixin):
     """
     Class containing data from a single round of training.
