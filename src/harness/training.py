@@ -275,7 +275,10 @@ def train(
     Function to perform a single round of training for a model.
     NOTE: Modifed `model` input's weights.
 
-    :returns Model, masked model, and training round objects with the final trained model and the training summary.
+    @returns (Tuple[TrialData, str]): Tuple containing the data for the 
+        trial and the output directory it should go to in case it needs
+        to be wrapped or modified before being saved for a specific
+        experiment.
     """
 
     # Run the training loop
@@ -292,7 +295,6 @@ def train(
     trial_data.stop_timer()
     trial_data_directory = os.path.join(output_directory, paths.get_model_directory(
         random_seed, pruning_step, trial_data=True))
-    trial_data.save_to(trial_data_directory, C.TRIAL_DATAFILE)
 
     # Save network final weights and masks to its folder in the appropriate trial folder
     mod.save_model(model, random_seed, pruning_step,
@@ -300,4 +302,4 @@ def train(
     mod.save_model(mask_model, random_seed, pruning_step,
                    masks=True, directory=output_directory)
 
-    return trial_data
+    return trial_data, trial_data_directory

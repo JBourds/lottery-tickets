@@ -15,15 +15,16 @@ sys.path.append(os.path.join(os.environ["HOME"], "lottery-tickets"))
 from src.harness.architecture import Architecture
 from src.harness import history
 
-directory = os.path.join(os.environ["HOME"], "lottery-tickets/experiments/archive/lenet_mnist_0_seed_5_experiments_1_batches_0.05_default_sparsity_lm_pruning_20241006-214741/models/model0")
-directory = os.path.join(os.environ["HOME"], "lottery-tickets/experiments/archive/conv2_cifar_0_seed_5_experiments_1_batches_0.05_default_sparsity_lm_pruning_20241006-214754/models/model0")
-output = os.path.join(os.path.dirname(os.path.dirname(directory)), "plots")
+base = "/users/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_3_experiments_1_batches_0.05_default_sparsity_lm_pruning_20241015-053957/"
+model_directory = os.path.join(base, "models", "model0") 
+plots_directory = os.path.join(base, "plots") 
+output = os.path.join(os.path.dirname(os.path.dirname(model_directory)), "plots")
 os.makedirs(output, exist_ok=True)
 start = "trial0"
 end = "trial14"
 
-start_path = os.path.join(directory, start, "trial_data.pkl")
-end_path = os.path.join(directory, end, "trial_data.pkl")
+start_path = os.path.join(model_directory, start, "trial_data.pkl")
+end_path = os.path.join(model_directory, end, "trial_data.pkl")
 
 initial = history.TrialData.load_from(start_path)
 final = history.TrialData.load_from(end_path)
@@ -109,7 +110,11 @@ def pixel_plot_filter(
     ax.set_title(name)
     ax.axis("off")
 
-def create_pixel_plot(layer: np.ndarray, name: str, suptitle: str = "") -> plt.Figure:
+def create_pixel_plot(
+    layer: np.ndarray, 
+    name: str, 
+    suptitle: str = ""
+) -> plt.Figure:
     fig = plt.figure(figsize=(6, 8), constrained_layout=True)
     fig.suptitle(suptitle)
 
@@ -131,20 +136,20 @@ def create_pixel_plot(layer: np.ndarray, name: str, suptitle: str = "") -> plt.F
 
 for trial, data in [("Trial 0", initial), ("Trial 14", final)]:
     arch = data.architecture
-    layer_names = Architecture.get_model_layers("conv2") 
+    layer_names = Architecture.get_model_layers(data.architecture) 
     weight_layer_indices = [index for index, name in enumerate(layer_names) if "bias" not in name.lower()]
     layer_names = [layer_names[index] for index in weight_layer_indices]
     masks = [data.masks[index] for index in weight_layer_indices]
     initial_weights = [data.initial_weights[index] for index in weight_layer_indices]
-    final_weights = [data.initial_weights[index] for index in weight_layer_indices]
+    final_weights = [data.final_weights[index] for index in weight_layer_indices]
     
     label = f"{trial} Masks"
     for weights, name in zip(masks, layer_names):
         fig = create_pixel_plot(weights, name, label)
-        fig.savefig(f"{label}-{name}")
+        fig.savefig(os.path.join(plots_directory, f"{label}-{name}"))
 
     label = f"{trial} Weights"
     for weights, name in zip(final_weights, layer_names):
         fig = create_pixel_plot(weights, name, label)
-        fig.savefig(f"{label}-{name}")
+        fig.savefig(os.path.join(plots_directory, f"{label}-{name}"))
     

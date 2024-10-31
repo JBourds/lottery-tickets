@@ -38,6 +38,6 @@ with open(filepath, 'w') as outfile:
     contents = ""
     for model in models:
         for dataset in datasets:
-            contents += os.path.join(OUTPUT_DIRECTORY, model + '_' + dataset + '.sh') + ' "$@ &"\n'
+            contents += os.path.join(OUTPUT_DIRECTORY, model + '_' + dataset + '.sh') + ' "$@" &\n'
     outfile.write(contents)
 os.chmod(filepath, 0o775)

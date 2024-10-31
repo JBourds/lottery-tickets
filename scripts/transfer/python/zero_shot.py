@@ -9,6 +9,7 @@ Author: Jordan Bourdeau
 """
 
 import copy
+from matplotlib import pyplot as plt
 import numpy as np
 import os
 from pprint import pprint
@@ -65,9 +66,6 @@ def transfer_masking(seed: int, src: str, src_ds: ds.Dataset, dst_ds: ds.Dataset
             )
             saved_weights = copy.deepcopy(model.get_weights())
             is_first_run = False
-            print(np.all(np.equal(src_X_test, dst_X_test)))
-            print(np.all(np.equal(src_X_test, dst_X_test)))
-        
         
         model.set_weights([w * m for w, m in zip(saved_weights, trial.masks)])
         # Test with source dataset using trained mask
@@ -102,6 +100,19 @@ def transfer_masking(seed: int, src: str, src_ds: ds.Dataset, dst_ds: ds.Dataset
         
          
 if __name__ == "__main__":
-    src = os.path.join(os.environ["HOME"], "lottery-tickets", "experiments", "lenet_mnist_0_seed_5_experiments_1_batches_0.05_default_sparsity_lm_pruning_20241012-125815/models/model0/")
+    src = "/users/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_3_experiments_1_batches_0.05_default_sparsity_lm_pruning_20241015-053957/models/model0/"
+    plots_dir = "/users/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_3_experiments_1_batches_0.05_default_sparsity_lm_pruning_20241015-053957/plots"
+    os.makedirs(plots_dir, exist_ok=True)
     seed = 0
-    pprint(transfer_masking(seed, src, "mnist", "fashion_mnist"))
+    data = transfer_masking(seed, src, "mnist", "fashion_mnist")
+    trial_count = 15
+    trials = np.arange(trial_count)
+    plt.plot(trials, data["src_lt_acc"], label="Mask on Src")
+    plt.plot(trials, data["dst_lt_acc"], label="Mask on Dst")
+    plt.plot(trials, data["src_rand_acc"], label="Random Mask on Src")
+    plt.plot(trials, data["dst_rand_acc"], label="Random Mask on Dst")
+    plt.legend()
+    plt.title("Zero Shot Transfer Masking")
+    plt.xlabel("Trial Number")
+    plt.ylabel("Validation Accuracy")
+    plt.gcf().savefig(os.path.join(plots_dir, "accuracies.png"))

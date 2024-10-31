@@ -22,6 +22,13 @@ from src.harness import constants as C
 from src.harness import mixins
 from src.harness import utils
 
+@dataclass
+class SeededInitData(mixins.PickleMixin, mixins.TimerMixin):
+    """
+    Experiment-specific wrapper for trial data.
+    """
+    trial_data: TrialData
+    seeded_init_data: Dict 
 
 @dataclass
 class TrialData(mixins.PickleMixin, mixins.TimerMixin):
@@ -47,7 +54,7 @@ class TrialData(mixins.PickleMixin, mixins.TimerMixin):
     train_accuracies: np.array
     validation_losses: np.array
     validation_accuracies: np.array
-
+    
     @property
     def initial_weights(self) -> List[np.ndarray]:
         """
