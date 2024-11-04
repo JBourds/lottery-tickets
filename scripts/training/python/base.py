@@ -42,6 +42,7 @@ def run_experiments(
     dataset: str = 'mnist',
     rewind_rule: str = 'oi',
     pruning_rule: str = 'lm',
+    seeding_rule: str | None = None,
     log_level: int = logging.INFO,
     global_pruning: bool = False
 ) -> None:
@@ -70,6 +71,8 @@ def run_experiments(
         Rule for rewinding weights. Defaults to 'oi' (original initialization).
     pruning_rule : str, optional
         Rule for pruning. Defaults to 'lm' (low magnitude pruning).
+    seeding_rule : str, optional
+        Rule for how weights get seeded.
     log_level : int, optional
         Logging level. Defaults to 2 (Info).
     global_pruning : bool, optional
@@ -81,6 +84,7 @@ def run_experiments(
         dataset=dataset,
         rewind_rule=rewind_rule,
         pruning_rule=pruning_rule,
+        seeding_rule=seeding_rule,
         target_sparsity=target_sparsity,
         sparsity_strategy=sparsity_strategy,
         global_pruning=global_pruning

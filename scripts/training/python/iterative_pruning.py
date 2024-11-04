@@ -57,6 +57,8 @@ if __name__ == '__main__':
                         help='Rule for rewinding weights. "oi" rewinds to original weight initialization.')
     parser.add_argument('--pruning_rule', type=str, default='lm',
                         help='Rule for pruning weights. "lm" prunes low magnitude weights.')
+    parser.add_argument('--seeding_rule', type=str, default='',
+                        help='Rule for "seeding" weights at initialization. Check seeding module for documentation.')
     parser.add_argument('--global_pruning', type=bool, default=False,
                         help='Boolean flag for whether to use global pruning. False by default.')
 

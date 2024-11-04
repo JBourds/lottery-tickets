@@ -10,18 +10,20 @@ import argparse
 from functools import partial
 import logging
 import os
+import re
 import sys
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 from tensorflow import keras
 
+from src.harness.architecture import Architecture, Hyperparameters
 from src.harness import constants as C
 from src.harness import dataset as ds
 from src.harness import experiment
 from src.harness import model as mod
 from src.harness import pruning, rewind
-from src.harness.architecture import Architecture, Hyperparameters
+from src.harness import seeding
 
 def get_experiment_parameter_constructor(
     model: str,
@@ -29,6 +31,7 @@ def get_experiment_parameter_constructor(
     dataset: str,
     rewind_rule: str,
     pruning_rule: str,
+    seeding_rule: str | None,
     target_sparsity: float,
     sparsity_strategy: str,
     global_pruning: bool = False,
@@ -55,6 +58,7 @@ def get_experiment_parameter_constructor(
             'sparsity_strategy': get_sparsity_strategy(sparsity_strategy),
             'rewind_rule': get_rewind_rule(rewind_rule, seed=seed, directory=directory),
             'pruning_rule': get_pruning_rule(pruning_rule),
+            'seeding_rule': get_seeding_rule(seeding_rule),
             'hyperparameters': hyperparameters,
             'global_pruning': global_pruning,
             'experiment_directory': directory,
@@ -110,3 +114,32 @@ def get_pruning_rule(pruning_rule: str) -> Callable:
         case _:
             raise ValueError(
                 f"'{pruning_rule}' is not a valid pruning rule option.")
+
+# Usage: <lm/hm/rand>-<% weights to seed>-<scale/set>-<value>
+def get_seeding_rule(seeding_rule: str | None) -> Callable[[List[np.ndarray[float]]], None] | None:
+    if seeding_rule is None:
+        return None
+    match = re.match('([a-zA-Z]+)-(\d{1,3})-([a-zA-z]+)-(\d+\.*\d*)$', seeding_rule)
+    if match is None:
+        raise ValueError('Invalid seeding rule string. Check usage.')
+    target, proportion, transform, val = match.groups()
+    proportion /= 100
+    match target.lower():
+        case 'hm':
+            target = seeding.Target.HIGH
+        case 'lm':
+            target = seeding.Target.LOW
+        case 'rand':
+            target = seeding.Target.RANDOM
+        case _:
+            raise ValueError(f'Unsuported target: {target}')
+    match transform.lower():
+        case 'scale':
+            transform = partial(seeding.scale_magnitude, factor=val)
+        case 'set':
+            transform = partial(seeding.set_to_constant, constant=val)
+        case _:
+            raise ValueError(f'Unsuported transform: {transform}')
+    
+    # This currently sets the same param for every layer
+    return partial(seeding.seed_magnitude, targets=target, proportions=proportion, transforms=transform)

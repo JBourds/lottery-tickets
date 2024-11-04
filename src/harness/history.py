@@ -34,10 +34,11 @@ class TrialData(mixins.PickleMixin, mixins.TimerMixin):
     pruning_step: int
     architecture: str
     dataset: str
+    seed_weights: Callable
 
     # Model parameters
-    final_weights: list[np.ndarray]
-    masks: list[np.ndarray]
+    final_weights: List[np.ndarray[np.float64]]
+    masks: List[np.ndarray[bool]]
 
     # Metrics
     loss_before_training: float
@@ -50,13 +51,16 @@ class TrialData(mixins.PickleMixin, mixins.TimerMixin):
     @property
     def initial_weights(self) -> List[np.ndarray]:
         """
-        Computed property for backwards compatability and less repeated
-        storage on disk.
+        Computed property for backwards compatability and less repeated storage on disk.
+        Recomputes seeded weights if they were seeded.
         """
         a = arch.Architecture(self.architecture, self.dataset)
         loader = a.get_model_constructor()
         utils.set_seed(self.random_seed)
-        return loader().get_weights()
+        weights = loader().get_weights()
+        if self.seed_weights is not None:
+            self.seed_weights(weights)
+        return weights
 
 def get_trials(
     epath: str,

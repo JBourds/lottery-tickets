@@ -16,7 +16,7 @@ from datetime import datetime
 
 import numpy as np
 import tensorflow as tf
-from typing import List
+from typing import Callable, List
 
 from src.harness import constants as C
 from src.harness import dataset as ds
@@ -110,6 +110,7 @@ def training_loop(
     mask_model: tf.keras.Model,
     dataset: ds.Dataset,
     hp: Hyperparameters,
+    seeding_rule: Callable,
 ) -> history.TrialData:
     """
     Main training loop for the model.
@@ -248,6 +249,7 @@ def training_loop(
         pruning_step,
         model.name,  # Equivalent to string in architecture
         dataset.name,
+        seeding_rule,  # Not used in training, but needs to get here to be saved
         final_parameters,
         masks,
         loss_before_training,
@@ -269,6 +271,7 @@ def train(
     mask_model: tf.keras.Model,
     dataset: ds.Dataset,
     hp: Hyperparameters,
+    seeding_rule: Callable,
     output_directory: str = './',
 ) -> history.TrialData:
     """
@@ -289,6 +292,7 @@ def train(
         mask_model,
         dataset,
         hp,
+        seeding_rule,
     )
 
     # Stop the trial data's timer and save it to the target directory

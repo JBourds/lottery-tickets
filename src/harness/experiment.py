@@ -36,6 +36,7 @@ def run_iterative_pruning_experiment(
     sparsity_strategy: pruning.SparsityStrategy,
     pruning_rule: Callable,
     rewind_rule: Callable,
+    seeding_rule: Callable | None,
     global_pruning: bool = False,
     experiment_directory: str = './',
     log_level: int = logging.INFO,
@@ -55,6 +56,7 @@ def run_iterative_pruning_experiment(
             to the appropriate level to sparsify them by.
         pruning_rule (callable, optional): Function used to prune model.
         rewind_rule (callable, optional): Function used for rewinding model weights.
+        seeding_rule (callable): Optional function used to seed weights at initialization.
         global_pruning (bool, optional): Boolean flag for whether pruning is done globally
             or layerwise. Defaults to False.
         experiment_directory (str): Path to place all experimental data.
@@ -74,8 +76,12 @@ def run_iterative_pruning_experiment(
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
 
-    # Make models and save them
+    # Make models and save them - Apply init seeding if applicable
     model = create_model()
+    if seeding_rule is not None:
+        weights = model.get_weights()
+        seeding_rule(weights)
+        model.set_weights(weights)
     mask_model = mod.create_masked_nn(create_model)
 
     mod.save_model(model, random_seed, 0, initial=True,
@@ -94,6 +100,7 @@ def run_iterative_pruning_experiment(
             mask_model=mask_model,
             dataset=dataset,
             hp=hyperparameters,
+            seeding_rule=seeding_rule,
             output_directory=experiment_directory,
         )
         trial_data.save_to(destination, C.TRIAL_DATAFILE)
