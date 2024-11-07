@@ -119,7 +119,7 @@ def seed_magnitude(
     weights: List[np.ndarray[float]],
     proportions: List[float] | float,
     targets: List[Target] | Target = Target.HIGH,
-    transforms: List[WeightsTransform] | WeightsTransform = lambda x: x,
+    transforms: List[WeightsTransform] | WeightsTransform = None
 ):
     if type(proportions) != list:
         proportions = [proportions] * len(weights)
@@ -130,5 +130,6 @@ def seed_magnitude(
         
     for weights, prop, target, transform in zip(weights, proportions, targets, transforms):
         mask = target_magnitude(weights, prop, target)
-        transform(weights, mask)
+        if transform is not None:
+            transform(weights, mask)
      

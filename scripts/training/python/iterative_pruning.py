@@ -94,6 +94,7 @@ if __name__ == '__main__':
         dataset=args.dataset,
         rewind_rule=args.rewind_rule,
         pruning_rule=args.pruning_rule,
+        seeding_rule=args.seeding_rule,
         log_level=args.log_level,
         global_pruning=args.global_pruning,
     )

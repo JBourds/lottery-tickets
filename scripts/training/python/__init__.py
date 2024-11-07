@@ -123,7 +123,8 @@ def get_seeding_rule(seeding_rule: str | None) -> Callable[[List[np.ndarray[floa
     if match is None:
         raise ValueError('Invalid seeding rule string. Check usage.')
     target, proportion, transform, val = match.groups()
-    proportion /= 100
+    proportion = float(proportion) / 100
+    val = float(val)
     match target.lower():
         case 'hm':
             target = seeding.Target.HIGH
