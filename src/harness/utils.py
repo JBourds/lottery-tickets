@@ -57,11 +57,13 @@ def count_total_and_nonzero_params(model: keras.Model) -> tuple[int, int]:
     :returns: Total number of weights and total number of nonzero weights.
     """
     weights: list[np.ndarray] = model.get_weights()
+    return count_total_and_nonzero_params_from_weights(weights) 
+
+def count_total_and_nonzero_params_from_weights(weights: List[np.ndarray]) -> tuple[int, int]:
     total_weights: int = sum(tf.size(w).numpy() for w in weights)
     nonzero_weights: int = sum(
         tf.math.count_nonzero(w).numpy() for w in weights)
     return total_weights, nonzero_weights
-
 
 def count_total_and_nonzero_params_per_layer(model: keras.Model) -> list[tuple[int, int]]:
     """
@@ -72,7 +74,9 @@ def count_total_and_nonzero_params_per_layer(model: keras.Model) -> list[tuple[i
 
     :returns: Total number of weights and total number of nonzero weights in each layer.
     """
-    weights: list[np.ndarray] = model.get_weights()
+    return count_total_and_nonzero_params_per_layer_from_weights(model.get_weights())
+
+def count_total_and_nonzero_params_per_layer_from_weights(weights: List[np.ndarray]) -> list[tuple[int, int]]:
     total_weights: list[int] = [tf.size(w).numpy() for w in weights]
     nonzero_weights: list[int] = [
         tf.math.count_nonzero(w).numpy() for w in weights]
