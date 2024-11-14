@@ -251,6 +251,8 @@ class Architecture:
         Architectures.CONV_4: Architectures.conv4_hyperparameters,
         Architectures.CONV_6: Architectures.conv6_hyperparameters,
     }
+    
+    LAYER_TYPES = ["dense", "bias", "conv", "output"]
 
     LAYERS = {
         Architectures.LENET: [
@@ -332,3 +334,14 @@ class Architecture:
             raise NotImplementedError(
                 f"'{architecture}' not implemented in Architecture class")
         return layers
+    
+    @staticmethod
+    def ohe_layer_types(architecture: str) -> np.ndarray[np.ndarray[np.int8]]:
+        model_layers = Architecture.get_model_layers(architecture)
+        outputs = np.zeros((len(model_layers), len(Architecture.LAYER_TYPES)))
+        for layer_index, layer_name in enumerate(model_layers):
+            for column_index, column_name in enumerate(Architecture.LAYER_TYPES):
+                if column_name in layer_name.lower():
+                    outputs[layer_index, column_index] = 1
+                    break
+        return outputs
