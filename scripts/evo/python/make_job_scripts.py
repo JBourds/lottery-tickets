@@ -33,6 +33,28 @@ fi"""
             script.write(contents)   
         os.chmod(file, 0o775)
 
+filepath = os.path.join(OUTPUT_DIRECTORY, 'base.sh')
+with open(filepath, 'w') as outfile:
+    contents = f"""#!/usr/bin/env bash
+cd {os.path.join(TRAINING_DIRECTORY, 'python')}
+
+if [[ $* == *--vacc* ]]; then
+    echo 'Queueing job to VACC'
+    export PYTHONPATH=$PYTHONPATH:{RUN_DIRECTORY}
+    rundir=$(python3 make_dir.py "$@")
+    mkdir -p $rundir
+    echo $rundir
+    slaunch dggpu --rundir=$rundir main.py --rundir=$rundir "$@"
+else
+    echo 'Queueing job locally'
+    export PYTHONPATH=$PYTHONPATH:{RUN_DIRECTORY}
+    rundir=$(python3 make_dir.py "$@")
+    mkdir -p $rundir
+    python3 main.py --rundir=$rundir "$@"
+fi"""
+    outfile.write(contents)
+os.chmod(filepath, 0o775)
+
 filepath = os.path.join(OUTPUT_DIRECTORY, 'run_all.sh')
 with open(filepath, 'w') as outfile:
     contents = ""

@@ -11,10 +11,10 @@ Author: Jordan Bourdeau
 import argparse
 import functools
 import numpy as np
+import pickle
 from tensorflow import keras
 
 from src.harness import evolution as evo
-from src.harness import history
 
 if __name__ == "__main__":
 
@@ -24,8 +24,8 @@ if __name__ == "__main__":
     # Feature subset (hardcoded to all features)
     
     # Hidden layers
-    parser.add_argument("--hidden_sizes", type=str, default="", help="--hidden_sizes=[n,]")
-    parser.add_argument("--hidden_activations", type=str, default="", help="--hidden_activations=[type,]")
+    parser.add_argument("--hidden_sizes", type=str, default="None", help="--hidden_sizes=[n,]")
+    parser.add_argument("--hidden_activations", type=str, default="None", help="--hidden_activations=[type,]")
     
     # Num experiments
     parser.add_argument("--experiments", type=int, default=1, help="--experiments=n")
@@ -65,10 +65,8 @@ if __name__ == "__main__":
                         help="Logging level to use. 0 = Not Set, 1 = Debug, 2 = Info, 3 = Warning, 4 = Error, 5 = Critical.")
     
     args, unknown = parser.parse_known_args()
-    hidden_layer_sizes = list(map(int, args.hidden_sizes.split(","))) if args.hidden_sizes else []
-    if args.hidden_activations == "":
-        hidden_layer_activations = ["relu"] * len(hidden_layer_sizes)
-    hidden_layer_activations = args.hidden_activations.split(",") if args.hidden_activations else []
+    hidden_layer_sizes = list(map(int, args.hidden_sizes.split(","))) if args.hidden_sizes != "None" else []
+    hidden_layer_activations = args.hidden_activations.split(",") if args.hidden_activations != "None" else ["relu"] * len(hidden_layer_sizes)
     if len(hidden_layer_sizes) != len(hidden_layer_activations):
         raise ValueError("Hidden layer sizes and activations must have the same number of inputs.")
 
@@ -132,3 +130,9 @@ if __name__ == "__main__":
         all_genome_metrics.append(genome_metrics)
         all_objective_metrics.append(objective_metrics)
         all_archives.append(archive)
+     
+    filenames = ["all_genome_metrics.pkl", "all_objective_metrics.pkl", "all_archives.pkl"]
+    data_dicts = [all_genome_metrics, all_objective_metrics, all_archives]
+    for filename, data_dict in zip(filenames, data_dicts):
+        with open(filename, "wb") as outfile:
+            pickle.dump(data_dict, outfile) 
