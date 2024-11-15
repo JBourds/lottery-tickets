@@ -19,72 +19,31 @@ import multiprocess as mp
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-from typing import Any, Callable, Dict, Iterable, List, Literal, Set, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, Set, Tuple
 
 # Typedefs
 Mutation = Callable[[Literal['Individual']], None]
 Crossover = Callable[[Literal['Individual'], Literal['Individual']], Literal['Individual']]
 FitnessFunction = Callable[[Literal['Individual']], float]
+
 # Feature selectors recursively return a tuple with a boolean flag
 # for if the features need to be unpacked, along with a list matching
 # the number of features with each element in the list matching the
 # dimensionality of the corresponding model/architecture layer
-ModelFeatureSelector = Callable[[keras.Model], Tuple[bool, List[np.ndarray]]]
-ArchFeatureSelector = Callable[[str, str], Tuple[bool, List[np.ndarray]]]
+ModelFeatureSelector = Callable[[Literal['Individual']], Tuple[bool, List[np.ndarray]]]
+ArchFeatureSelector = Callable[[Literal['Individual']], Tuple[bool, List[np.ndarray]]]
 
+# Multi-objective Pareto optimization functions
 
-class ModelFeatures:
-    @staticmethod
-    def layer_sparsity(model: keras.Model) -> Tuple[bool, List[np.ndarray]]:
-        sparsities = [
-            nonzero / total 
-            for total, nonzero 
-            in utils.count_total_and_nonzero_params_per_layer(model)
-        ]
-        return False, [np.ones_like(w).flatten() * s for s, w in zip(sparsities, model.get_weights())]
-
-    @staticmethod
-    def magnitude(model: keras.Model) -> Tuple[bool, List[np.ndarray]]:
-        return False, [np.abs(w).flatten() for w in model.get_weights()]
-
-    # Needed to break symmetry so an entire layer is not masked from the beginning
-    @staticmethod
-    def random(model: keras.Model) -> Tuple[bool, List[np.ndarray]]:
-        return False, [np.random.normal(size=w.shape).flatten() for w in model.get_weights()]
+class Target(Enum):
+    MINIMIZE = 0
+    MAXIMIZE = 1
     
-class ArchFeatures:
+GenomeMetricCallback = Callable[[Dict, List[Literal['Individual']]], Any]
+ObjectiveRangeFunction = Callable[[List[Literal['Individual']]], float]
+ObjectiveFunc = Tuple[Target, ObjectiveRangeFunction, FitnessFunction]
+Objective = Tuple[Target, float, FitnessFunction]
 
-    @staticmethod
-    def layer_num(architecture_name: str, dataset_name: str) -> Tuple[bool, List[np.ndarray]]:
-        a = arch.Architecture(architecture_name, dataset_name)
-        weights = a.get_model_constructor()().get_weights()
-        return False, [np.ones_like(w).flatten() * i for i, w in enumerate(weights)]
-    
-    @staticmethod
-    def layer_ohe(architecture_name: str, dataset_name: str) -> Tuple[bool, List[List[np.ndarray]]]:
-        ohe_layers = arch.Architecture.ohe_layer_types(architecture_name)
-        a = arch.Architecture(architecture_name, dataset_name)
-        weights = a.get_model_constructor()().get_weights()
-        ohe_layer_features = []
-        for layer_index, layer_ohe in enumerate(ohe_layers):
-            ohe_features = [
-                ohe * np.ones_like(weights[layer_index])
-                for ohe in layer_ohe
-            ]
-            if not ohe_layer_features:
-                ohe_layer_features = [[layer_ohe_feature] for layer_ohe_feature in ohe_features]
-            else:
-                for index, layer_ohe_feature in enumerate(ohe_features):
-                    ohe_layer_features[index].append(layer_ohe_feature)
-        return True, [(False, values) for values in ohe_layer_features]
-    
-    @staticmethod
-    def layer_prop_params(architecture_name: str, dataset_name: str) -> Tuple[bool, List[np.ndarray]]:
-        a = arch.Architecture(architecture_name, dataset_name)
-        model = a.get_model_constructor()()
-        total, _ = utils.count_total_and_nonzero_params(model)
-        return False, [w.size / total for w in model.get_weights()]
-        
 
 # Individual class representing a NN which maps features about a model and synapses to binary decision 
 # for if it will be masked or not
@@ -98,8 +57,8 @@ class Individual:
         self, 
         architecture_name: str, 
         dataset_name: str,
-        model_features: List[ModelFeatureSelector],
-        arch_features: List[ArchFeatureSelector],
+        model_feature_selectors: List[ModelFeatureSelector],
+        arch_feature_selectors: List[ArchFeatureSelector],
         layers: Iterable[Tuple[int, str]],
     ):
         # If this is the first instance of the class, initialize it with read only copies of data
@@ -114,31 +73,25 @@ class Individual:
             )
             self.DATA = self.ARCHITECTURE.load_data()
         
-        self.model_features = model_features
-        self.arch_features = arch_features
-        self.arch_feature_values = []
-        # Eval this to get the number of outputs which will go into the NN
-        # save architecture feature values
-        temp_features = self._eval_features()
-        from pprint import pprint
-        print(type(temp_features[0]))
-        pprint(list(map(lambda x: x[0].flatten()[0], temp_features)))
-                
-        layers = [keras.layers.Input(shape=(len(temp_features),))] \
+        self._masked_model = None
+        self._phenotype = None
+        self.metrics = {}
+        self.rng = np.random.default_rng()
+        self.model_feature_selectors = model_feature_selectors
+        self.arch_feature_values = self._eval_features(arch_feature_selectors)
+        # This would not work currently if there were any model feature selectors which
+        # needed to be unpacked but it's not an issue fo rnow
+        num_features = len(self.arch_feature_values) + len(self.model_feature_selectors)
+        
+        layers = [keras.layers.Input(shape=(num_features,))] \
             + [keras.layers.Dense(size, activation) for size, activation in layers] \
             + [keras.layers.Dense(1, activation='sigmoid')]
         self.genome = keras.Sequential(layers)
         # Dummy loss- we don't train this with gradient descent
         # but use it to map synapse features to probabilities of being masked
         self.genome.compile(loss=tf.keras.losses.CategoricalCrossentropy())
-        self._phenotype = None
-        self._fitness = None
-        self.metrics = {}
-        self.rng = np.random.default_rng()
-                                                       
-    # Private method for evaluating model and architecture features
-    def _eval_features(self) -> List[np.ndarray]:
-        
+                
+    def _eval_features(self, feature_selectors: List[ModelFeatureSelector | ArchFeatureSelector]) -> List[np.ndarray]:
         # Helper method which can recursively unpack features
         def unpack_features(unpack_flag: bool, features: List[Tuple[bool, Any]]) -> List[np.ndarray]:
             values = []
@@ -150,45 +103,37 @@ class Individual:
                 values.append([feature_values for feature_values in features])
             return values
         
-        model_features = []
-        for feature in self.model_features:
-            unpack_flag, feature_values = feature(self.MODEL)
-            model_features.extend(unpack_features(unpack_flag, feature_values))
-        # Only evaluate this once in an object lifetime
-        if not self.arch_feature_values:
-            arch_features = []
-            for feature in self.arch_features:
-                unpack_flag, feature_values = feature(self.ARCHITECTURE_NAME, self.DATASET_NAME)
-                arch_features.extend(unpack_features(unpack_flag, feature_values))
-            self.arch_feature_values = arch_features
-        return model_features + self.arch_feature_values
+        results = []
+        for feature in feature_selectors:
+            unpack_flag, feature_values = feature(self)
+            results.extend(unpack_features(unpack_flag, feature_values))
+        return results
         
     @staticmethod
     def copy_from(individual: Literal['Individual']) -> Literal['Individual']:
         copied = copy.deepcopy(individual)
         copied.metrics.clear()
-        copied._phenotype = None
-        copied._fitness = None
         copied.rng = np.random.default_rng()
         return copied
     
     @property
-    def phenotype(self) -> List[np.ndarray[bool]]:
+    def phenotype(self) -> List[np.ndarray[np.int8]]:
         """
         Function which produces a list of boolean Numpy arrays matching the dimensionality
         of the architecture it is trained on based on the output of the NN genotype encoding
         from the computed features for each synapse.
         """
+        # Start with a full mask before we have one
         if self._phenotype is None:
-            computed_features = [compute_feature(self.model) for compute_feature in self.features]
-            masks = []
-            for layer, shape in zip(zip(*computed_features), map(np.shape, self.model.get_weights())):
-                X = np.array(list(zip(*layer)))
-                mask = (self.genome(X).numpy().reshape(shape) > .5).astype(np.int8)
-                masks.append(mask)
-            self._phenotype = masks
+            self._phenotype = [np.ones_like(w) for w in self.model.get_weights()]
         return self._phenotype
-
+    
+    @property
+    def masked_model(self) -> List[np.ndarray]: 
+        model = self.copy_model()
+        model.set_weights([m * w for m, w in zip(self.phenotype, self.model.get_weights())])
+        return model
+    
     @property
     def architecture(self) -> arch.Architecture | None:
         return self.ARCHITECTURE
@@ -224,20 +169,19 @@ class Individual:
         
     @staticmethod
     def sparsity(individual: Literal['Individual']) -> float:
-        total, nonzero = utils.count_total_and_nonzero_params_from_weights(individual.phenotype)
-        return nonzero / total
+        if individual.metrics.get("sparsity") is None:
+            total, nonzero = utils.count_total_and_nonzero_params_from_weights(individual.phenotype)
+            sparsity = nonzero / total
+            individual.metrics["sparsity"] = sparsity
+        return individual.metrics["sparsity"]
         
     @staticmethod
     def eval_accuracy(individual: Literal['Individual'], verbose: int = 0) -> float:
-        if individual._fitness is None:
-            model = individual.copy_model()
-            weights = [w * m for w, m in zip(individual.model.get_weights(), individual.phenotype)]
-            model.set_weights(weights)
+        if individual.metrics.get("accuracy") is None:
             X_test, Y_test = individual.test_data
-            loss, accuracy = model.evaluate(X_test, Y_test, batch_size=len(X_test), verbose=verbose)
-            individual._fitness = accuracy
-        
-        return individual._fitness
+            loss, accuracy = individual.masked_model.evaluate(X_test, Y_test, batch_size=len(X_test), verbose=verbose)
+            individual.metrics["accuracy"] = accuracy
+        return individual.metrics["accuracy"]
     
     # Mutation Methods
     
@@ -252,6 +196,20 @@ class Individual:
             Individual.mutate(individual, rate(f.n), scale(f.n))
         f.n = 0
         return f
+    
+    # Method must be called in order to update the phenotype based on the output of the specified
+    # features with the previous phenotype (starting with mask of all 1s)
+    @staticmethod
+    def update_phenotype(individual: Literal['Individual']):
+        computed_features = individual._eval_features(individual.model_feature_selectors) + individual.arch_feature_values
+        masks = []
+        for layer, shape in zip(zip(*computed_features), map(np.shape, individual.model.get_weights())):
+            # Turn this into matrix multiplication for SPEED
+            flattened_layers = [l.flatten() for l in layer]
+            X = np.array(list(zip(*flattened_layers)))
+            mask = (individual.genome(X).numpy().reshape(shape) > .5).astype(np.int8)
+            masks.append(mask)
+        individual._phenotype = masks
     
     @staticmethod
     def mutate(individual: Literal['Individual'], rate: float, scale: float):
@@ -269,7 +227,6 @@ class Individual:
             )) * perturb_mask
             weights[layer_index] = layer + perturbations
         individual.genome.set_weights(weights)
-        individual._phenotype = None
     
     # Crossover Methods
     
@@ -298,18 +255,83 @@ class Individual:
         child2.genome.set_weights(c2_weights)
         return child1, child2
 
-# Multi-objective Pareto optimization functions
-    
-GenomeMetricCallback = Callable[[Dict, List[Individual]], Any]
-ObjectiveRangeFunction = Callable[[List[Individual]], float]
+class ModelFeatures:
+    @staticmethod
+    def layer_sparsity(individual: Individual) -> Tuple[bool, List[np.ndarray]]:
+        sparsities = [
+            nonzero / total 
+            for total, nonzero 
+            in utils.count_total_and_nonzero_params_per_layer_from_weights(individual.phenotype)
+        ]
+        return False, [np.ones_like(w) * s for s, w in zip(sparsities, individual.phenotype)]
 
-class Target(Enum):
-    MINIMIZE = 0
-    MAXIMIZE = 1
+    @staticmethod
+    def magnitude(individual: Individual) -> Tuple[bool, List[np.ndarray]]:
+        return False, [np.abs(w) for w in individual.model.get_weights()]
+
+    # Needed to break symmetry so an entire layer is not masked from the beginning
+    @staticmethod
+    def random(individual: Individual) -> Tuple[bool, List[np.ndarray]]:
+        return False, [np.random.normal(size=w.shape) for w in individual.model.get_weights()]
     
-ObjectiveFunc = Tuple[Target, ObjectiveRangeFunction, FitnessFunction]
-Objective = Tuple[Target, float, FitnessFunction]
+    # Implementation derived from: https://github.com/ganguli-lab/Synaptic-Flow/blob/master/Pruners/pruners.py
+    @staticmethod
+    def synaptic_flow(
+        individual: Individual,
+        loss_fn: Optional[keras.losses.Loss],
+    ) -> Tuple[bool, List[np.ndarray]]:
+        X_test, Y_test = individual.test_data
+        X_test, Y_test = tf.convert_to_tensor(X_test), tf.convert_to_tensor(Y_test)
+        synaptic_flows = []
+        
+        model = individual.masked_model
+        with tf.GradientTape() as tape:
+            predictions = model(X_test, training=True)
+            loss = loss_fn(Y_test, predictions)
+        gradients = tape.gradient(loss, model.trainable_variables)
+        for grad, param in zip(gradients, model.trainable_variables):
+            if grad is not None:
+                synaptic_flow = tf.abs(grad * param)
+                synaptic_flows.append(synaptic_flow.numpy())
+        
+        return False, synaptic_flows
     
+class ArchFeatures:
+
+    @staticmethod
+    def layer_num(individual: Individual) -> Tuple[bool, List[np.ndarray]]:
+        architecture_name, dataset_name = individual.ARCHITECTURE_NAME, individual.DATASET_NAME
+        a = arch.Architecture(architecture_name, dataset_name)
+        weights = a.get_model_constructor()().get_weights()
+        return False, [np.ones_like(w) * i for i, w in enumerate(weights)]
+    
+    @staticmethod
+    def layer_ohe(individual: Individual) -> Tuple[bool, List[List[np.ndarray]]]:
+        architecture_name, dataset_name = individual.ARCHITECTURE_NAME, individual.DATASET_NAME
+        ohe_layers = arch.Architecture.ohe_layer_types(architecture_name)
+        a = arch.Architecture(architecture_name, dataset_name)
+        weights = a.get_model_constructor()().get_weights()
+        ohe_layer_features = []
+        for layer_index, layer_ohe in enumerate(ohe_layers):
+            ohe_features = [
+                ohe * np.ones_like(weights[layer_index])
+                for ohe in layer_ohe
+            ]
+            if not ohe_layer_features:
+                ohe_layer_features = [[layer_ohe_feature] for layer_ohe_feature in ohe_features]
+            else:
+                for index, layer_ohe_feature in enumerate(ohe_features):
+                    ohe_layer_features[index].append(layer_ohe_feature)
+        return True, [(False, values) for values in ohe_layer_features]
+    
+    @staticmethod
+    def layer_prop_params(individual: Individual) -> Tuple[bool, List[np.ndarray]]:
+        architecture_name, dataset_name = individual.ARCHITECTURE_NAME, individual.DATASET_NAME
+        a = arch.Architecture(architecture_name, dataset_name)
+        model = a.get_model_constructor()()
+        total, _ = utils.count_total_and_nonzero_params(model)
+        return False, [np.ones_like(w) * (w.size / total) for w in model.get_weights()]
+        
 def pareto_dominates(
     a: Individual,
     b: Individual,
@@ -383,7 +405,6 @@ def nondominated_lexicographic_tournament_selection(
     tournament_size: int,
     num_winners: int,
 ) -> List[Individual]:
-    print(f"Selection with {len(ranked_fronts)} fronts and {len(sparsities)} sparsities") 
     # Returns (front, Individual, sparsity)
     def sample_individual() -> Tuple[int, Individual, float]:
         front_index = np.random.randint(0, len(ranked_fronts))
@@ -437,10 +458,7 @@ def nsga2(
         print(f"Generation {generation_index + 1}")
         
         # Elitist (µ + λ) style strategy
-        for individual in population:
-            for _, _, fitness in objectives:
-                fitness(individual)
-        population.extend(archive)
+        population.extend([Individual.copy_from(individual) for individual in archive])
         
         # Create ranked Pareto fronts with their sparsities up to the 
         # number of fronts specified
@@ -461,10 +479,10 @@ def nsga2(
                     key=lambda i: sparsities[i], 
                     reverse=True,
                 )[:remaining_spots]
-                archive.extend([front[i] for i in indices])
+                archive.extend([Individual.copy_from(front[i]) for i in indices])
                 break
             else:
-                archive.extend(front)
+                archive.extend([Individual.copy_from(individual) for individual in front])
         
         children = []
         # Selection, breeding, and mutation
@@ -494,22 +512,4 @@ def nsga2(
         
     return genome_metrics, objective_metrics, archive
 
-# Metrics over a population
 
-class Population:
-
-    @staticmethod
-    def average_sparsity(data: Dict, population: List[Individual]):
-        overall_key = "average_global_sparsity"
-        layer_key = "average_layer_sparsity"
-        for key in [overall_key, layer_key]:
-            if data.get(key) is None:
-                data[key] = []
-
-        global_counts = list(map(lambda i: utils.count_total_and_nonzero_params_from_weights(i.phenotype), population))
-        overall_sparsities = [nonzero / total for total, nonzero in global_counts]
-        layer_counts = list(map(lambda i: utils.count_total_and_nonzero_params_per_layer_from_weights(i.phenotype), population))
-        layer_sparsities = [[nonzero / total for total, nonzero in layer] for layer in layer_counts]
-
-        data[overall_key].append(np.mean(overall_sparsities))
-        data[layer_key].append(np.mean(layer_sparsities, axis=0))
