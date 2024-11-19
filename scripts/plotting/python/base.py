@@ -18,12 +18,15 @@ from typing import Generator
 from src.harness import constants as C
 from src.harness import history
 from src.harness import paths
+from src.harness import seeding
 from src.metrics import experiment_aggregations as e_agg
 from src.metrics import trial_aggregations as t_agg
 
 from src.plotting import base_plots as bp
 from src.plotting import global_plots as gp
 from src.plotting import layerwise_plots as lp
+from src.plotting import seeding as sp
+
 
     
 def make_plots(
@@ -33,6 +36,7 @@ def make_plots(
     eprefix: str = C.EXPERIMENT_PREFIX,
     tprefix: str = C.TRIAL_PREFIX,
     tdata: str = C.TRIAL_DATAFILE,
+    seeding_rule: str = "",
 ):
     """
     Function which creates all the plots for an experiment given information about
@@ -44,9 +48,13 @@ def make_plots(
     @param eprefix (str): String prefix for individual experiments (random seeds).
     @param tprefix (str): String prefix for individual trials (rounds of IMP).
     @param tdata (str): Name of the pickled trial data file within the directory.
+    @param seeding_rule (str): Seeding rule used to create the plots.
+        Optionally results in additional plots being generated.
 
     @returns (None): Saves plots to specified directory.
     """
+    
+    # Basic aggregations
     experiments = history.get_experiments(root, models_dir, eprefix, tprefix, tdata)
     trial_aggregations = {
         'pruning_step': t_agg.get_pruning_step,
@@ -129,6 +137,8 @@ def make_plots(
 
     for params in plot_params:
         save_location = os.path.join(root, plots_dir, params['name'])
+        if os.path.exists(save_location):
+            continue
         e_key, t_key = params['x']
         x = results[e_key][t_key]
         y_mean = results['mean'][params['name']]
@@ -147,3 +157,49 @@ def make_plots(
         kwargs['save_location'] = save_location
         params['func'](*args, **kwargs)
          
+    # Could parse this from path names too if it was consistent
+    if seeding_rule:
+        callbacks = [
+            ("prop_target_remaining", sp.prop_weights_in_mask),
+            ("layerwise_sparsity", sp.layerwise_sparsity),
+            ("prop_target_positive", sp.prop_positive_in_mask),
+            ("layerwise_positive", sp.layerwise_positive),
+        ]
+        weight_target = seeding.get_weight_targeting(seeding_rule)
+        results = sp.compile_traced_weights(
+            weight_target,
+            history.get_experiments(root),
+            callbacks,
+        )
+        sparsity_2d = np.array([
+            d["layerwise_sparsity"]
+            for d in results
+        ])
+        prop_target_remaining_2d = np.array([
+            d["prop_target_remaining"]
+            for d in results
+        ])
+        prop_nontarget_positive_2d = np.array([
+            d["layerwise_positive"]
+            for d in results
+        ])
+        prop_target_positive_2d = np.array([
+            d["prop_target_positive"]
+            for d in results
+        ])
+        ename = os.path.basename(os.path.normpath(root))
+        model_name = ename.split("_")[0]
+        save_location = os.path.join(
+            root, 
+            plots_dir,
+            "seeded_weights_sparsity.png",
+        )
+        sp.plot_seeded_vs_overall_sparsity(prop_target_remaining_2d, sparsity_2d, model_name, save_location)
+        save_location = os.path.join(
+            root,
+            plots_dir,
+            "seeded_weights_positive.png",
+        )
+        sp.plot_seeded_vs_overall_positive(prop_target_positive_2d, prop_nontarget_positive_2d, model_name, save_location)
+            
+    

@@ -9,6 +9,7 @@ Author: Jordan Bourdeau
 import argparse
 
 from scripts.training.python.base import run_experiments
+from scripts.plotting.python.base import make_plots
 from src.harness import pruning
 from src.harness.architecture import Architecture
 
@@ -98,3 +99,6 @@ if __name__ == '__main__':
         log_level=args.log_level,
         global_pruning=args.global_pruning,
     )
+
+    make_plots(args.rundir, seeding_rule=args.seeding_rule)
+        

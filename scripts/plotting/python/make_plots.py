@@ -36,9 +36,19 @@ if __name__ == "__main__":
         help="Prefix for trial directories (rounds of IMP).")
     parser.add_argument("--tdata", type=str, default=C.TRIAL_DATAFILE,
         help="Name for the datafile in trial directories.")
+    parser.add_argument("--seeding_rule", type=str, default="",
+                        help="Rule for how weights were seeded.")
  
     args, unknown = parser.parse_known_args() 
     if args.root is None:
         raise ValueError("Must provide root directory for experiments.")
-    make_plots(args.root, args.models_dir, args.plots_dir, args.eprefix, args.tprefix, args.tdata)
+    make_plots(
+        args.root, 
+        args.models_dir, 
+        args.plots_dir, 
+        args.eprefix, 
+        args.tprefix, 
+        args.tdata,
+        args.seeding_rule,
+    )
 

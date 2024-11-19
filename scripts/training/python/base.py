@@ -90,6 +90,7 @@ def run_experiments(
         global_pruning=global_pruning
     )
 
+    print(path)
     paths.create_path(path)
     random_seeds = list(range(starting_seed, starting_seed + num_experiments))
     partial_get_experiment_parameters = functools.partial(

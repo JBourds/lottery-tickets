@@ -53,6 +53,8 @@ if __name__ == '__main__':
                         help='Rule for rewinding weights. "oi" rewinds to original weight initialization.')
     parser.add_argument('--pruning_rule', type=str, default='lm',
                         help='Rule for pruning weights. "lm" prunes low magnitude weights.')
+    parser.add_argument('--seeding_rule', type=str, default='',
+                        help='Rule for "seeding" weights at initialization. Check seeding module for documentation.')
     parser.add_argument('--max_processes', type=int, default=None,
                         help='Max number of processes to run in tandem. Defaults to total number of CPU cores.')
     parser.add_argument('--global_pruning', type=bool, default=False,
@@ -66,7 +68,10 @@ if __name__ == '__main__':
 
     # Construct the full experiment directory path
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    path = f"{args.model}_{args.dataset}_{args.seed}_seed_{args.experiments}_experiments_{args.batches}_{args.sparsity_strategy}_sparsity_{args.pruning_rule}_pruning_{timestamp}"
+    path = f"{args.model}_{args.dataset}_{args.seed}_seed" \
+    + f"_{args.experiments}_experiments_{args.batches}" \
+    + f"_{args.sparsity_strategy}_sparsity_{args.pruning_rule}_pruning" \
+    + f"_{args.seeding_rule}_seeding_{timestamp}"
     path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))),
         C.EXPERIMENTS_DIRECTORY,

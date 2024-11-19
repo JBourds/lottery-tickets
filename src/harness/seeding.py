@@ -1,5 +1,5 @@
 """
-seeding.py
+py
 
 Module containing function definitions used for "Seeding"
 models with various types of initializations (e.g., 
@@ -11,7 +11,9 @@ Author: Jordan Bourdeau
 """
 
 from enum import Enum
+from functools import partial
 import numpy as np
+import re
 from tensorflow import keras
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -46,6 +48,63 @@ class Target(Enum):
     LOW = 1
     RANDOM = 2
 
+# Usage: <lm/hm/rand>-<% weights to seed>-<scale/set>-<value>
+def get_seeding_rule(seeding_rule: str | None) -> Callable[[List[np.ndarray[float]]], None] | None:
+    if seeding_rule is None:
+        return None
+    match = re.match('^([a-zA-Z]+)(\d{1,3}),([a-zA-z]+)([-]?\d+\.*\d*)$', seeding_rule)
+    if match is None:
+        raise ValueError(f'Invalid seeding rule string: {seeding_rule}. Check usage.')
+    target, proportion, transform, val = match.groups()
+    proportion = float(proportion) / 100
+    val = float(val)
+    match target.lower():
+        case 'hm':
+            target = Target.HIGH
+        case 'lm':
+            target = Target.LOW
+        case 'rand':
+            target = Target.RANDOM
+        case _:
+            raise ValueError(f'Unsuported target: {target}')
+    match transform.lower():
+        case 'scale':
+            transform = partial(scale_magnitude, factor=val)
+        case 'set':
+            transform = partial(set_to_constant, constant=val)
+        case _:
+            raise ValueError(f'Unsuported transform: {transform}')
+    
+    # This currently sets the same param for every layer
+    return partial(seed_magnitude, targets=target, proportions=proportion, transforms=transform)
+
+# Usage: <lm/hm/rand>-<% weights to seed>
+# Will ignore the transformation parameters from the training script
+def get_weight_targeting(seeding_rule: str | None) -> WeightsTarget | None:
+    if seeding_rule is None:
+        return None
+    match = re.match('^([a-zA-Z]+)(\d{1,3})', seeding_rule)
+    if match is None:
+        raise ValueError(f'Invalid seeding rule string: {seeding_rule}. Check usage.')
+    target, proportion = match.groups()
+    proportion = float(proportion) / 100
+    match target.lower():
+        case 'hm':
+            target = Target.HIGH
+        case 'lm':
+            target = Target.LOW
+        case 'rand':
+            target = Target.RANDOM
+        case _:
+            raise ValueError(f'Unsuported target: {target}')
+    
+    # This currently sets the same param for every layer
+    return partial(
+        target_magnitude,
+        proportion=proportion,
+        target=target,
+    )
+    
 def init_seed(
     model: keras.Model,
     layer_proportions: List[float],
