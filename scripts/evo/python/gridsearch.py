@@ -7,8 +7,6 @@ SCRIPT_PATH = os.path.join(
     "shell",
     "base.sh",
 )
-print("Running script:")
-print(SCRIPT_PATH)
 
 mutation_scales = [.1, .25, .5]
 mutation_rates = [.125, .25, .5]
@@ -24,7 +22,7 @@ dnames = ["mnist"]
 asizes = [10]
 tsizes = [4]
 nwinners_list = [2]
-psizes = [50]
+psizes = [25]
 nfronts_list = [2]
 experiments_list = [10]
 generations_list = [100]
@@ -53,23 +51,23 @@ for aname, dname, mrate, mscale, layers, asize, tsize, nwinners, psize, nfronts,
         str,
         (aname, dname, mrate, mscale, asize, tsize, nwinners, psize, nfronts, experiments, generations)
     )
-    
-    subprocess.Popen([
-        "nohup",
-        SCRIPT_PATH, 
-        "--aname", aname,
-        "--dname", dname, 
-        "--mrate", mrate, 
-        "--mscale", mscale, 
-        "--hidden_sizes", hidden_sizes,
-        "--hidden_activations", hidden_activations,
-        "--asize", asize,
-        "--tsize", tsize,
-        "--nwinners", nwinners,
-        "--psize", psize,
-        "--nfronts", nfronts,
-        "--experiments", experiments,
-        "--generations", generations,
-        "--vacc",
-    ], 
-    )
+   
+    cmd = f"nohup {SCRIPT_PATH} " \
+        + f"--aname={aname} " \
+        + f"--dname={dname} " \
+        + f"--mrate={mrate} " \
+        + f"--mscale={mscale} " \
+        + f"--hidden_sizes={hidden_sizes} " \
+        + f"--hidden_activations={hidden_activations} " \
+        + f"--asize={asize} " \
+        + f"--tsize={tsize} " \
+        + f"--nwinners={nwinners} " \
+        + f"--psize={psize} " \
+        + f"--nfronts={nfronts} " \
+        + f"--experiments={experiments} " \
+        + f"--generations={generations} " \
+        + f"--vacc " \
+        + f"{0} > /dev/null 2>&1 &"
+    print(cmd)
+    os.system(cmd)
+   

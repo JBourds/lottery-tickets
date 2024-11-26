@@ -14,11 +14,12 @@ for experiment_dir in evo_experiments:
     for filename in filenames:
         try:
             with open(os.path.join(EXPERIMENTS_DIRECTORY, experiment_dir, filename), "rb") as infile:
-                data = pickle.loads(infile)
+                data = pickle.load(infile)
                 results.append(data)
         except Exception as e:
-            print(f"Skipping:", filename, "for directory:", experiment_dir)
+            print(f"Error {e} Skipping:", filename, "for directory:", experiment_dir)
     experiment_metrics[experiment_dir] = results
+    break
 
 print(experiment_metrics)
 
