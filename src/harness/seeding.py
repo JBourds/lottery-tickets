@@ -48,30 +48,66 @@ class Target(Enum):
     LOW = 1
     RANDOM = 2
 
-# Usage: <lm/hm/rand>-<% weights to seed>-<scale/set>-<value>
+    @staticmethod
+    def from_symbol(symbol: str):
+        match symbol.lower():
+            case 'hm':
+                return Target.HIGH
+            case 'lm':
+                return Target.LOW
+            case 'rand':
+                return Target.RANDOM
+            case _:
+                raise ValueError(f'Unsuported target: {target}')
+
+class Sign(Enum):
+    POSITIVE = 0
+    NEGATIVE = 1
+    BOTH = 2
+    FLIP_POSITIVE = 3
+    FLIP_NEGATIVE = 4
+    FLIP_BOTH = 5
+    SAME = 6
+
+    @staticmethod
+    def from_symbol(symbol: str):
+        match symbol.lower():
+            case 's':
+                return Sign.SAME
+            case 'p':
+                return Sign.POSITIVE
+            case 'n':
+                return Sign.NEGATIVE
+            case 'b':
+                return Sign.BOTH
+            case 'fp':
+                return Sign.FLIP_POSITIVE
+            case 'fn':
+                return Sign.FLIP_NEGATIVE
+            case 'fb':
+                return Sign.FLIP_BOTH
+            case _:
+                raise ValueError("Invalid symbol for sign")
+
+# Usage: <lm/hm/rand><% weights to seed>,<sign target>,<scale/set><value>
 def get_seeding_rule(seeding_rule: str | None) -> Callable[[List[np.ndarray[float]]], None] | None:
     if seeding_rule is None:
         return None
-    match = re.match('^([a-zA-Z]+)(\d{1,3}),([a-zA-z]+)([-]?\d+\.*\d*)$', seeding_rule)
+    match = re.match('^([a-zA-Z]+)(\d+),([nps]{1,2}),([a-zA-z]+)([-]?\d+\.*\d*)$', seeding_rule)
     if match is None:
         raise ValueError(f'Invalid seeding rule string: {seeding_rule}. Check usage.')
-    target, proportion, transform, val = match.groups()
-    proportion = float(proportion) / 100
+    target, proportion, sign, transform, val = match.groups()
+    proportion = float(str("." + proportion))
+    if proportion > 1:
+        raise ValueError("Cannot have > 100% targeted.")
     val = float(val)
-    match target.lower():
-        case 'hm':
-            target = Target.HIGH
-        case 'lm':
-            target = Target.LOW
-        case 'rand':
-            target = Target.RANDOM
-        case _:
-            raise ValueError(f'Unsuported target: {target}')
+    target = Target.from_symbol(target)
+    sign = Sign.from_symbol(sign)
     match transform.lower():
         case 'scale':
-            transform = partial(scale_magnitude, factor=val)
+            transform = partial(scale_magnitude, factor=val, sign=sign)
         case 'set':
-            transform = partial(set_to_constant, constant=val)
+            transform = partial(set_to_constant, constant=val, sign=sign)
         case _:
             raise ValueError(f'Unsuported transform: {transform}')
     
@@ -83,20 +119,14 @@ def get_seeding_rule(seeding_rule: str | None) -> Callable[[List[np.ndarray[floa
 def get_weight_targeting(seeding_rule: str | None) -> WeightsTarget | None:
     if seeding_rule is None:
         return None
-    match = re.match('^([a-zA-Z]+)(\d{1,3})', seeding_rule)
+    match = re.match('^([a-zA-Z]+)(\d+)', seeding_rule)
     if match is None:
         raise ValueError(f'Invalid seeding rule string: {seeding_rule}. Check usage.')
     target, proportion = match.groups()
-    proportion = float(proportion) / 100
-    match target.lower():
-        case 'hm':
-            target = Target.HIGH
-        case 'lm':
-            target = Target.LOW
-        case 'rand':
-            target = Target.RANDOM
-        case _:
-            raise ValueError(f'Unsuported target: {target}')
+    proportion = float(str("." + proportion))
+    if proportion > 1:
+        raise ValueError("Cannot have > 100% targeted.")
+    target = Target.from_symbol(target)
     
     # This currently sets the same param for every layer
     return partial(
@@ -142,36 +172,76 @@ def target_magnitude(
     target: Target,
 ) -> np.ndarray[int]:
     num_weights = int(weights.size * proportion)
-    weights = np.abs(weights)
-    
+    abs_weights = np.abs(weights)
+
     # High magnitude
     if target == Target.HIGH:
-        threshold = np.sort(weights, axis=None)[-num_weights]
-        return weights > threshold
+        threshold = np.sort(abs_weights, axis=None)[-num_weights]
+        mag_weights = abs_weights > threshold
     # Low magnitude
     elif target == Target.LOW:
-        threshold = np.sort(weights, axis=None)[num_weights - 1]
-        return weights < threshold
+        threshold = np.sort(abs_weights, axis=None)[num_weights - 1]
+        mag_weights = abs_weights < threshold
     # Random
     elif target == Target.RANDOM:
-        mask = np.ones(weights.size)
+        mask = np.ones(abs_weights.size)
         mask[num_weights:] *= 0
         np.random.shuffle(mask)
-        return np.reshape(mask, weights.shape)
+        mag_weights = np.reshape(mask, abs_weights.shape)
+    return mag_weights
+    
     
 def scale_magnitude(
     weights: np.ndarray[float],
     mask: np.ndarray[bool],
     factor: float,
+    sign: Sign,
 ):
-    weights[mask] *= factor
+    match sign:
+        case Sign.SAME:
+            weights[mask] *= factor
+        case Sign.POSITIVE:
+            weights[mask & (weights >= 0)] *= factor
+        case Sign.FLIP_POSITIVE:
+            weights[mask & (weights >= 0)] *= -factor
+        case Sign.NEGATIVE:
+            weights[mask & (weights < 0)] *= -factor
+        case Sign.FLIP_NEGATIVE:
+            weights[mask & (weights < 0)] *= factor
+        case Sign.BOTH:
+            weights[mask & (weights >= 0)] *= factor
+            weights[mask & (weights < 0)] *= -factor
+        case Sign.FLIP_BOTH:
+            weights[mask & (weights >= 0)] *= -factor
+            weights[mask & (weights < 0)] *= factor
+        case _:
+            raise ValueError(f"Invalid sign: {sign}")
     
 def set_to_constant(
     weights: np.ndarray[float],
     mask: np.ndarray[bool],
     constant: float,
+    sign: Sign,
 ):
-    weights[mask] = constant
+    match sign:
+        case Sign.SAME:
+            weights[mask] = constant
+        case Sign.POSITIVE:
+            weights[mask & (weights >= 0)] = constant
+        case Sign.FLIP_POSITIVE:
+            weights[mask & (weights >= 0)] = -constant
+        case Sign.NEGATIVE:
+            weights[mask & (weights < 0)] = -constant
+        case Sign.FLIP_NEGATIVE:
+            weights[mask & (weights < 0)] = constant
+        case Sign.BOTH:
+            weights[mask & (weights >= 0)] = constant
+            weights[mask & (weights < 0)] = -constant
+        case Sign.FLIP_BOTH:
+            weights[mask & (weights >= 0)] = -constant
+            weights[mask & (weights < 0)] = constant
+        case _:
+            raise ValueError(f"Invalid sign: {sign}")
     
 # Init strategies to modify weights in place
 def seed_magnitude(

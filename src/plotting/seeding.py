@@ -22,6 +22,7 @@ import itertools
 from matplotlib import pyplot as plt
 import matplotlib.ticker as mtick
 import numpy as np
+import numpy.typing as npt
 import os
 import tensorflow as tf
 from typing import Any, Dict, Callable, Generator, Iterable, List, Tuple
@@ -30,7 +31,7 @@ WeightTrackingCallback = Tuple[
     str,
     Callable[
         [
-            List[np.ndarray[bool]],
+            List[npt.NDArray[bool]],
             history.TrialData,
         ],
         Any,
@@ -38,7 +39,7 @@ WeightTrackingCallback = Tuple[
 ]
 
 def prop_weights_in_mask(
-    tracking_masks: List[np.ndarray], 
+    tracking_masks: List[npt.NDArray], 
     trial: history.TrialData,
 ) -> List[float]:
     return [
@@ -47,7 +48,7 @@ def prop_weights_in_mask(
     ]
 
 def prop_positive_in_mask(
-    tracking_masks: List[np.ndarray], 
+    tracking_masks: List[npt.NDArray], 
     trial: history.TrialData,
 ) -> List[float]:
     return [
@@ -56,22 +57,22 @@ def prop_positive_in_mask(
     ]
 
 def layerwise_sparsity(
-    masks: List[np.ndarray[bool]], 
+    masks: List[npt.NDArray[bool]], 
     trial: history.TrialData
 ) -> List[float]:
     return [np.sum(m) / m.size for m in trial.masks]
 
 def layerwise_positive(
-    masks: List[np.ndarray[bool]], 
+    masks: List[npt.NDArray[bool]], 
     trial: history.TrialData
 ) -> List[float]:
     return [np.sum(w >= 0) / w.size for w in trial.final_weights]
 
 def trace_weights_over_time(
-    tracking_masks: List[np.ndarray], 
+    tracking_masks: List[npt.NDArray], 
     trials: Iterable[history.TrialData],
     callbacks: List[WeightTrackingCallback],
-) -> Dict[str, np.ndarray]:
+) -> Dict[str, npt.NDArray]:
     data = {}
         
     for index, trial in enumerate(trials):
@@ -101,8 +102,9 @@ def compile_traced_weights(
     return trial_values
 
 def plot_seeded_vs_overall_positive(
-    targets_2d: np.ndarray[np.ndarray[np.ndarray]],
-    nontargets_2d: np.ndarray[np.ndarray[np.ndarray]],
+    targets_2d: npt.NDArray[npt.NDArray[npt.NDArray]],
+    nontargets_2d: npt.NDArray[npt.NDArray[npt.NDArray]],
+    sparsities: npt.NDArray[np.float64],
     model_name: str,
     save_location: str = None,
 ):
@@ -127,15 +129,21 @@ def plot_seeded_vs_overall_positive(
     plt.xlabel("Overall Layer Positive Proportion (%)")
     plt.ylabel("Seeded Layer Positive Proportion (%)")
 
-    for index, label in enumerate(all_layers):
-        bp.plot_aggregated_summary_ci(
-            agg_mean_actual[:, index], 
-            agg_mean_targets[:, index], 
-            agg_std_targets[:, index], 
-            num_samples,
-            legend=label,
-            show_ci_legend=False,
-        )
+    plot_params = [
+        ("Target", agg_mean_targets, agg_std_targets),
+        ("Nontarget", agg_mean_nontargets, agg_std_actual),
+    ]
+    for index, layer_label in enumerate(all_layers):
+        for target_label, mean, std in plot_params:
+            label = f"{layer_label}: {target_label}"
+            bp.plot_aggregated_summary_ci(
+                sparsities,
+                mean[:, index], 
+                std[:, index], 
+                num_samples,
+                legend=label,
+                show_ci_legend=false,
+            )
 
     plt.legend()
     if save_location is not None:
@@ -144,8 +152,8 @@ def plot_seeded_vs_overall_positive(
     plt.show()
 
 def plot_seeded_vs_overall_sparsity(
-    targets_2d: np.ndarray[np.ndarray[np.ndarray]],
-    sparsity_2d: np.ndarray[np.ndarray[np.ndarray]],
+    targets_2d: npt.NDArray[npt.NDArray[npt.NDArray]],
+    sparsity_2d: npt.NDArray[npt.NDArray[npt.NDArray]],
     model_name: str,
     save_location: str = None,
 ):
@@ -181,6 +189,9 @@ def plot_seeded_vs_overall_sparsity(
         )
 
     plt.legend()
+    # Plot a diagonal line showing direct linear relationship and add gridlines
+    plt.grid()
+    plt.gca().plot([0, 1], [0, 1], transform=plt.gca().transAxes, label="Linear Relationship")
     if save_location is not None:
         plt.savefig(save_location)
     plt.show()

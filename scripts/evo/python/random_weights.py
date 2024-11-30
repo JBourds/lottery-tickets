@@ -5,9 +5,10 @@ import numpy as np
 import numpy.typing as npt
 import sys
 from typing import Dict, List, Tuple
+import tensorflow as tf
 from tensorflow import keras
 from typing import List, Tuple
-sys.path.append("~/lottery-tickets")
+sys.path.append(os.path.join(os.path.expanduser("~"), "lottery-tickets"))
 
 import src.harness.evolution as evo
 
@@ -37,21 +38,26 @@ individual_constructor = functools.partial(
     layers=layers,
 )
 
-def random_restart(population_size: int, num_generations: int) -> Tuple[npt.NDArray[np.float64]]:
-    accuracies = np.zeros((population_size, num_generations))
-    sparsities = np.zeros((population_size, num_generations))
+def random_reinitialize(num_generations: int, steps: int) -> Tuple[npt.NDArray[np.float64]]:
+    accuracies = np.zeros(num_generations)
+    sparsities = np.zeros(num_generations)
+    individual = individual_constructor()
     for generation_index in range(num_generations):
-        individuals = [individual_constructor() for _ in range(population_size)]
-        for individual_index, individual in enumerate(individuals):
+        for _ in range(steps):
             evo.Individual.update_phenotype(individual)
-            accuracy = evo.Individual.eval_accuracy(individual)
-            sparsity = evo.Individual.sparsity(individual)
-            accuracies[individual_index][generation_index] = accuracy
-            sparsities[individual_index][generation_index] = sparsity
+        accuracy = evo.Individual.eval_accuracy(individual)
+        sparsity = evo.Individual.sparsity(individual)
+        accuracies[generation_index] = accuracy
+        sparsities[generation_index] = sparsity
+        individual.reinitialize(seed=generation_index)
+        individual.clear_metrics()
     return accuracies, sparsities
 
-random_accuracies, random_sparsities = random_restart(50, 1000)
-np.save("random_accuracies", random_accuracies)
-np.save("random_sparsities", random_sparsities)
+generations = 1000
+steps = 1
+random_accuracies, random_sparsities = random_reinitialize(generations, steps)
+
+np.save(f"random_accuracies_{generations}_gens_{steps}_steps", random_accuracies)
+np.save(f"random_sparsities_{generations}_gens_{steps}_steps", random_sparsities)
         
     

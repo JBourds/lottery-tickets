@@ -2,7 +2,7 @@ import argparse
 import datetime
 import os
 
-from src.harness import constants as C
+EXPERIMENTS_DIRECTORY = "experiments"
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -51,7 +51,7 @@ if __name__ == '__main__':
         + f"_{args.mscale}-mscale_{args.mrate}-mrate_{timestamp}"
     path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))),
-        C.EXPERIMENTS_DIRECTORY,
+        EXPERIMENTS_DIRECTORY,
         path,
     )
     print(path)

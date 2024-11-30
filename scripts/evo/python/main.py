@@ -17,6 +17,7 @@ from tensorflow import keras
 from src.harness import evolution as evo
 
 if __name__ == "__main__":
+    print("Running evolution script")
 
     parser = argparse.ArgumentParser(
         description="Evolutionary algorithms script.")
@@ -59,12 +60,12 @@ if __name__ == "__main__":
     # Objectives (hardcoded)
     # Model features (hardcoded)
     # Architecture features (hardcoded)
-    
     # Logging
     parser.add_argument("--log_level", type=int, default=2,
                         help="Logging level to use. 0 = Not Set, 1 = Debug, 2 = Info, 3 = Warning, 4 = Error, 5 = Critical.")
     
     args, unknown = parser.parse_known_args()
+    print(f"Parsed arguments: {args} and unknown {unknown}")
     hidden_layer_sizes = list(map(int, args.hidden_sizes.split(","))) if args.hidden_sizes != "None" else []
     hidden_layer_activations = args.hidden_activations.split(",") if args.hidden_activations != "None" else ["relu"] * len(hidden_layer_sizes)
     if len(hidden_layer_sizes) != len(hidden_layer_activations):
@@ -123,16 +124,16 @@ if __name__ == "__main__":
 
     all_genome_metrics = []
     all_objective_metrics = []
-    all_archives = []
+    best_individuals = []
     for run in range(args.experiments):
         print(f"Run {run + 1}")
-        genome_metrics, objective_metrics, archive = evo.nsga2(**kwargs)
+        genome_metrics, objective_metrics, best_individual = evo.nsga2(**kwargs)
         all_genome_metrics.append(genome_metrics)
         all_objective_metrics.append(objective_metrics)
-        all_archives.append(archive)
+        best_individuals.append(best_individual)
      
-    filenames = ["all_genome_metrics.pkl", "all_objective_metrics.pkl", "all_archives.pkl"]
-    data_dicts = [all_genome_metrics, all_objective_metrics, all_archives]
+    filenames = ["all_genome_metrics.pkl", "all_objective_metrics.pkl", "best_individuals.pkl"]
+    data_dicts = [all_genome_metrics, all_objective_metrics, best_individuals]
     for filename, data_dict in zip(filenames, data_dicts):
         with open(filename, "wb") as outfile:
             pickle.dump(data_dict, outfile) 

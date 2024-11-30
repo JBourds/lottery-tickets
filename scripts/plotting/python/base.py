@@ -200,6 +200,9 @@ def make_plots(
             plots_dir,
             "seeded_weights_positive.png",
         )
-        sp.plot_seeded_vs_overall_positive(prop_target_positive_2d, prop_nontarget_positive_2d, model_name, save_location)
+        sparsities = sparsity_2d[0]
+        with open("sparsities.txt", "w") as outfile:
+            outfile.write(str(sparsities))
+        sp.plot_seeded_vs_overall_positive(prop_target_positive_2d, prop_nontarget_positive_2d, sparsities, model_name, save_location)
             
     

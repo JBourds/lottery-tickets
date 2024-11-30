@@ -99,7 +99,6 @@ def run_experiments(
         seed) for seed in random_seeds]
 
     for kwargs in experiment_kwargs:
-        # kwargs["log_level"] = log_level
         p = mp.Process(target=experiment.run_iterative_pruning_experiment, kwargs=kwargs)
         p.start()
         p.join()  

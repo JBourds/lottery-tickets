@@ -18,6 +18,7 @@ from matplotlib import pyplot as plt
 import multiprocess as mp
 import numpy as np
 import tensorflow as tf
+import keras.backend as K
 from tensorflow import keras
 from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, Set, Tuple
 
@@ -74,7 +75,10 @@ class Individual:
             self.DATA = self.ARCHITECTURE.load_data()
         
         self._masked_model = None
-        self._phenotype = None
+        # Allocate all this memory up front then mutate it in place from there
+        self._phenotype_init = False
+        self._phenotype = [np.ones_like(w) for w in self.MODEL.get_weights()]
+        self._masked_model = copy.deepcopy(self.MODEL)
         self.metrics = {}
         self.rng = np.random.default_rng()
         self.model_feature_selectors = model_feature_selectors
@@ -90,6 +94,10 @@ class Individual:
         # Dummy loss- we don't train this with gradient descent
         # but use it to map synapse features to probabilities of being masked
         self.genome.compile(loss=tf.keras.losses.CategoricalCrossentropy())
+        
+        # Allocate a big matrix to store the features for every synapse in
+        self.num_synapses = np.sum([w.size for w in self.MODEL.get_weights()])
+        self.X = np.zeros((self.num_synapses, num_features))
                 
     def _eval_features(self, feature_selectors: List[ModelFeatureSelector | ArchFeatureSelector]) -> List[np.ndarray]:
         # Helper method which can recursively unpack features
@@ -110,11 +118,12 @@ class Individual:
         return results
         
     @staticmethod
-    def copy_from(individual: Literal['Individual']) -> Literal['Individual']:
-        copied = copy.deepcopy(individual)
-        copied.metrics.clear()
-        copied.rng = np.random.default_rng()
-        return copied
+    def copy_from(src: Literal['Individual'], dst: Literal['Individual']):
+        dst.metrics.clear()
+        dst.rng = np.random.default_rng()
+        dst.genome = copy.deepcopy(src.genome)
+        # Causes phenotype to be reevaluated next time it is required
+        dst._phenotype_init = False
     
     @property
     def phenotype(self) -> List[np.ndarray[np.int8]]:
@@ -123,16 +132,16 @@ class Individual:
         of the architecture it is trained on based on the output of the NN genotype encoding
         from the computed features for each synapse.
         """
-        # Start with a full mask before we have one
-        if self._phenotype is None:
-            self._phenotype = [np.ones_like(w) for w in self.model.get_weights()]
+        if not self._phenotype_init:
+            for m in self._phenotype:
+                m = np.ones_like(m)
+            self._phenotype_init = True
         return self._phenotype
     
     @property
     def masked_model(self) -> List[np.ndarray]: 
-        model = self.copy_model()
-        model.set_weights([m * w for m, w in zip(self.phenotype, self.model.get_weights())])
-        return model
+        self._masked_model.set_weights([m * w for m, w in zip(self.phenotype, self.model.get_weights())])
+        return self._masked_model
     
     @property
     def architecture(self) -> arch.Architecture | None:
@@ -162,10 +171,6 @@ class Individual:
     @property
     def fitness(self) -> Any:
         return self._fitness
-        
-    def copy_model(self) -> keras.Model | None:
-        if self.model is not None:
-            return copy.deepcopy(self.model)
         
     @staticmethod
     def sparsity(individual: Literal['Individual']) -> float:
@@ -231,12 +236,18 @@ class Individual:
     # Crossover Methods
     
     @staticmethod
-    def crossover(p1: Literal['Individual'], p2: Literal['Individual']) -> Iterable[Literal['Individual']]:
-        child1, child2 = list(map(Individual.copy_from, (p1, p2)))
+    def crossover(
+        p1: Literal['Individual'], 
+        p2: Literal['Individual'], 
+        c1: Literal['Individual'], 
+        c2: Literal['Individual'],
+    ) -> Iterable[Literal['Individual']]:
+        for parent, child in zip((p1, p2), (c1, c2)):
+            Individual.copy_from(parent, child)
         p1_weights = p1.genome.get_weights()
         p2_weights = p2.genome.get_weights()
-        c1_weights = child1.genome.get_weights()
-        c2_weights = child2.genome.get_weights()
+        c1_weights = c1.genome.get_weights()
+        c2_weights = c2.genome.get_weights()
         for layer_index, weights in enumerate(p1_weights):
             # Generate a 0/1 for each row, then extend it across all outgoing synapses
             parents = np.repeat(
@@ -251,9 +262,26 @@ class Individual:
                 + p2_weights[layer_index] * inverse_parents
             c2_weights[layer_index] = p2_weights[layer_index] * parents \
                 + p1_weights[layer_index] * inverse_parents
-        child1.genome.set_weights(c1_weights)
-        child2.genome.set_weights(c2_weights)
-        return child1, child2
+        c1.genome.set_weights(c1_weights)
+        c2.genome.set_weights(c2_weights)
+        return c1, c2
+
+    def clear_metrics(self):
+        self.metrics.clear()
+
+    def reinitialize(self, seed: int):
+        utils.set_seed(seed) 
+        # Iterate through the layers of the model
+        for layer in self.genome.layers:
+            # Check if the layer has weights (e.g., Dense, Conv2D)
+            if isinstance(layer, (tf.keras.layers.Dense, tf.keras.layers.Conv2D)):
+                # Reinitialize weights and biases
+                for weight in layer.weights:
+                    # Use the layer's original initializer to reinitialize weights
+                    initializer = layer.initializer if hasattr(layer, 'initializer') else tf.keras.initializers.GlorotUniform()
+                    new_values = initializer(shape=weight.shape, dtype=weight.dtype)
+                    weight.assign(new_values)
+                
 
 class ModelFeatures:
     @staticmethod
@@ -423,6 +451,7 @@ def nondominated_lexicographic_tournament_selection(
     
     return [individual for _, individual, _ in n_best[:num_winners]]
     
+# NOTE: This kept running out of memory and failing so I updated it to not make any new allocations
 def nsga2(
     num_generations: int,
     archive_size: int,
@@ -450,15 +479,37 @@ def nsga2(
         for i in range(len(objectives))
     })
     
-    # Create and evaluate the initial population
-    population = [individual_constructor() for _ in range(population_size)]
+    # Pre-allocate the maximum number of individuals which are needed at once,
+    # and use this list as a form of allocator which they get pushed/popped from
+    # + 1 in case we want an odd population size
+    max_individuals_at_a_time = 2 * population_size + 2 * archive_size + 1
+    allocations = [individual_constructor() for _ in range(max_individuals_at_a_time)]
+    population = [allocations.pop() for _ in range(population_size)]
     archive = []
-    
+
+    best_genome = None
+    best_accuracy = None
+
+    def reevaluate_best() -> Individual:
+        nonlocal best_accuracy
+        nonlocal best_genome
+
+        best = max(population, key=Individual.eval_accuracy)
+        # print(f"Current Best Accuracy {best_accuracy}, Genome: {best_genome}")
+        if best_genome is None or best_accuracy is None or Individual.eval_accuracy(best) > best_accuracy:
+            best_genome = copy.deepcopy(best.genome.get_weights())
+            best_accuracy = Individual.eval_accuracy(best)
+            # print(f"New Best Accuracy {best_accuracy}, Genome: {best_genome}")
+        # print(f"Current Best Accuracy {best_accuracy}, Genome: {best_genome}")
+
+    reevaluate_best()
+        
     for generation_index in range(num_generations):
         print(f"Generation {generation_index + 1}")
-        
         # Elitist (µ + λ) style strategy
-        population.extend([Individual.copy_from(individual) for individual in archive])
+        # Laterally shift already allocated individuals from archive to population
+        population.extend(archive)
+        archive = []
         
         # Create ranked Pareto fronts with their sparsities up to the 
         # number of fronts specified
@@ -468,39 +519,53 @@ def nsga2(
             for front in ranked_pareto_fronts(population, objectives)[:fronts_to_consider]
         ]
         # Rebuild the archive from the best, most sparse individuals in lower fronts
-        archive = []
+        # Allocates `archive_size` individuals
         ranked_fronts = [tup[0] for tup in ranked_fronts_with_sparsities]
         ranked_sparsities = [tup[1] for tup in ranked_fronts_with_sparsities]
+        new_archive = [allocations.pop() for _ in range(archive_size)]
+        index = 0
         for front, sparsities in zip(ranked_fronts, ranked_sparsities):
-            remaining_spots = archive_size - len(archive)
+            remaining_spots = archive_size - index
             if remaining_spots < len(front):
                 indices = sorted(
                     list(range(len(sparsities))), 
                     key=lambda i: sparsities[i], 
                     reverse=True,
                 )[:remaining_spots]
-                archive.extend([Individual.copy_from(front[i]) for i in indices])
+                for src_index, dst in zip(indices, new_archive[index:]):
+                    Individual.copy_from(front[src_index], dst)
+                    index += 1
                 break
             else:
-                archive.extend([Individual.copy_from(individual) for individual in front])
+                for src, dst in zip(front, new_archive[index:]):
+                    Individual.copy_from(src, dst)
+                    index += 1
+        archive = new_archive
         
         children = []
         # Selection, breeding, and mutation
+        # Selection does not make any new allocations, and will be a view on the population
         selected = nondominated_lexicographic_tournament_selection(
             ranked_fronts, 
             ranked_sparsities,
             tournament_size,
             num_tournament_winners,
         )
+        # Each iteration = 2 allocations until we are at `population_size` allocations
         while len(children) < population_size:
+            new_children = [allocations.pop() for _ in range(2)]
             parents = np.random.choice(selected, 2)
-            new_children = crossover(*parents) if crossover else list(map(Individual.copy_from, parents))
+            crossover(*parents, *new_children)
             
             for child in new_children:
                 for mutation in mutations:
                     mutation(child)
             children.extend(new_children)
+        # Free the combined old population and archive, as well as any remainders
+        allocations.extend(population + children[population_size:])
         population = children[:population_size]
+
+        reevaluate_best()
         
         # Callbacks to gather data during training process
         for callback in genome_metric_callbacks:
@@ -510,6 +575,6 @@ def nsga2(
             for pop_index, individual in enumerate(population):
                 objective_metrics[f"objective_{obj_index}_value"][pop_index, generation_index] = fitness_func(individual)
         
-    return genome_metrics, objective_metrics, archive
+    return genome_metrics, objective_metrics, best_genome
 
 

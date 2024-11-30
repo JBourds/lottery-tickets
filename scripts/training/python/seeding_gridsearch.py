@@ -16,12 +16,23 @@ import subprocess
 models = ["lenet"]
 datasets = ["mnist"]
 targets = ["hm"]
-percentages = np.array([1, 5, 10, 25])
-scalars = 10 ** np.arange(5) / 100
-constants = [-1, 0, 1]
+# percentages = np.array([1, 5, 10, 25])
+percentages = np.array(["00005", "0001", "0005", "001", "001"])
+scalars = [1.5, 2.5, 5]
+constants = [-1, 1]
+
+# Sign-aware constants
+signs = ["s", "p", "fp"]
 
 # General params
 experiment_params = "--target_sparsity=0.025 --experiments=5 --vacc"
+
+# # Test with single case
+# percentages = np.array(["00005"])
+# scalars = [1.5]
+# constants = []
+# signs = ["p"]
+# experiment_params = "--target_sparsity=0.65 --experiments=1 --vacc"
 
 print(f"Common params: {experiment_params}")
 print("Grid search over the following parameters:")
@@ -39,7 +50,7 @@ def run_all(experiment_params: str, seeding_rule: str):
         "run_all.sh"
     )
     cmd = f"nohup {script_path} {seeding_rule} {experiment_params}" \
-        + " {0} >/dev/null 2>&1 &"
+         + " {0} >/dev/null 2>&1 &"
     print(cmd)
     subprocess.call(cmd, shell=True)
     
@@ -57,11 +68,11 @@ def run_one(model: str, dataset: str, experiment_params: str, seeding_rule: str)
     
 
 # Scaling
-for model, dataset, target, percent, scalar in product(models, datasets, targets, percentages, scalars):
-    seeding_rule = f"--seeding_rule={target}{percent},scale{scalar}"
+for model, dataset, target, percent, sign, scalar in product(models, datasets, targets, percentages, signs, scalars):
+    seeding_rule = f"--seeding_rule={target}{percent},{sign},scale{scalar}"
     run_one(model, dataset, experiment_params, seeding_rule)
 
 # Constants
-for model, dataset, target, percent, constant in product(models, datasets, targets, percentages, constants):
-    seeding_rule = f"--seeding_rule={target}{percent},set{constant}"
+for model, dataset, target, percent, sign, constant in product(models, datasets, targets, percentages, signs, constants):
+    seeding_rule = f"--seeding_rule={target}{percent},{sign}set{constant}"
     run_one(model, dataset, experiment_params, seeding_rule)

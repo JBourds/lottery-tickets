@@ -8,7 +8,7 @@ SCRIPT_PATH = os.path.join(
     "base.sh",
 )
 
-mutation_scales = [.1, .25, .5]
+mutation_scales = [.025, .05, .1, .2,]
 mutation_rates = [.125, .25, .5]
 layers_list = [
     [],
@@ -22,10 +22,10 @@ dnames = ["mnist"]
 asizes = [10]
 tsizes = [4]
 nwinners_list = [2]
-psizes = [25]
+psizes = [50]
 nfronts_list = [2]
-experiments_list = [10]
-generations_list = [100]
+experiments_list = [50]
+generations_list = [1000]
 
 for aname, dname, mrate, mscale, layers, asize, tsize, nwinners, psize, nfronts, experiments, generations in itertools.product(
     anames,
@@ -52,7 +52,8 @@ for aname, dname, mrate, mscale, layers, asize, tsize, nwinners, psize, nfronts,
         (aname, dname, mrate, mscale, asize, tsize, nwinners, psize, nfronts, experiments, generations)
     )
    
-    cmd = f"nohup {SCRIPT_PATH} " \
+    cmd = "nohup " \
+        + f"{SCRIPT_PATH} " \
         + f"--aname={aname} " \
         + f"--dname={dname} " \
         + f"--mrate={mrate} " \

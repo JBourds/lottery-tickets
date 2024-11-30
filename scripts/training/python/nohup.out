@@ -1,0 +1,308 @@
+Queueing job to VACC
+2024-11-26 17:02:15.851844: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:485] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-11-26 17:02:16.310883: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:8454] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-11-26 17:02:16.532500: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1452] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-11-26 17:02:17.704306: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-11-26 17:02:31.932088: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-170249
+Submitted batch job 21543546
+args=Namespace(resource='dggpu', runs=1, argfile=None, rundir=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-170249'), force=False, script=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py'), flags=['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-170249', '--seeding_rule=hm5e-05,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc'])
+Found custom configs: /users/j/b/jbourde2/.config/slacc/config.json
+Added user configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Found custom configs: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/config.json
+Added custom configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Running from: /gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-170249
+Python script: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py
+Flags: ['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-170249', '--seeding_rule=hm5e-05,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc']
+Config:
+ {
+  "env": "conda activate lt",
+  "resources": {
+    "cpus-per-task": 1,
+    "gres": "gpu:1",
+    "mem": "32G",
+    "partition": "dggpu",
+    "time": "1-00:00:00"
+  }
+}
+Queueing job to VACC
+2024-11-26 17:06:13.225363: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:485] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-11-26 17:06:13.572771: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:8454] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-11-26 17:06:13.732525: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1452] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-11-26 17:06:14.737069: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-11-26 17:06:26.998115: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-170643
+Submitted batch job 21543547
+args=Namespace(resource='dggpu', runs=1, argfile=None, rundir=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-170643'), force=False, script=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py'), flags=['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-170643', '--seeding_rule=hm5e-05,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc'])
+Found custom configs: /users/j/b/jbourde2/.config/slacc/config.json
+Added user configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Found custom configs: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/config.json
+Added custom configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Running from: /gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-170643
+Python script: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py
+Flags: ['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-170643', '--seeding_rule=hm5e-05,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc']
+Config:
+ {
+  "env": "conda activate lt",
+  "resources": {
+    "cpus-per-task": 1,
+    "gres": "gpu:1",
+    "mem": "32G",
+    "partition": "dggpu",
+    "time": "1-00:00:00"
+  }
+}
+Queueing job to VACC
+2024-11-26 17:09:23.828981: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:485] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-11-26 17:09:24.333976: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:8454] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-11-26 17:09:24.477275: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1452] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-11-26 17:09:25.411660: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-11-26 17:09:39.030739: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-170955
+Submitted batch job 21543548
+args=Namespace(resource='dggpu', runs=1, argfile=None, rundir=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-170955'), force=False, script=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py'), flags=['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-170955', '--seeding_rule=hm5e-05,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc'])
+Found custom configs: /users/j/b/jbourde2/.config/slacc/config.json
+Added user configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Found custom configs: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/config.json
+Added custom configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Running from: /gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-170955
+Python script: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py
+Flags: ['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-170955', '--seeding_rule=hm5e-05,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc']
+Config:
+ {
+  "env": "conda activate lt",
+  "resources": {
+    "cpus-per-task": 1,
+    "gres": "gpu:1",
+    "mem": "32G",
+    "partition": "dggpu",
+    "time": "1-00:00:00"
+  }
+}
+Queueing job to VACC
+2024-11-26 17:14:09.477573: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:485] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-11-26 17:14:09.958228: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:8454] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-11-26 17:14:10.141273: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1452] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-11-26 17:14:11.129796: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-11-26 17:14:23.503912: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-171439
+Submitted batch job 21543549
+args=Namespace(resource='dggpu', runs=1, argfile=None, rundir=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-171439'), force=False, script=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py'), flags=['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-171439', '--seeding_rule=hm5e-05,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc'])
+Found custom configs: /users/j/b/jbourde2/.config/slacc/config.json
+Added user configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Found custom configs: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/config.json
+Added custom configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Running from: /gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-171439
+Python script: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py
+Flags: ['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-171439', '--seeding_rule=hm5e-05,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc']
+Config:
+ {
+  "env": "conda activate lt",
+  "resources": {
+    "cpus-per-task": 1,
+    "gres": "gpu:1",
+    "mem": "32G",
+    "partition": "dggpu",
+    "time": "1-00:00:00"
+  }
+}
+Queueing job to VACC
+2024-11-26 17:16:01.699512: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:485] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-11-26 17:16:01.712764: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:8454] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-11-26 17:16:01.716496: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1452] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-11-26 17:16:01.728457: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-11-26 17:16:03.508904: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-171606
+Submitted batch job 21543550
+args=Namespace(resource='dggpu', runs=1, argfile=None, rundir=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-171606'), force=False, script=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py'), flags=['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-171606', '--seeding_rule=hm5e-05,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc'])
+Found custom configs: /users/j/b/jbourde2/.config/slacc/config.json
+Added user configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Found custom configs: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/config.json
+Added custom configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Running from: /gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-171606
+Python script: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py
+Flags: ['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-171606', '--seeding_rule=hm5e-05,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc']
+Config:
+ {
+  "env": "conda activate lt",
+  "resources": {
+    "cpus-per-task": 1,
+    "gres": "gpu:1",
+    "mem": "32G",
+    "partition": "dggpu",
+    "time": "1-00:00:00"
+  }
+}
+Queueing job to VACC
+2024-11-26 17:27:20.796369: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:485] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-11-26 17:27:21.407947: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:8454] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-11-26 17:27:21.677215: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1452] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-11-26 17:27:23.106747: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-11-26 17:27:42.155561: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-172805
+Submitted batch job 21543551
+args=Namespace(resource='dggpu', runs=1, argfile=None, rundir=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-172805'), force=False, script=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py'), flags=['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-172805', '--seeding_rule=hm5e-05,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc'])
+Found custom configs: /users/j/b/jbourde2/.config/slacc/config.json
+Added user configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Found custom configs: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/config.json
+Added custom configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Running from: /gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-172805
+Python script: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py
+Flags: ['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm5e-05,p,scale1.5_seeding_20241126-172805', '--seeding_rule=hm5e-05,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc']
+Config:
+ {
+  "env": "conda activate lt",
+  "resources": {
+    "cpus-per-task": 1,
+    "gres": "gpu:1",
+    "mem": "32G",
+    "partition": "dggpu",
+    "time": "1-00:00:00"
+  }
+}
+Queueing job to VACC
+2024-11-26 17:31:18.547838: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:485] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-11-26 17:31:19.222755: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:8454] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-11-26 17:31:19.464425: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1452] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-11-26 17:31:21.157138: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-11-26 17:31:42.103113: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-173206
+Submitted batch job 21543567
+args=Namespace(resource='dggpu', runs=1, argfile=None, rundir=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-173206'), force=False, script=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py'), flags=['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-173206', '--seeding_rule=hm00005,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc'])
+Found custom configs: /users/j/b/jbourde2/.config/slacc/config.json
+Added user configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Found custom configs: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/config.json
+Added custom configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Running from: /gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-173206
+Python script: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py
+Flags: ['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-173206', '--seeding_rule=hm00005,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc']
+Config:
+ {
+  "env": "conda activate lt",
+  "resources": {
+    "cpus-per-task": 1,
+    "gres": "gpu:1",
+    "mem": "32G",
+    "partition": "dggpu",
+    "time": "1-00:00:00"
+  }
+}
+Queueing job to VACC
+2024-11-26 17:36:03.429862: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:485] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-11-26 17:36:04.254066: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:8454] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-11-26 17:36:04.450788: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1452] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-11-26 17:36:05.635911: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-11-26 17:36:24.670372: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-173647
+Submitted batch job 21543569
+args=Namespace(resource='dggpu', runs=1, argfile=None, rundir=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-173647'), force=False, script=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py'), flags=['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-173647', '--seeding_rule=hm00005,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc'])
+Found custom configs: /users/j/b/jbourde2/.config/slacc/config.json
+Added user configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Found custom configs: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/config.json
+Added custom configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Running from: /gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-173647
+Python script: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py
+Flags: ['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-173647', '--seeding_rule=hm00005,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc']
+Config:
+ {
+  "env": "conda activate lt",
+  "resources": {
+    "cpus-per-task": 1,
+    "gres": "gpu:1",
+    "mem": "32G",
+    "partition": "dggpu",
+    "time": "1-00:00:00"
+  }
+}
+Queueing job to VACC
+2024-11-26 17:42:16.293701: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:485] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-11-26 17:42:16.917117: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:8454] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-11-26 17:42:17.119631: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1452] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-11-26 17:42:18.768639: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-11-26 17:42:39.727490: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-174304
+Submitted batch job 21543570
+args=Namespace(resource='dggpu', runs=1, argfile=None, rundir=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-174304'), force=False, script=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py'), flags=['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-174304', '--seeding_rule=hm00005,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc'])
+Found custom configs: /users/j/b/jbourde2/.config/slacc/config.json
+Added user configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Found custom configs: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/config.json
+Added custom configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Running from: /gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-174304
+Python script: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py
+Flags: ['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-174304', '--seeding_rule=hm00005,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc']
+Config:
+ {
+  "env": "conda activate lt",
+  "resources": {
+    "cpus-per-task": 1,
+    "gres": "gpu:1",
+    "mem": "32G",
+    "partition": "dggpu",
+    "time": "1-00:00:00"
+  }
+}
+Queueing job to VACC
+2024-11-26 17:50:03.206238: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:485] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-11-26 17:50:04.002638: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:8454] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-11-26 17:50:04.199646: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1452] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-11-26 17:50:05.686116: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-11-26 17:50:23.401109: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-175045
+Submitted batch job 21543571
+args=Namespace(resource='dggpu', runs=1, argfile=None, rundir=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-175045'), force=False, script=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py'), flags=['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-175045', '--seeding_rule=hm00005,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc'])
+Found custom configs: /users/j/b/jbourde2/.config/slacc/config.json
+Added user configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Found custom configs: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/config.json
+Added custom configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Running from: /gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-175045
+Python script: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py
+Flags: ['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-175045', '--seeding_rule=hm00005,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc']
+Config:
+ {
+  "env": "conda activate lt",
+  "resources": {
+    "cpus-per-task": 1,
+    "gres": "gpu:1",
+    "mem": "32G",
+    "partition": "dggpu",
+    "time": "1-00:00:00"
+  }
+}
+Queueing job to VACC
+2024-11-26 17:55:35.890867: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:485] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-11-26 17:55:36.571635: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:8454] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-11-26 17:55:36.885331: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1452] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-11-26 17:55:38.182220: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-11-26 17:55:53.867389: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
+/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-175616
+Submitted batch job 21543867
+args=Namespace(resource='dggpu', runs=1, argfile=None, rundir=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-175616'), force=False, script=PosixPath('/gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py'), flags=['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-175616', '--seeding_rule=hm00005,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc'])
+Found custom configs: /users/j/b/jbourde2/.config/slacc/config.json
+Added user configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Found custom configs: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/config.json
+Added custom configs ['dggpu', 'bdgpu', 'dg-multi', 'blue', 'short'] to available configs.
+Running from: /gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-175616
+Python script: /gpfs1/home/j/b/jbourde2/lottery-tickets/scripts/training/python/iterative_pruning.py
+Flags: ['--model=lenet', '--dataset=mnist', '--rundir=/gpfs1/home/j/b/jbourde2/lottery-tickets/experiments/lenet_mnist_0_seed_1_experiments_1_default_sparsity_lm_pruning_hm00005,p,scale1.5_seeding_20241126-175616', '--seeding_rule=hm00005,p,scale1.5', '--target_sparsity=0.65', '--experiments=1', '--vacc']
+Config:
+ {
+  "env": "conda activate lt",
+  "resources": {
+    "cpus-per-task": 1,
+    "gres": "gpu:1",
+    "mem": "32G",
+    "partition": "dggpu",
+    "time": "1-00:00:00"
+  }
+}
