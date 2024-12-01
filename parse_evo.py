@@ -53,7 +53,8 @@ if __name__ == "__main__":
         directory for directory in os.listdir(EXPERIMENTS_DIRECTORY) 
         if directory.lower().startswith("evo") 
         and "5_experiments" in directory
-        and "153114" in directory
+        and "204734" in directory
+        and len(os.listdir(os.path.join(EXPERIMENTS_DIRECTORY, directory))) > 1
     ]
     filenames = ["all_objective_metrics.pkl", "all_genome_metrics.pkl", "best_individuals.pkl"]
     experiment_metrics = {}
@@ -66,10 +67,7 @@ if __name__ == "__main__":
     max_accuracies = []
     max_sparsities = []
     exp_params = []
-
-    best_accuracy = -float("inf")
-    best_genome = None
-    best_condition_index = None
+    exp_best_genomes = []
     
     for condition_index, experiment_dir in enumerate(evo_experiments):
         results = []
@@ -93,13 +91,8 @@ if __name__ == "__main__":
         std_sparsities.append(np.std(best_sparsities))
         max_accuracies.append(best_accuracies)
         max_sparsities.append(best_sparsities)
-        
-        highest_accuracy_experiment_index = np.argmax(best_accuracies)
-        if best_accuracies[highest_accuracy_experiment_index] > best_accuracy:
-            best_genome = best_genomes[highest_accuracy_experiment_index]
-            best_accuracy = best_accuracies[highest_accuracy_experiment_index]
-            best_condition_index = condition_index
-    
+        exp_best_genomes.append(best_genomes[np.argmax(best_accuracies)]) 
+
     # Create plot showing results of gridsearch
     target_path = os.path.join(
         os.path.dirname(os.path.realpath(__file__)),
@@ -118,8 +111,16 @@ if __name__ == "__main__":
         label = f"Hidden Layers: {layer_string}\nScale: {mscale}\nRate: {mrate}"
         return label
 
-    fig, (ci_plot, acc_boxplots, sparsity_boxplots) = plt.subplots(nrows=3, figsize=(8, 12))
+    fig, (ci_plot, acc_boxplots, sparsity_boxplots, acc_transfer_boxplots, sp_transfer_boxplots) = plt.subplots(nrows=5, figsize=(15, 20))
     labels = list(map(label_from_params, exp_params))
+    
+    # Add random chance reference lines
+    ci_plot.axhline(0.1)
+    ci_plot.axvline(0.5)
+    acc_boxplots.axhline(0.1)
+    sparsity_boxplots.axhline(0.5)
+    acc_transfer_boxplots.axhline(0.1)
+    sp_transfer_boxplots.axhline(0.5)
 
     # Accuracy Boxplots
     acc_boxplots.set_title("Best Accuracy Distributions")
@@ -143,7 +144,21 @@ if __name__ == "__main__":
     ci_plot.yaxis.set_major_formatter(ticker.PercentFormatter())
     ci_plot.grid()
 
-    for label_index, (label, mean_acc, std_acc, mean_spars, std_spars) in enumerate(zip(labels, mean_accuracies, std_accuracies, mean_sparsities, std_sparsities)):
+    # Transfer Masking Experiment
+    acc_transfer_boxplots.set_title("Transfer Masking on Best Genome Accuracy")
+    acc_transfer_boxplots.set_ylabel("Accuracy (%)")
+    acc_transfer_boxplots.yaxis.set_major_formatter(ticker.PercentFormatter())
+    acc_transfer_boxplots.grid()
+
+    sp_transfer_boxplots.set_title("Transfer Masking on Best Genome Sparsity")
+    sp_transfer_boxplots.set_ylabel("Sparsity (%)")
+    sp_transfer_boxplots.yaxis.set_major_formatter(ticker.PercentFormatter())
+    sp_transfer_boxplots.grid()
+
+    all_reinit_accuracies = []
+    all_reinit_sparsities = []
+
+    for label_index, (label, best_genome, mean_acc, std_acc, mean_spars, std_spars) in enumerate(zip(labels, exp_best_genomes, mean_accuracies, std_accuracies, mean_sparsities, std_sparsities)):
         label = f"({label_index})\n{label}"
         n = len(mean_accuracies) 
         alpha = 0.05 
@@ -151,7 +166,8 @@ if __name__ == "__main__":
 
         # Create 95% CI for accuracy and sparsity at each point
         ci_plot.plot(mean_spars, mean_acc, label=label, marker=".", markersize=8)
-        color = plt.gca().get_lines()[-1].get_color()
+        ci_plot.text(mean_spars, mean_acc + 0.005, str(label_index), ha="center", va="bottom")
+        color = "blue"
         lower_bound = mean_acc - t_value * (std_acc / np.sqrt(n))
         upper_bound = mean_acc + t_value * (std_acc / np.sqrt(n))
         ci_plot.fill_between([mean_spars], [lower_bound], [upper_bound], color=color, alpha=0.3)
@@ -159,75 +175,45 @@ if __name__ == "__main__":
         lower_bound = mean_spars - t_value * (std_spars / np.sqrt(n))
         upper_bound = mean_spars + t_value * (std_spars / np.sqrt(n))
         ci_plot.fill_betweenx([mean_acc], [lower_bound], [upper_bound], color=color, alpha=0.3)
-    
+        
+        # Transfer Masking
+        layers = list(zip(params["layer_sizes"], params["layer_activations"]))
+        feature_selectors = [
+            evo.ModelFeatures.layer_sparsity,
+            evo.ModelFeatures.magnitude,
+            evo.ModelFeatures.random,
+            functools.partial(evo.ModelFeatures.synaptic_flow, loss_fn=keras.losses.CategoricalCrossentropy()),
+        ]
+        
+        arch_feature_selectors = [
+            evo.ArchFeatures.layer_num,
+            evo.ArchFeatures.layer_ohe,
+            evo.ArchFeatures.layer_prop_params,
+        ] 
+        individual_constructor = functools.partial(
+            evo.Individual,
+            "lenet",
+            "mnist",
+            model_feature_selectors=feature_selectors,
+            arch_feature_selectors=arch_feature_selectors,
+            layers=layers,
+        )
+        reinit_accuracies = []
+        reinit_sparsities = []
+        for seed in range(100, 102):
+            utils.set_seed(seed) 
+            individual = individual_constructor()
+            individual.genome = best_genome 
+            evo.Individual.update_phenotype(individual)
+            reinit_accuracies.append(evo.Individual.eval_accuracy(individual))
+            reinit_sparsities.append(evo.Individual.sparsity(individual))
+        all_reinit_accuracies.append(reinit_accuracies) 
+        all_reinit_sparsities.append(reinit_sparsities) 
+        
+    acc_transfer_boxplots.boxplot(all_reinit_accuracies) 
+    sp_transfer_boxplots.boxplot(all_reinit_sparsities) 
     fig.tight_layout()
-    fig.legend(loc="upper left", bbox_to_anchor=(1.05, 0.75))
+    fig.legend(loc="upper left", bbox_to_anchor=(1.05, .9), ncols=2)
     fig.savefig(target_path, bbox_inches="tight")
     
-    # Take the very best genome and try it on different seeds for weight initializations
-    print(f"Best condition index: {best_condition_index}\n{labels[best_condition_index]}")
-    a = arch.Architecture("lenet", "mnist")
-    params = exp_params[best_condition_index]
-    layers = list(zip(params["layer_sizes"], params["layer_activations"]))
-    feature_selectors = [
-        evo.ModelFeatures.layer_sparsity,
-        evo.ModelFeatures.magnitude,
-        evo.ModelFeatures.random,
-        functools.partial(evo.ModelFeatures.synaptic_flow, loss_fn=keras.losses.CategoricalCrossentropy()),
-    ]
-    
-    arch_feature_selectors = [
-        evo.ArchFeatures.layer_num,
-        evo.ArchFeatures.layer_ohe,
-        evo.ArchFeatures.layer_prop_params,
-    ] 
-    individual_constructor = functools.partial(
-        evo.Individual,
-        "lenet",
-        "mnist",
-        model_feature_selectors=feature_selectors,
-        arch_feature_selectors=arch_feature_selectors,
-        layers=layers,
-    )
-    reinit_accuracies = []
-    reinit_sparsities = []
-    for seed in range(10, 30):
-        utils.set_seed(seed) 
-        individual = individual_constructor()
-        # Change this out on later trials so it is not hardcoded
-        # individual.genome = best_genome 
-        evo.Individual.update_phenotype(individual)
-        reinit_accuracies.append(evo.Individual.eval_accuracy(individual))
-        reinit_sparsities.append(evo.Individual.sparsity(individual))
-    
-    label = labels[best_condition_index] 
-    target_path = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)),
-        C.PLOTS_DIRECTORY,
-        "transfer_masking.png",
-    )
-    os.makedirs(os.path.dirname(target_path), exist_ok=True)
 
-    fig, (acc_boxplot, sparsity_boxplot) = plt.subplots(ncols=2)
-    fig.suptitle("Transfer Masking With Best Genome")
-
-    acc_boxplot.set_title("Accuracy")
-    bplot1 = acc_boxplot.boxplot(reinit_accuracies)["boxes"][0]
-    acc_boxplot.yaxis.set_major_formatter(ticker.PercentFormatter())
-    acc_boxplot.set_ylabel("Accuracy %")
-    acc_boxplot.set_xlabel("")
-    acc_boxplot.axhline(0.10)
-    acc_boxplot.grid()
-
-    sparsity_boxplot.set_title("Sparsity")
-    bplot2 = sparsity_boxplot.boxplot(reinit_sparsities)["boxes"][0]
-    sparsity_boxplot.yaxis.set_major_formatter(ticker.PercentFormatter())
-    sparsity_boxplot.set_ylabel("Sparsity (%)")
-    sparsity_boxplot.set_xlabel("")
-    sparsity_boxplot.axhline(0.50)
-    sparsity_boxplot.grid()
-
-    handles = [bplot1, bplot2]
-    fig.legend(handles, [label], loc="upper center", bbox_to_anchor=(0.5, -0.05))
-    fig.tight_layout()
-    fig.savefig(target_path, bbox_inches="tight")
