@@ -22,10 +22,10 @@ dnames = ["mnist"]
 asizes = [10]
 tsizes = [4]
 nwinners_list = [2]
-psizes = [50]
+psizes = [20]
 nfronts_list = [2]
-experiments_list = [50]
-generations_list = [1000]
+experiments_list = [5]
+generations_list = [50]
 
 for aname, dname, mrate, mscale, layers, asize, tsize, nwinners, psize, nfronts, experiments, generations in itertools.product(
     anames,

@@ -16,3 +16,5 @@ experiments/
 plots/
 *.swo
 .ipynb_checkpoints/
+*.npy
+*.png

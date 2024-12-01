@@ -166,7 +166,7 @@ class Individual:
         if self.data is not None:
             _, X_test, _, Y_test = self.data
             # For now, use a smaller portion for proof of concept
-            return X_test[:100], Y_test[:100]
+            return X_test[:250], Y_test[:250]
         
     @property
     def fitness(self) -> Any:
@@ -497,7 +497,7 @@ def nsga2(
         best = max(population, key=Individual.eval_accuracy)
         # print(f"Current Best Accuracy {best_accuracy}, Genome: {best_genome}")
         if best_genome is None or best_accuracy is None or Individual.eval_accuracy(best) > best_accuracy:
-            best_genome = copy.deepcopy(best.genome.get_weights())
+            best_genome = copy.deepcopy(best.genome)
             best_accuracy = Individual.eval_accuracy(best)
             # print(f"New Best Accuracy {best_accuracy}, Genome: {best_genome}")
         # print(f"Current Best Accuracy {best_accuracy}, Genome: {best_genome}")
