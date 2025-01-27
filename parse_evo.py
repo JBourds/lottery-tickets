@@ -200,13 +200,13 @@ if __name__ == "__main__":
         )
         reinit_accuracies = []
         reinit_sparsities = []
-        for seed in range(100, 102):
+        for seed in range(100, 200):
             utils.set_seed(seed) 
             individual = individual_constructor()
             individual.genome = best_genome 
             evo.Individual.update_phenotype(individual)
-            reinit_accuracies.append(evo.Individual.eval_accuracy(individual))
-            reinit_sparsities.append(evo.Individual.sparsity(individual))
+            reinit_accuracies.append(evo.Individual.eval_accuracy(individual) * 100)
+            reinit_sparsities.append(evo.Individual.sparsity(individual) * 100)
         all_reinit_accuracies.append(reinit_accuracies) 
         all_reinit_sparsities.append(reinit_sparsities) 
         

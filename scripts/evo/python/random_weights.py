@@ -11,6 +11,7 @@ from typing import List, Tuple
 sys.path.append(os.path.join(os.path.expanduser("~"), "lottery-tickets"))
 
 import src.harness.evolution as evo
+from src.harness import utils
 
 model_feature_selectors = [
     evo.ModelFeatures.layer_sparsity, 
@@ -55,9 +56,20 @@ def random_reinitialize(num_generations: int, steps: int) -> Tuple[npt.NDArray[n
 
 generations = 1000
 steps = 1
-random_accuracies, random_sparsities = random_reinitialize(generations, steps)
+N = 5
 
-np.save(f"random_accuracies_{generations}_gens_{steps}_steps", random_accuracies)
-np.save(f"random_sparsities_{generations}_gens_{steps}_steps", random_sparsities)
+highest_accuracies = np.zeros(N)
+lowest_sparsities = np.zeros(N)
+for n in range(N):
+    utils.set_seed(n)
+    print(f"Experiment {n}")
+    random_accuracies, random_sparsities = random_reinitialize(generations, steps)
+    np.save(f"{n}_random_accuracies_{generations}_gens_{steps}_steps", random_accuracies)
+    np.save(f"{n}_random_sparsities_{generations}_gens_{steps}_steps", random_sparsities)
+    highest_accuracies[n] = np.max(random_accuracies)
+    lowest_sparsities[n] = np.min(random_sparsities)
+
+np.save("highest_accuracies", highest_accuracies)
+np.save("lowest_sparsities", lowest_sparsities)
         
     
