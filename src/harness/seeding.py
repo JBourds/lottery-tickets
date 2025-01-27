@@ -93,7 +93,7 @@ class Sign(Enum):
 def get_seeding_rule(seeding_rule: str | None) -> Callable[[List[np.ndarray[float]]], None] | None:
     if seeding_rule is None:
         return None
-    match = re.match('^([a-zA-Z]+)(\d+),([nps]{1,2}),([a-zA-z]+)([-]?\d+\.*\d*)$', seeding_rule)
+    match = re.match('^([a-zA-Z]+)(\d+),([npsfb]{1,2}),([a-zA-z]+)([-]?\d+\.*\d*)$', seeding_rule)
     if match is None:
         raise ValueError(f'Invalid seeding rule string: {seeding_rule}. Check usage.')
     target, proportion, sign, transform, val = match.groups()

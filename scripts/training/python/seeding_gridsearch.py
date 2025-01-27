@@ -13,12 +13,12 @@ import os
 import subprocess
 
 # Grid search params
-models = ["lenet"]
+models = ["lenet", "conv2"]
 datasets = ["mnist"]
 targets = ["hm"]
 # percentages = np.array([1, 5, 10, 25])
-percentages = np.array(["00005", "0001", "0005", "001", "001"])
-scalars = [1.5, 2.5, 5]
+percentages = np.array(["00005", "0001", "0005", "001"])
+scalars = [1.5, 3]
 constants = [-1, 1]
 
 # Sign-aware constants
@@ -74,5 +74,5 @@ for model, dataset, target, percent, sign, scalar in product(models, datasets, t
 
 # Constants
 for model, dataset, target, percent, sign, constant in product(models, datasets, targets, percentages, signs, constants):
-    seeding_rule = f"--seeding_rule={target}{percent},{sign}set{constant}"
+    seeding_rule = f"--seeding_rule={target}{percent},{sign},set{constant}"
     run_one(model, dataset, experiment_params, seeding_rule)
