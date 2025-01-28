@@ -131,7 +131,7 @@ def plot_seeded_vs_overall_positive(
 
     plot_params = [
         ("Target", agg_mean_targets, agg_std_targets),
-        ("Nontarget", agg_mean_nontargets, agg_std_actual),
+        ("Nontarget", agg_mean_actual, agg_std_actual),
     ]
     for index, layer_label in enumerate(all_layers):
         for target_label, mean, std in plot_params:
@@ -188,10 +188,10 @@ def plot_seeded_vs_overall_sparsity(
             show_ci_legend=False,
         )
 
-    plt.legend()
     # Plot a diagonal line showing direct linear relationship and add gridlines
     plt.grid()
-    plt.gca().plot([0, 1], [0, 1], transform=plt.gca().transAxes, label="Linear Relationship")
+    plt.gca().plot([0, 1], [0, 1], transform=plt.gca().transAxes, label="Linear Relationship", linestlye="dashed")
+    plt.legend()
     if save_location is not None:
         plt.savefig(save_location)
     plt.show()
