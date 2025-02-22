@@ -177,6 +177,8 @@ def plot_seeded_vs_overall_sparsity(
     plt.title(f"Overall Sparsity vs. Seeded Sparsity in {model_name}")
     plt.xlabel("Overall Layer Sparsity (%)")
     plt.ylabel("Seeded Layer Sparsity (%)")
+    plt.gca().yaxis.set_major_formatter(plt.FuncFormatter(lambda x, pos: f"{x:.0%}"))
+    plt.gca().xaxis.set_major_formatter(plt.FuncFormatter(lambda x, pos: f"{x:.0%}"))
 
     for index, label in enumerate(all_layers):
         bp.plot_aggregated_summary_ci(
@@ -190,7 +192,7 @@ def plot_seeded_vs_overall_sparsity(
 
     # Plot a diagonal line showing direct linear relationship and add gridlines
     plt.grid()
-    plt.gca().plot([0, 1], [0, 1], transform=plt.gca().transAxes, label="Linear Relationship", linestlye="dashed")
+    plt.gca().plot([0, 1], [0, 1], transform=plt.gca().transAxes, label="Linear Relationship", linestyle="dashed")
     plt.legend()
     if save_location is not None:
         plt.savefig(save_location)
