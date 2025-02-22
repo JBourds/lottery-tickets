@@ -34,7 +34,7 @@ class TrialData(mixins.PickleMixin, mixins.TimerMixin):
     pruning_step: int
     architecture: str
     dataset: str
-    seed_weights: Callable
+    # seed_weights: Callable
 
     # Model parameters
     final_weights: List[np.ndarray[np.float64]]
