@@ -152,8 +152,8 @@ class Architectures(Enum):
 
     @staticmethod
     def create_conv2(
-            input_shape: Tuple[int, ...],
-            num_classes: int,
+        input_shape: Tuple[int, ...],
+        num_classes: int,
     ) -> keras.Model:
         model = Sequential([
             Input(input_shape),
@@ -175,8 +175,8 @@ class Architectures(Enum):
 
     @staticmethod
     def create_conv4(
-            input_shape: Tuple[int, ...],
-            num_classes: int,
+        input_shape: Tuple[int, ...],
+        num_classes: int,
     ) -> keras.Model:
         model = Sequential([
             Input(input_shape),
@@ -204,8 +204,8 @@ class Architectures(Enum):
 
     @staticmethod
     def create_conv6(
-            input_shape: Tuple[int, ...],
-            num_classes: int,
+        input_shape: Tuple[int, ...],
+        num_classes: int,
     ) -> keras.Model:
         model = Sequential([
             Input(input_shape),
