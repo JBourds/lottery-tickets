@@ -8,6 +8,7 @@ from typing import Callable, Generator, List, Tuple
 
 from src.harness import architecture as arch
 from src.harness import history as hist
+from src.metrics.synflow import *
 
 def build_layer_df(
     architecture: str, 
@@ -208,8 +209,8 @@ def merge_dfs(
     tlw_df = pd.merge(tl_df, weights_df, on=keys[:3], how="outer")
     tlw_df = pd.get_dummies(tlw_df, columns=["arch"])
     tlw_df = pd.get_dummies(tlw_df, columns=["dataset"])
-    drop_cols = keys + ["step", "seed"]
-    tlw_df.drop(columns=drop_cols, inplace=True)
+    # drop_cols = keys + ["step", "seed"]
+    # tlw_df.drop(columns=drop_cols, inplace=True)
     return tlw_df
 
 # Correct for class imblance by trimming groups to the smallest
