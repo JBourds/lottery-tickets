@@ -99,7 +99,7 @@ def build_weight_df(
         i_sign = np.sign(i_flat)
         i_mag = np.abs(i_flat, dtype=np.float32)
         i_perc = np.array([np.argmax(v < i_sorted) - num_zero for v in i_flat]) / num_nonzero
-        i_norm_std = (f_flat - layer_df["li_mean"].iloc[layer]) / layer_df["li_std"].iloc[layer]
+        i_norm_std = (i_flat - layer_df["li_mean"].iloc[layer]) / layer_df["li_std"].iloc[layer]
          
         # Create a dictionary for weight features for this layer
         layer_weight_features = {
