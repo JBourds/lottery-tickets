@@ -18,3 +18,5 @@ plots/
 .ipynb_checkpoints/
 *.npy
 *.png
+*.h5
+*.pkl
