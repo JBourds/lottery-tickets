@@ -1,3 +1,5 @@
+import tensorflow as tf
+tf.keras.backend.set_floatx("float64")
 import os
 import sys
 
@@ -9,7 +11,10 @@ sys.path.append(root)
 from src.metrics.features import *
 
 if __name__ == "__main__":
-    tdf, ldf, wdf = build_dataframes(epath)
-    corrected_wdf = correct_class_imbalance(wdf)
-    merged_df = merge_dfs(tdf, ldf, corrected_wdf)
+    tdf, ldf, wdf, twdf = build_dataframes(epath, train_steps=10, batch_size=64)
+    tdf.to_pickle("tdf.pkl")
+    ldf.to_pickle("ldf.pkl")
+    wdf.to_pickle("wdf.pkl")
+    twdf.to_pickle("twdf.pkl")
+    merged_df = merge_dfs(tdf, ldf, wdf, twdf)
     merged_df.to_pickle(output_path) 
