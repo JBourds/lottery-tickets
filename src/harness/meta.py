@@ -5,16 +5,16 @@ import tensorflow as tf
 from tensorflow import keras
 from typing import Callable, List, Tuple
 
-def create_meta(shape: Tuple[int, ...]) -> keras.Model:
-    model = keras.Sequential([
-        keras.Input(shape=shape),
-        keras.layers.Dense(8, "relu"),
-        keras.layers.Dense(1, "sigmoid"),
-    ])
+def create_meta(shape: Tuple[int, ...], depth: int, width: int) -> keras.Model:
+    model = keras.Sequential([keras.Input(shape=shape)])
+    for _ in range(depth):
+        model.add(keras.layers.Dense(width, "relu"))
+    model.add(keras.layers.Dense(1, "sigmoid"))
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=3e-4),
              loss=tf.keras.losses.BinaryCrossentropy(),
              metrics=["accuracy"])
     return model
+
 
 def make_meta_mask(
     meta: keras.Model,

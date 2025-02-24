@@ -15,17 +15,8 @@ import sys
 # Get root in path
 root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.append(root)
+from src.harness.meta import create_meta
 from src.metrics.features import *
-
-def create_meta(shape: Tuple[int, ...], depth: int, width: int) -> keras.Model:
-    model = keras.Sequential([keras.Input(shape=shape)])
-    for _ in range(depth):
-        model.add(keras.layers.Dense(width, "relu"))
-    model.add(keras.layers.Dense(1, "sigmoid"))
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=3e-4),
-             loss=tf.keras.losses.BinaryCrossentropy(),
-             metrics=["accuracy"])
-    return model
 
 # Takeaways (no training steps):
 #     - Large diminishing marginal returns beyond a 1 layer 16 neuron ReLU network
