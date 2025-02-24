@@ -162,7 +162,7 @@ def build_weight_df_with_training(
     keys = ["l_num"]
     weight_df[f"norm_wt{n}_mag"] = weight_df.groupby(keys)[f"wt{n}_mag"].transform(normalize)
     weight_df[f"norm_wt{n}_synflow"] = weight_df.groupby(keys)[f"wt{n}_synflow"].transform(normalize)
-    weight_df.fillna(0)
+    weight_df.fillna(0, inplace=True)
     
     return weight_df
 
@@ -241,7 +241,7 @@ def build_weight_df(
     keys = ["l_num"]
     weight_df["norm_wi_mag"] = weight_df.groupby(keys)["wi_mag"].transform(normalize)
     weight_df["norm_wi_synflow"] = weight_df.groupby(keys)["wi_synflow"].transform(normalize)
-    weight_df.fillna(0)
+    weight_df.fillna(0, fillna=True)
     
     return weight_df
 
