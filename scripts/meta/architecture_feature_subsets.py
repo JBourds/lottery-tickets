@@ -1,5 +1,5 @@
 from copy import copy as shallowcopy
-from itertools import product
+from itertools import combinations, product
 import json
 from matplotlib import pyplot as plt
 import pandas as pd
@@ -26,8 +26,6 @@ def create_meta(shape: Tuple[int, ...], depth: int, width: int) -> keras.Model:
              loss=tf.keras.losses.BinaryCrossentropy(),
              metrics=["accuracy"])
     return model
-
-import matplotlib.ticker as mtick
 
 # Takeaways (no training steps):
 #     - Large diminishing marginal returns beyond a 1 layer 16 neuron ReLU network
@@ -66,17 +64,24 @@ def plot_feature_arch_subsets(variants: Dict[Tuple[int, int], Dict[str, Dict]]):
 
 
 if __name__ == "__main__":
-    # Hand-picked (change once results are in)
-    feature_subsets = [
-        ["wi_std", "output"],
-        ["wi_perc", "l_sparsity"],
+    includes = ["l_sparsity", "sparsity", "l_rel_size"]
+    feature_banks = [
+        ["norm_wt10_mag", "norm_wt10_synflow", "wt10_sign"],
+        ["norm_wi_mag", "norm_wi_synflow", "wi_sign"],
     ]
-    widths = 2 ** np.arange(3, 9)
-    depths = 2 ** np.arange(1, 4)
+    feature_subsets = []
+    for bank in feature_banks:
+        for choose in range(2, len(bank)):
+            for subset in map(list, combinations(bank, choose)):
+                feature_subsets.append(subset + includes)    
+                feature_subsets.append(subset)    
+
+    widths = 2 ** np.array([3, 5, 7])
+    depths = 2 ** np.array([0, 2, 4])
     hidden_layers = [(depth, width) for width, depth in product(widths, depths)]
     df_path = os.path.join(root, "mnist_weightabase.pkl")
     df = pd.read_pickle(df_path)
-    epochs = 1
+    epochs = 3
     batch_size = 256
     # {arch: {subset: {data}}}
     variants = {}
@@ -85,8 +90,8 @@ if __name__ == "__main__":
         variants[dim] = {}
         for subset in feature_subsets:
             X, Y = featurize_db(df, subset)
-            X = X[:2 * batch_size]
-            Y = Y[:2 * batch_size]
+            np.random.shuffle(X)
+            np.random.shuffle(Y)
             model = create_meta(X[0].shape, depth, width)
             history = model.fit(X, Y, epochs=epochs, batch_size=batch_size, validation_split=0.2, shuffle=True)
             variants[dim][",".join(subset)] = {
