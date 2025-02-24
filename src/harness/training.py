@@ -165,8 +165,8 @@ def training_loop(
     batch_counter = 0
     for epoch in range(hp.epochs):
         # Shuffle training data using pruning step as a seed
-        tf.random.shuffle(X_train, seed=pruning_step)
-        tf.random.shuffle(Y_train, seed=pruning_step)
+        X_train = tf.random.shuffle(X_train, seed=pruning_step)
+        Y_train = tf.random.shuffle(Y_train, seed=pruning_step)
 
         for batch_index in range(num_batches):
             # Calculate the lower/upper index for batch (assume data is shuffled)
