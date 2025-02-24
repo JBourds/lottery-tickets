@@ -14,6 +14,10 @@ sys.path.append(basepath)
 from src.harness.meta import *
 from src.metrics.features import *
 
+def should_skip(feature: str):
+    ignore_list = ["e_num", "t_num", "w_num", "l_num", "w_mask", "wf_sign", "seed", "step", "size", "arch_lenet", "dataset_mnist", "bias", "conv"]
+    return feature in ignore_list
+
 def make_plot(accuracies: npt.NDArray[np.float32], columns: List[str], batch_size: int = 256, location: str = "single_feature_analysis.png"):
     indices = np.argsort(np.max(accuracies, axis=1))[::-1]
     plt.figure(figsize=(10, 8))
@@ -34,20 +38,23 @@ if __name__ == "__main__":
     epochs = 3
     batch_size = 256
     histories = []
-    for index, feature in tqdm(enumerate(merged_df.columns)):
+    columns = [c for c in merged_df.columns if not should_skip(c)]
+    for index, feature in tqdm(enumerate(columns)):
         print(f"{feature} ({index + 1} / {len(merged_df.columns)})")
-        iX, iY = featurize_db(merged_df, [feature])
-        i_meta = create_meta(iX[0].shape)
-        histories.append(i_meta.fit(iX, iY, epochs=epochs, batch_size=batch_size, validation_split=0.2, shuffle=True))
+        X, Y = featurize_db(merged_df, [feature])
+        np.random.shuffle(X)
+        np.random.shuffle(Y)
+        model = create_meta(X[0].shape)
+        histories.append(model.fit(X, Y, epochs=epochs, batch_size=batch_size, validation_split=0.2, shuffle=True))
 
     accuracies = np.array(list(map(lambda x: x.history["accuracy"], histories)))
     with open("columns.txt", "w") as outfile:
-        outfile.write(str(merged_df.columns))
+        outfile.write(str(columns))
     np.save("accuracies", accuracies)
 
-    # accuracies = np.load("accuracies.npy")
-    # with open("columns.txt", "r") as infile:
-    #     contents = infile.read()
-    #     columns = eval(contents[contents.index("["):contents.index("]")+1])
+    #accuracies = np.load("accuracies.npy")
+    #with open("columns.txt", "r") as infile:
+    #    contents = infile.read()
+    #    columns = eval(contents[contents.index("["):contents.index("]")+1])
     make_plot(accuracies, columns)
 
