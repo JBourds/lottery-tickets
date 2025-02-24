@@ -17,12 +17,12 @@ models = ["lenet", "conv2"]
 datasets = ["mnist"]
 targets = ["hm"]
 # percentages = np.array([1, 5, 10, 25])
-percentages = np.array(["00005", "0001", "0005", "001"])
-scalars = [1.5, 3]
-constants = [-1, 1]
+percentages = np.array(["10", "20"])
+scalars = [2]
+constants = [1]
 
 # Sign-aware constants
-signs = ["s", "p", "fp"]
+signs = ["s"]
 
 # General params
 experiment_params = "--target_sparsity=0.025 --experiments=5 --vacc"
