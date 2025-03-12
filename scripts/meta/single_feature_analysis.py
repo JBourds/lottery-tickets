@@ -42,10 +42,12 @@ if __name__ == "__main__":
     for index, feature in tqdm(enumerate(columns)):
         print(f"{feature} ({index + 1} / {len(merged_df.columns)})")
         X, Y = featurize_db(merged_df, [feature])
-        np.random.shuffle(X)
-        np.random.shuffle(Y)
-        model = create_meta(X[0].shape)
-        histories.append(model.fit(X, Y, epochs=epochs, batch_size=batch_size, validation_split=0.2, shuffle=True))
+        indices = np.random.permutation(X.shape[0])
+        rand_X = X[indices]
+        rand_Y = Y[indices]
+        assert rand_X.shape == X.shape and rand_Y.shape == Y.shape
+        model = create_meta(rand_X[0].shape, depth=1, width=16)
+        histories.append(model.fit(rand_X, rand_Y, epochs=epochs, batch_size=batch_size, validation_split=0.2, shuffle=True))
 
     accuracies = np.array(list(map(lambda x: x.history["accuracy"], histories)))
     with open("columns.txt", "w") as outfile:

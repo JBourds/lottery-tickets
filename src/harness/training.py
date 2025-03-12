@@ -164,9 +164,10 @@ def training_loop(
     # Batch counter won't always fit cleanly within an epoch
     batch_counter = 0
     for epoch in range(hp.epochs):
+        indices = tf.random.shuffle(tf.range(tf.shape(X_train)[0]), seed=pruning_step)
         # Shuffle training data using pruning step as a seed
-        X_train = tf.random.shuffle(X_train, seed=pruning_step)
-        Y_train = tf.random.shuffle(Y_train, seed=pruning_step)
+        X_train = tf.gather(X_train, indices)
+        Y_train = tf.gather(Y_train, indices)
 
         for batch_index in range(num_batches):
             # Calculate the lower/upper index for batch (assume data is shuffled)

@@ -1,19 +1,50 @@
 from copy import copy as shallowcopy
+import copy
 import numpy as np
 import numpy.typing as npt
+import pandas as pd
 import tensorflow as tf
 from tensorflow import keras
-from typing import Callable, List, Tuple
+from typing import Callable, Dict, List, Tuple
+from sklearn.model_selection import train_test_split
+
+from src.harness import architecture as arch
+from src.metrics import features as f
+from src.metrics.synflow import compute_synflow_per_weight
+
 
 def create_meta(shape: Tuple[int, ...], depth: int, width: int) -> keras.Model:
+    """
+    Create the meta model with a specified depth and width for each layer.
+    """
     model = keras.Sequential([keras.Input(shape=shape)])
     for _ in range(depth):
         model.add(keras.layers.Dense(width, "relu"))
     model.add(keras.layers.Dense(1, "sigmoid"))
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=3e-4),
-             loss=tf.keras.losses.BinaryCrossentropy(),
-             metrics=["accuracy"])
+                  loss=tf.keras.losses.BinaryCrossentropy(),
+                  metrics=["accuracy"])
     return model
+
+
+def train_meta(
+    meta_model: keras.Model,
+    X: npt.NDArray,
+    Y: npt.NDArray,
+    epochs: int = 2,
+    batch_size: int = 256,
+    val_prop: float = 0.2,
+) -> Dict:
+    """
+    Function which trains the meta model and analyzes the types of mistakes
+    it makes.
+    """
+    X_train, X_test, Y_train, Y_test = train_test_split(
+        X, Y, test_size=0.2, random_state=42)
+    history = meta_model.fit(X_train, Y_train, epochs=epochs,
+                             batch_size=batch_size, validation_split=val_prop, shuffle=True)
+    loss, accuracy = meta_model.evaluate(X_test, Y_test)
+    return history, loss, accuracy
 
 
 def make_meta_mask(
@@ -23,110 +54,102 @@ def make_meta_mask(
     dataset: str,
     steps: int,
 ) -> Tuple[List[npt.NDArray], List[float]]:
+    """
+    Function which simulates training but only relies on the predicted masks
+    from the meta model.
+
+    @param meta: Meta mask model which predicts whether a weight should change
+        its mask from a 1 to a 0.
+    @param make_x: Function that produces the input vector for the meta model
+        based on the keras model.
+    @param architecture: String for the architecture being used.
+    @param dataset: String for the dataset being used.
+    @param steps: Number of masking iterations.
+
+    @returns: Final masks and accuracies.
+    """
     a = arch.Architecture(architecture, dataset)
-    _, val_X, _, val_Y = a.load_data()
+    _, X_test, _, Y_test = a.load_data()
     model = a.get_model_constructor()()
     original_weights = copy.deepcopy(model.get_weights())
-    model.compile(optimizer="Adam", loss=tf.keras.losses.CategoricalCrossentropy(), metrics=["accuracy"])
+    model.compile(optimizer="Adam", loss=tf.keras.losses.CategoricalCrossentropy(
+    ), metrics=["accuracy"])
     masks = [np.ones_like(w) for w in model.get_weights()]
-    
-    def update_masks(mask_pred: npt.NDArray) -> List[npt.NDArray]:
+    layer_names = list(map(lambda x: x.lower(), a.layer_names))
+
+    def get_sparsities() -> List[float]:
+        return [np.count_nonzero(m) / m.size for m in masks]
+
+    def update_masks(mask_pred: npt.NDArray):
         start = 0
         end = 0
-        new_masks = []
         nonlocal masks
-        for m in masks:
-            end += m.size
-            new_m = np.reshape(mask_pred[start:end], m.shape)
-            new_masks.append(new_m)
+        for layer, (mask, name) in enumerate(zip(masks, layer_names), start=1):
+            end += mask.size
+            # And with existing mask to not allow previously masked
+            # weights to become unmasked by the xor
+            to_prune = mask_pred[start:end] & mask
+            # Output & convolutional layers, prune at half the rate
+            if "output" in name or "conv" in name:
+                to_prune *= np.random.randint(low=0,
+                                              high=2, size=to_prune.shape)
+            # This will flip masks from 1 to 0 if the model output a 1
+            # for the label (prune the weight)
+            mask ^= to_prune
             start = end
-        return masks
-            
+
     accuracies = []
     for step in range(steps):
         # Get validation accuracy
-        _, accuracy = model.evaluate(val_X, val_Y)
+        _, accuracy = model.evaluate(X_test, Y_test)
         accuracies.append(accuracy)
-        print(f"Step {step} accuracy: {accuracy:.2%}")
+        print(
+            f"Step {step} accuracy: {accuracy:.2%}, sparsities: {get_sparsities()}")
         # Extract features
         X = make_x(architecture, model, masks)
         # Predict and replace existing mask
         mask_pred = meta.predict(X, batch_size=2**20)
-        masks = update_masks(mask_pred)
+        update_masks(mask_pred)
         model.set_weights([w * m for w, m in zip(original_weights, masks)])
-        
+
     return masks, accuracies
 
 
 def make_x(
     architecture: str,
+    dataset: str,
     model: keras.Model,
     masks: List[npt.NDArray],
+    features: List[str],
+    train_steps: int = 10,
+    batch_size: int = 256,
 ) -> npt.NDArray:
-    # Layer features:
-    # i_features = ["l_sparsity", "l_rel_size", "li_prop_positive", "wi_std", "wi_perc", "wi_synflow", "wi_sign", "dense", "bias", "conv", "output"]
-    nparams = sum(map(np.size, masks))
-    nfeatures = 11
-    features = np.zeros((nparams, nfeatures))
-    
-    # Helper functions to add the unrolled weight values and
-    # scalar layer values to the feature matrix
-    n = 0
-    def add_layer_features(layer_values: List[float]):
-        nonlocal n
-        start = 0
-        end = 0
-        for v, size in zip(layer_values, map(np.size, masks)):
-            end += size
-            features[start:end, n] = v
-            start = end
-        n += 1
-        
-    def add_weight_features(weight_features: List[npt.NDArray]):
-        nonlocal n
-        start = 0
-        end = 0
-        for v in weight_features:
-            end += v.size
-            features[start:end, n] = np.ravel(v)
-            start = end
-        n += 1
-    
-    # Make a separate copy to compute synflow for
-    masked_weights = [w * m for w, m in zip(model.get_weights(), masks)]
-    masked_model = shallowcopy(model)
-    masked_model.set_weights(masked_weights)
-    synflow_scores = [np.reshape(scores, -1) for scores in compute_synflow_per_weight(masked_model)]
-    
-    # Mask features
-    sparsities = [np.count_nonzero(m) / np.size(m) for m in masks]
-    rel_size = [np.size(m) / nparams for m in masks]
-    prop_pos = [np.count_nonzero(w >= 0) for w in masks]
-    
-    # Layer type
-    layer_ohe = arch.Architecture.ohe_layer_types(architecture)
-    for values in [sparsities, rel_size, prop_pos]:
-        add_layer_features(values)
-    
-    # Weight features
-    l_std = [np.std(w) for w in masked_weights]
-    l_mean = [np.mean(w) for w in masked_weights]
-    l_sorted = [np.sort(np.ravel(w)) for w in masked_weights]
-    
-    w_std = [(w - l_mean) / l_std for w, l_mean, l_std in zip(l_std, l_mean, masked_weights)]
-    w_sign = [np.sign(w) for w in masked_weights]
-    num_nonzero = sum(map(np.count_nonzero, masks))
-    num_zero = nparams - num_nonzero
-    w_perc = np.array([
-        np.argmax(np.ravel(v) < v_sorted) - num_zero 
-        for v, v_sorted in zip(masked_weights, l_sorted)]
-    ) / num_nonzero
-    
-    flat_masks = [np.ravel(m) for m in masks]
-    for values in [w_std, w_perc, synflow_scores, w_sign]:
-        add_weight_features(values)
-    
-    for values in [layer_ohe[:, i] for i in range(layer_ohe.shape[1])]:
-        add_layer_features(values)
-        
-    return features
+    """
+    Function that creates the feature matrix for the meta model.
+    Creates a DF with all features in it, then selects the subset.
+
+    @param architecture: Architecture string used to get information
+        about model layers.
+    @param dataset: Dataset string used to signify which dataset was used.
+    @param model: Keras model.
+    @param masks: Current masks (used to compute metrics from masked model).
+    @param features: List of feature names to use.
+
+    @returns: Feature matrix used by the meta model.
+    """
+    layer_df = f.build_layer_df(architecture, model.get_weights(), [], masks)
+    architecture = arch.Architecture(architecture, dataset)
+    # Use masks twice here since we aren't generating any labels but just need the shape
+    weight_df = f.build_weight_df(
+        layer_df, architecture, model.get_weights(), [], masks, [], training=False)
+    trained_weight_df = f.build_weight_df_with_training(
+        layer_df, architecture, model.get_weights(), masks,
+        [], train_steps, batch_size, training=False) \
+        if train_steps > 0 else None
+
+    df = pd.merge(layer_df, weight_df, on=["l_num"], how="inner")
+    print("X columns:", df.columns)
+    if trained_weight_df is not None:
+        df = pd.merge(df, trained_weight_df, on=[
+                      "l_num", "w_num"], how="inner")
+    return df[features].to_numpy()

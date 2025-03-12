@@ -2,7 +2,7 @@
   "dggpu": {
     "env": "conda activate lt",
     "resources": {
-      "time": "2:00:00",
+      "time": "5:00:00",
       "partition": "dggpu",
       "gres": "gpu:1",
       "cpus-per-task": 1,
