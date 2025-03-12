@@ -22,13 +22,13 @@ def build_layer_df(
         "l_size": [],
         "l_rel_size": [],
         "l_sparsity": [],
-        "li_mean": [],
-        "li_std": [],
+        "li_mag_mean": [],
+        "li_mag_std": [],
         "li_prop_positive": [],
     }
     if final:
-        layer_features["lf_mean"] = []
-        layer_features["lf_std"] = []
+        layer_features["lf_mag_mean"] = []
+        layer_features["lf_mag_std"] = []
         layer_features["lf_prop_positive"] = []
 
     # Loop over layers, vectorize calculations where possible
@@ -37,18 +37,19 @@ def build_layer_df(
     for index, (iw, fw, m) in tqdm(enumerate(zip(initial, final, masks))):
         print(f"Layer {index}")
         mask = m.astype(bool)
-        iw_filtered = iw[mask]
+        iw_filtered = np.abs(iw[mask])
         layer_features["l_num"].append(index)
         layer_features["l_size"].append(m.size)
         layer_features["l_rel_size"].append(m.size / total_size)
         layer_features["l_sparsity"].append(np.mean(m))
-        layer_features["li_mean"].append(np.mean(iw_filtered))
-        layer_features["li_std"].append(np.std(iw_filtered))
-        layer_features["li_prop_positive"].append(np.mean(iw_filtered >= 0))
+        layer_features["li_mag_mean"].append(np.mean(iw_filtered))
+        layer_features["li_mag_std"].append(np.std(iw_filtered))
+        layer_features["li_prop_positive"].append(
+            np.mean(iw_filtered >= 0))
         if final:
-            fw_filtered = fw[mask]
-            layer_features["lf_mean"].append(np.mean(fw_filtered))
-            layer_features["lf_std"].append(np.std(fw_filtered))
+            fw_filtered = np.abs(fw[mask])
+            layer_features["lf_mag_mean"].append(np.mean(fw_filtered))
+            layer_features["lf_mag_std"].append(np.std(fw_filtered))
             layer_features["lf_prop_positive"].append(
                 np.mean(fw_filtered >= 0))
     layer_ohe = arch.Architecture.ohe_layer_types(architecture)
@@ -162,7 +163,7 @@ def build_weight_df_with_training(
             [np.argmax(v < t_sorted) - num_zero for v in t_flat]) / num_nonzero
         # Use std from initial weights assuming we did small amounts of training
         t_norm_std = (
-            t_flat - layer_df["li_mean"].iloc[layer]) / layer_df["li_std"].iloc[layer]
+            t_flat - layer_df["li_mag_mean"].iloc[layer]) / layer_df["li_mag_std"].iloc[layer]
 
         # Create a dictionary for weight features for this layer
         layer_weight_features = {
@@ -247,7 +248,7 @@ def build_weight_df(
             f_perc = np.array(
                 [np.argmax(v < f_sorted) - num_zero for v in f_flat]) / num_nonzero
             f_norm_std = (
-                f_flat - layer_df["lf_mean"].iloc[layer]) / layer_df["lf_std"].iloc[layer]
+                f_flat - layer_df["lf_mag_mean"].iloc[layer]) / layer_df["lf_mag_std"].iloc[layer]
 
         i_flat = iw.flatten()
         i_sorted = np.sort(i_flat)
@@ -256,7 +257,7 @@ def build_weight_df(
         i_perc = np.array(
             [np.argmax(v < i_sorted) - num_zero for v in i_flat]) / num_nonzero
         i_norm_std = (
-            i_flat - layer_df["li_mean"].iloc[layer]) / layer_df["li_std"].iloc[layer]
+            i_flat - layer_df["li_mag_mean"].iloc[layer]) / layer_df["li_mag_std"].iloc[layer]
 
         # Create a dictionary for weight features for this layer
         layer_weight_features = {
@@ -356,9 +357,6 @@ def build_trial_dfs(
     else:
         trained_weight_df = None
 
-    print("Build trial dfs:")
-    print(weight_df.label.value_counts())
-
     return trial_df, layer_df, weight_df, trained_weight_df
 
 
@@ -418,11 +416,7 @@ def build_dataframes(
     layers = []
     weights = []
     trained_weights = []
-    print(f"Building dataframes for experiments at {epath}")
-    for e_num, e in tqdm(enumerate(experiments[:1])):
-        # TODO: Remove to get full dataset
-        if len(trials) >= 2:
-            break
+    for e_num, e in tqdm(enumerate(experiments)):
         print(f"Experiment {e_num}")
         t_df, l_df, w_df, tw_df = build_exp_dfs(
             e, e_num, train_steps, batch_size)
@@ -462,7 +456,6 @@ def correct_class_imbalance(wdf: pd.DataFrame) -> pd.DataFrame:
     # size. Can afford to do this because we have so many data points
     if "label" in wdf.columns:
         smallest_group_size = min(wdf["label"].value_counts())
-        print("Correct class imbalance smallest group size:", smallest_group_size)
         dfs = []
         for name, group in wdf.groupby("label"):
             dfs.append(group.sample(smallest_group_size, replace=False))

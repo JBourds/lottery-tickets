@@ -106,7 +106,7 @@ def make_meta_mask(
         print(
             f"Step {step} accuracy: {accuracy:.2%}, sparsities: {get_sparsities()}")
         # Extract features
-        X = make_x(architecture, model, masks)
+        X = make_x(architecture, dataset, model, masks, features)
         # Predict and replace existing mask
         mask_pred = meta.predict(X, batch_size=2**20)
         update_masks(mask_pred)
@@ -148,7 +148,6 @@ def make_x(
         if train_steps > 0 else None
 
     df = pd.merge(layer_df, weight_df, on=["l_num"], how="inner")
-    print("X columns:", df.columns)
     if trained_weight_df is not None:
         df = pd.merge(df, trained_weight_df, on=[
                       "l_num", "w_num"], how="inner")
