@@ -8,7 +8,7 @@ from typing import Callable, Generator, List, Optional, Tuple
 
 from src.harness import architecture as arch
 from src.harness import history as hist
-from src.metrics.synflow import *
+from src.metrics.synflow import compute_synflow_per_weight
 
 
 def build_layer_df(
@@ -37,19 +37,21 @@ def build_layer_df(
     for index, (iw, fw, m) in tqdm(enumerate(zip(initial, final, masks))):
         print(f"Layer {index}")
         mask = m.astype(bool)
-        iw_filtered = np.abs(iw[mask])
+        iw_filtered = iw[mask]
+        iw_mag = np.abs(iw_filtered)
         layer_features["l_num"].append(index)
         layer_features["l_size"].append(m.size)
         layer_features["l_rel_size"].append(m.size / total_size)
         layer_features["l_sparsity"].append(np.mean(m))
-        layer_features["li_mag_mean"].append(np.mean(iw_filtered))
-        layer_features["li_mag_std"].append(np.std(iw_filtered))
+        layer_features["li_mag_mean"].append(np.mean(iw_mag))
+        layer_features["li_mag_std"].append(np.std(iw_mag))
         layer_features["li_prop_positive"].append(
             np.mean(iw_filtered >= 0))
         if final:
-            fw_filtered = np.abs(fw[mask])
-            layer_features["lf_mag_mean"].append(np.mean(fw_filtered))
-            layer_features["lf_mag_std"].append(np.std(fw_filtered))
+            fw_filtered = fw[mask]
+            fw_mag = np.abs(fw_filtered)
+            layer_features["lf_mag_mean"].append(np.mean(fw_mag))
+            layer_features["lf_mag_std"].append(np.std(fw_mag))
             layer_features["lf_prop_positive"].append(
                 np.mean(fw_filtered >= 0))
     layer_ohe = arch.Architecture.ohe_layer_types(architecture)
@@ -67,12 +69,12 @@ def normalize(x: pd.Series) -> pd.Series:
 def get_train_one_step() -> Callable:
     @tf.function
     def train_one_step(
-        model: tf.keras.Model,
+        model: keras.Model,
         masks: List[tf.Tensor],
         inputs: tf.Tensor,
         labels: tf.Tensor,
-        optimizer: tf.keras.optimizers.Optimizer,
-        loss_fn: tf.keras.metrics.Metric,
+        optimizer: keras.optimizers.Optimizer,
+        loss_fn: keras.metrics.Metric,
     ) -> float:
         with tf.GradientTape() as tape:
             predictions = model(inputs, training=True)
@@ -98,8 +100,8 @@ def build_weight_df_with_training(
     previous_masks: List[npt.NDArray[np.float32]],
     n: int,
     batch_size: int,
-    optimizer: Optional[tf.keras.optimizers.Optimizer] = None,
-    loss_fn: Optional[tf.keras.losses.Loss] = None,
+    optimizer: Optional[keras.optimizers.Optimizer] = None,
+    loss_fn: Optional[keras.losses.Loss] = None,
     training: bool = True,
 ) -> pd.DataFrame:
     # Training
@@ -119,6 +121,7 @@ def build_weight_df_with_training(
     @tf.function
     def do_train_steps() -> List[float]:
         losses = []
+        # Warning: This could wrap around with too many training steps
         for i in tqdm(range(n)):
             start = i * batch_size
             stop = start + batch_size
@@ -129,15 +132,12 @@ def build_weight_df_with_training(
         return losses
 
     print("Training...")
-    losses = do_train_steps()
+    _ = do_train_steps()
     trained = model.get_weights()
 
     # Compute features
     weight_features_list = []
-    start_idx = 0
     print("Making weight features with training")
-    num_weights = sum(map(np.size, model.get_weights()))
-    shape = [1] + list(model.input_shape[1:])
     t_synflow = compute_synflow_per_weight(model)
     # Preserve shape for for loop below
     if not training:
@@ -156,14 +156,16 @@ def build_weight_df_with_training(
 
         # Don't preserve initial weight if a weight was masked
         t_flat = tw.flatten() * mask
-        t_sorted = np.sort(t_flat)
         t_sign = np.sign(t_flat)
         t_mag = np.abs(t_flat, dtype=np.float32)
+        t_sorted = np.sort(t_mag)
         t_perc = np.array(
-            [np.argmax(v < t_sorted) - num_zero for v in t_flat]) / num_nonzero
+            [np.argmax(v < t_sorted) - num_zero for v in t_mag]) / num_nonzero
         # Use std from initial weights assuming we did small amounts of training
+        # and they are within the same general region
         t_norm_std = (
-            t_flat - layer_df["li_mag_mean"].iloc[layer]) / layer_df["li_mag_std"].iloc[layer]
+            t_mag - layer_df["li_mag_mean"].iloc[layer]
+        ) / layer_df["li_mag_std"].iloc[layer]
 
         # Create a dictionary for weight features for this layer
         layer_weight_features = {
@@ -211,12 +213,9 @@ def build_weight_df(
 ) -> pd.DataFrame:
     # Prepare weight features: No need for large weight_features array, use a list of dicts
     weight_features_list = []
-    start_idx = 0
 
     print("Making weight features")
     model = architecture.get_model_constructor()()
-    num_weights = sum(map(np.size, model.get_weights()))
-    shape = [1] + list(model.input_shape[1:])
 
     # Computed across the whole model
     model.set_weights([w * m for w, m in zip(initial, masks)])
@@ -242,22 +241,22 @@ def build_weight_df(
 
         if final:
             f_flat = fw.flatten()
-            f_sorted = np.sort(f_flat)
             f_sign = np.sign(f_flat)
             f_mag = np.abs(f_flat, dtype=np.float32)
+            f_sorted = np.sort(f_mag)
             f_perc = np.array(
-                [np.argmax(v < f_sorted) - num_zero for v in f_flat]) / num_nonzero
+                [np.argmax(v < f_sorted) - num_zero for v in f_mag]) / num_nonzero
             f_norm_std = (
-                f_flat - layer_df["lf_mag_mean"].iloc[layer]) / layer_df["lf_mag_std"].iloc[layer]
+                f_mag - layer_df["lf_mag_mean"].iloc[layer]) / layer_df["lf_mag_std"].iloc[layer]
 
         i_flat = iw.flatten()
-        i_sorted = np.sort(i_flat)
         i_sign = np.sign(i_flat)
         i_mag = np.abs(i_flat, dtype=np.float32)
+        i_sorted = np.sort(i_mag)
         i_perc = np.array(
-            [np.argmax(v < i_sorted) - num_zero for v in i_flat]) / num_nonzero
+            [np.argmax(v < i_sorted) - num_zero for v in i_mag]) / num_nonzero
         i_norm_std = (
-            i_flat - layer_df["li_mag_mean"].iloc[layer]) / layer_df["li_mag_std"].iloc[layer]
+            i_mag - layer_df["li_mag_mean"].iloc[layer]) / layer_df["li_mag_std"].iloc[layer]
 
         # Create a dictionary for weight features for this layer
         layer_weight_features = {
@@ -457,7 +456,7 @@ def correct_class_imbalance(wdf: pd.DataFrame) -> pd.DataFrame:
     if "label" in wdf.columns:
         smallest_group_size = min(wdf["label"].value_counts())
         dfs = []
-        for name, group in wdf.groupby("label"):
+        for _, group in wdf.groupby("label"):
             dfs.append(group.sample(smallest_group_size, replace=False))
         return pd.concat(dfs)
     else:
@@ -466,9 +465,9 @@ def correct_class_imbalance(wdf: pd.DataFrame) -> pd.DataFrame:
 
 def featurize_db(
     tlw_df: pd.DataFrame,
-    features: List[str] = [],
+    features: List[str] = None,
 ) -> Tuple[npt.NDArray, npt.NDArray]:
-    if not features:
+    if features is None:
         raise ValueError("No features provided.")
     Y, X = tlw_df["label"], tlw_df[features]
     return X.to_numpy().astype(np.float32), Y.to_numpy()
