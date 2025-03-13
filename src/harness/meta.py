@@ -49,10 +49,11 @@ def train_meta(
 
 def make_meta_mask(
     meta: keras.Model,
-    make_x: Callable[[str, str, keras.Model, List[npt.NDArray]], npt.NDArray],
+    make_x: Callable,
     architecture: str,
     dataset: str,
     steps: int,
+    features: List[str],
 ) -> Tuple[List[npt.NDArray], List[float]]:
     """
     Function which simulates training but only relies on the predicted masks
@@ -65,6 +66,7 @@ def make_meta_mask(
     @param architecture: String for the architecture being used.
     @param dataset: String for the dataset being used.
     @param steps: Number of masking iterations.
+    @param features: List of feature names to use.
 
     @returns: Final masks and accuracies.
     """
@@ -77,26 +79,33 @@ def make_meta_mask(
     masks = [np.ones_like(w) for w in model.get_weights()]
     layer_names = list(map(lambda x: x.lower(), a.layer_names))
 
-    def get_sparsities() -> List[float]:
+    def get_sparsities(masks: List[npt.NDArray]) -> List[float]:
         return [np.count_nonzero(m) / m.size for m in masks]
 
-    def update_masks(mask_pred: npt.NDArray):
+    def update_masks(mask_pred: npt.NDArray) -> List[npt.NDArray]:
         start = 0
         end = 0
         nonlocal masks
+        new_masks = []
         for layer, (mask, name) in enumerate(zip(masks, layer_names), start=1):
             end += mask.size
-            # And with existing mask to not allow previously masked
-            # weights to become unmasked by the xor
-            to_prune = mask_pred[start:end] & mask
+            to_prune = mask_pred[start:end].ravel()
+            print(np.unique(to_prune, return_counts=True))
+            flat_mask = mask.ravel()
+            # Don't allow previously masked weights to become unmasked later
+            to_prune *= flat_mask
             # Output & convolutional layers, prune at half the rate
             if "output" in name or "conv" in name:
                 to_prune *= np.random.randint(low=0,
                                               high=2, size=to_prune.shape)
-            # This will flip masks from 1 to 0 if the model output a 1
-            # for the label (prune the weight)
-            mask ^= to_prune
+            # Because to_prune can only have 1s where mask is a 1, a subtraction
+            # works here
+            print(f"Old mask sparsity: {np.count_nonzero(mask) / mask.size}")
+            mask -= np.reshape(to_prune, mask.shape)
+            print(f"New mask sparsity: {np.count_nonzero(mask) / mask.size}")
+            new_masks.append(mask)
             start = end
+        return new_masks
 
     accuracies = []
     for step in range(steps):
@@ -104,12 +113,12 @@ def make_meta_mask(
         _, accuracy = model.evaluate(X_test, Y_test)
         accuracies.append(accuracy)
         print(
-            f"Step {step} accuracy: {accuracy:.2%}, sparsities: {get_sparsities()}")
+            f"Step {step} accuracy: {accuracy:.2%}, sparsities: {get_sparsities(masks)}")
         # Extract features
         X = make_x(architecture, dataset, model, masks, features)
-        # Predict and replace existing mask
-        mask_pred = meta.predict(X, batch_size=2**20)
-        update_masks(mask_pred)
+        # Predict and replace existing mask (round to 1 or 0)
+        mask_pred = np.round(meta.predict(X, batch_size=2**20))
+        masks = update_masks(mask_pred)
         model.set_weights([w * m for w, m in zip(original_weights, masks)])
 
     return masks, accuracies
@@ -144,8 +153,7 @@ def make_x(
         layer_df, architecture, model.get_weights(), [], masks, [], training=False)
     trained_weight_df = f.build_weight_df_with_training(
         layer_df, architecture, model.get_weights(), masks,
-        [], train_steps, batch_size, training=False) \
-        if train_steps > 0 else None
+        [], train_steps, batch_size, training=False) if train_steps > 0 else None
 
     df = pd.merge(layer_df, weight_df, on=["l_num"], how="inner")
     if trained_weight_df is not None:
