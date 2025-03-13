@@ -26,10 +26,14 @@ def build_layer_df(
         "li_mag_std": [],
         "li_prop_positive": [],
     }
-    if final:
+    include_final = len(final) > 0
+    if include_final:
         layer_features["lf_mag_mean"] = []
         layer_features["lf_mag_std"] = []
         layer_features["lf_prop_positive"] = []
+    # Preserve shape of the list
+    else:
+        final = initial
 
     # Loop over layers, vectorize calculations where possible
     print("Creating layer features")
@@ -47,7 +51,7 @@ def build_layer_df(
         layer_features["li_mag_std"].append(np.std(iw_mag))
         layer_features["li_prop_positive"].append(
             np.mean(iw_filtered >= 0))
-        if final:
+        if include_final:
             fw_filtered = fw[mask]
             fw_mag = np.abs(fw_filtered)
             layer_features["lf_mag_mean"].append(np.mean(fw_mag))
@@ -220,12 +224,14 @@ def build_weight_df(
     # Computed across the whole model
     model.set_weights([w * m for w, m in zip(initial, masks)])
     i_synflow = compute_synflow_per_weight(model)
-    if final:
+    include_final = len(final) > 0
+    if include_final:
         model.set_weights([w * m for w, m in zip(final, masks)])
         f_synflow = compute_synflow_per_weight(model)
 
     # Just reuse the shape so the for loop below iterates fine
     if not training:
+        final = initial
         previous_masks = masks
 
     # Duplicate features for initial vs. final weights
@@ -239,7 +245,7 @@ def build_weight_df(
         layer_num = np.full(num_params, layer, dtype=np.int8)
         weight_nums = np.arange(num_params, dtype=np.int32)
 
-        if final:
+        if include_final:
             f_flat = fw.flatten()
             f_sign = np.sign(f_flat)
             f_mag = np.abs(f_flat, dtype=np.float32)
@@ -269,7 +275,7 @@ def build_weight_df(
             "wi_std": i_norm_std.astype(np.float32),
             "wi_synflow": i_synflow[layer].numpy().flatten(),
         }
-        if final:
+        if include_final:
             layer_weight_features["wf_sign"] = f_sign
             layer_weight_features["wf_val"] = f_flat
             layer_weight_features["wf_mag"] = f_mag
