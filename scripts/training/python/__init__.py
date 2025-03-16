@@ -25,6 +25,7 @@ from src.harness import model as mod
 from src.harness import pruning, rewind
 from src.harness import seeding
 
+
 def get_experiment_parameter_constructor(
     model: str,
     hyperparameters: Hyperparameters | None,
@@ -34,6 +35,7 @@ def get_experiment_parameter_constructor(
     seeding_rule: str | None,
     target_sparsity: float,
     sparsity_strategy: str,
+    initializer: str,
     global_pruning: bool = False,
 ) -> Callable[[int, str], Dict[str, Any]]:
     """
@@ -47,21 +49,21 @@ def get_experiment_parameter_constructor(
         Inner function which inherits all the context it was created in but
         gets called with a unique seed and directory each time.
         """
-        architecture = Architecture(model, dataset)
+        architecture = Architecture(model, dataset, initializer)
         make_model = architecture.get_model_constructor()
 
         return {
-            'random_seed': seed,
-            'create_model': make_model,
-            'dataset': architecture.dataset,
-            'target_sparsity': target_sparsity,
-            'sparsity_strategy': get_sparsity_strategy(sparsity_strategy),
-            'rewind_rule': get_rewind_rule(rewind_rule, seed=seed, directory=directory),
-            'pruning_rule': get_pruning_rule(pruning_rule),
-            'seeding_rule': seeding.get_seeding_rule(seeding_rule),
-            'hyperparameters': hyperparameters,
-            'global_pruning': global_pruning,
-            'experiment_directory': directory,
+            "random_seed": seed,
+            "create_model": make_model,
+            "dataset": architecture.dataset,
+            "target_sparsity": target_sparsity,
+            "sparsity_strategy": get_sparsity_strategy(sparsity_strategy),
+            "rewind_rule": get_rewind_rule(rewind_rule, seed=seed, directory=directory),
+            "pruning_rule": get_pruning_rule(pruning_rule),
+            "seeding_rule": seeding.get_seeding_rule(seeding_rule),
+            "hyperparameters": hyperparameters,
+            "global_pruning": global_pruning,
+            "experiment_directory": directory,
         }
 
     return inner_function
@@ -84,34 +86,42 @@ def get_log_level(log_level: int) -> int:
         case 5:
             return logging.CRITICAL
         case _:
-            raise ValueError("Unknown log level '{log_level}'.")
+            raise ValueError(f"Unknown log level \"{log_level}\".")
 
 
 def get_rewind_rule(rewind_rule: str, *args, **kwargs) -> Callable:
     match rewind_rule:
-        case 'oi':
+        case "oi":
             return rewind.get_rewind_to_original_init_for(*args, **kwargs)
+        # Signed constant
+        case "sc":
+            return rewind.rewind_to_signed_constant
+        case "no":
+            return rewind.no_rewind
         case _:
             raise ValueError(
-                f"'{rewind_rule}' is not a valid rewind rule option.")
+                f"\"{rewind_rule}\" is not a valid rewind rule option.")
 
 
 def get_sparsity_strategy(sparsity_strategy: str) -> Callable[[str], float]:
     match sparsity_strategy.lower():
-        case 'default':
+        case "default":
             return pruning.default_sparsity_strategy
+        case "slow":
+            return pruning.slow_pruning
+        case "fast":
+            return pruning.fast_pruning
         case _:
             raise ValueError(
-                f"'{sparsity_strategy}' is not a valid sparsity strategy option.")
+                f"\"{sparsity_strategy}\" is not a valid sparsity strategy option.")
 
 
 def get_pruning_rule(pruning_rule: str) -> Callable:
     match pruning_rule:
-        case 'lm':
+        case "lm":
             return pruning.low_magnitude_pruning
-        case 'hm':
+        case "hm":
             return pruning.high_magnitude_pruning
         case _:
             raise ValueError(
-                f"'{pruning_rule}' is not a valid pruning rule option.")
-
+                f"\"{pruning_rule}\" is not a valid pruning rule option.")

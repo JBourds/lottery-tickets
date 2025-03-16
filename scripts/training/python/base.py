@@ -7,28 +7,26 @@ Author: Jordan Bourdeau
 Date Created: 4/30/24
 """
 
+from src.harness.architecture import Hyperparameters
+from src.harness import rewind
+from src.harness import pruning
+from src.harness import paths
+from src.harness import model as mod
+from src.harness import experiment
+from src.harness import dataset as ds
+from src.harness import constants as C
+from scripts.training.python import get_experiment_parameter_constructor, get_log_level
+import numpy as np
+from typing import List
+import sys
+import os
 import argparse
 import datetime
 import functools
 import logging
 import multiprocess as mp
 mp.set_start_method('spawn', force=True)
-import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-import sys
-from typing import List
-
-import numpy as np
-
-from scripts.training.python import get_experiment_parameter_constructor, get_log_level
-from src.harness import constants as C
-from src.harness import dataset as ds
-from src.harness import experiment
-from src.harness import model as mod
-from src.harness import paths
-from src.harness import pruning
-from src.harness import rewind
-from src.harness.architecture import Hyperparameters
 
 
 def run_experiments(
@@ -42,7 +40,8 @@ def run_experiments(
     dataset: str = 'mnist',
     rewind_rule: str = 'oi',
     pruning_rule: str = 'lm',
-    seeding_rule: str | None = None,
+    seeding_rule: str = None,
+    initializer: str = "glorot_uniform",
     log_level: int = logging.INFO,
     global_pruning: bool = False
 ) -> None:
@@ -71,8 +70,8 @@ def run_experiments(
         Rule for rewinding weights. Defaults to 'oi' (original initialization).
     pruning_rule : str, optional
         Rule for pruning. Defaults to 'lm' (low magnitude pruning).
+    initializer : str, optional
     seeding_rule : str, optional
-        Rule for how weights get seeded.
     log_level : int, optional
         Logging level. Defaults to 2 (Info).
     global_pruning : bool, optional
@@ -85,6 +84,7 @@ def run_experiments(
         rewind_rule=rewind_rule,
         pruning_rule=pruning_rule,
         seeding_rule=seeding_rule,
+        initializer=initializer,
         target_sparsity=target_sparsity,
         sparsity_strategy=sparsity_strategy,
         global_pruning=global_pruning
@@ -99,6 +99,7 @@ def run_experiments(
         seed) for seed in random_seeds]
 
     for kwargs in experiment_kwargs:
-        p = mp.Process(target=experiment.run_iterative_pruning_experiment, kwargs=kwargs)
+        p = mp.Process(
+            target=experiment.run_iterative_pruning_experiment, kwargs=kwargs)
         p.start()
-        p.join()  
+        p.join()

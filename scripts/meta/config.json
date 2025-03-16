@@ -1,16 +1,16 @@
 {
   "dggpu": {
-    "env": "conda activate lt",
+    "env": "conda activate lt2",
     "resources": {
-      "time": "5:00:00",
+      "time": "04:00:00",
       "partition": "dggpu",
       "gres": "gpu:1",
       "cpus-per-task": 1,
-      "mem": "8GB"
+      "mem": "32G"
     }
   },
   "bdgpu": {
-    "env": "conda activate lt",
+    "env": "conda activate lt2",
     "resources": {
       "time": "08:00:00",
       "partition": "bdgpu",
@@ -20,7 +20,7 @@
     }
   },
   "dg-multi": {
-    "env": "conda activate lt",
+    "env": "conda activate lt2",
     "resources": {
       "time": "2-00:00:00",
       "partition": "dggpu",
@@ -29,22 +29,31 @@
       "mem": "12G"
     }
   },
-  "blue": {
-    "env": "conda activate lt",
+  "general": {
+    "env": "",
     "resources": {
-      "time": "2:00:00",
-      "partition": "bluemoon",
+      "time": "04:00:00",
+      "partition": "general",
       "cpus-per-task": 1,
-      "mem": "16G"
+      "mem": "32G"
     }
   },
   "short": {
-    "env": "conda activate lt",
+    "env": "",
     "resources": {
       "time": "1:00:00",
       "partition": "short",
       "cpus-per-task": 1,
-      "mem": "8G"
+      "mem": "32G"
+    }
+  },
+  "blue": {
+    "env": "conda activate lt2",
+    "resources": {
+      "time": "8:00:00",
+      "partition": "bluemoon",
+      "cpus-per-task": 1,
+      "mem": "32G"
     }
   }
 }

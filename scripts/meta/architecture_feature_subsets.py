@@ -13,6 +13,7 @@ from tensorflow import keras
 from typing import Callable, Dict, List, Tuple
 import os
 import sys
+import argparse
 
 # Get root in path
 root = os.path.dirname(os.path.dirname(
@@ -62,6 +63,7 @@ def plot_feature_arch_subsets(variants: Dict[Tuple[int, int], Dict[str, Dict]]):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Feature importance testing.")
     includes = ["l_sparsity", "sparsity", "l_rel_size"]
     feature_banks = [
         ["norm_wt10_mag", "norm_wt10_synflow", "wt10_sign"],

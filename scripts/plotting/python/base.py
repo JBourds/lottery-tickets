@@ -28,7 +28,6 @@ from src.plotting import layerwise_plots as lp
 from src.plotting import seeding as sp
 
 
-    
 def make_plots(
     root: str,
     models_dir: str = C.MODELS_DIRECTORY,
@@ -53,9 +52,10 @@ def make_plots(
 
     @returns (None): Saves plots to specified directory.
     """
-    
+
     # Basic aggregations
-    experiments = history.get_experiments(root, models_dir, eprefix, tprefix, tdata)
+    experiments = history.get_experiments(
+        root, models_dir, eprefix, tprefix, tdata)
     trial_aggregations = {
         'pruning_step': t_agg.get_pruning_step,
         'loss_before_training': t_agg.get_loss_before_training,
@@ -68,7 +68,7 @@ def make_plots(
 
         # Compare the masked/unmasked initial weights against each other to see if there is a trend from the initialization
         # in addition to what the values do once trained
-        
+
         'final_positive_percent': t_agg.get_global_percent_positive_weights,
         'initial_positive_percent': functools.partial(t_agg.get_global_percent_positive_weights, use_initial_weights=True),
         'masked_initial_positive_percent': functools.partial(t_agg.get_global_percent_positive_weights, use_initial_weights=True, use_masked_weights=True),
@@ -76,14 +76,14 @@ def make_plots(
         'final_avg_mag': t_agg.get_global_average_magnitude,
         'initial_avg_mag': functools.partial(t_agg.get_global_average_magnitude, use_initial_weights=True),
         'masked_initial_avg_mag': functools.partial(t_agg.get_global_average_magnitude, use_initial_weights=True, use_masked_weights=True),
-        
+
         # Layerwise metrics
         'layer_pos_percent': t_agg.get_layerwise_percent_positive_weights,
         'layer_avg_mag': t_agg.get_layerwise_average_magnitude,
     }
     experiment_aggregations = {
         'mean': e_agg.mean_over_experiments,
-        'std': e_agg.std_over_experiments, 
+        'std': e_agg.std_over_experiments,
         '0th': e_agg.nth_experiment,
         'num_samples': e_agg.num_samples,
         'values': lambda x: x,
@@ -91,49 +91,55 @@ def make_plots(
     results = {}
     t_functions = [f for f in trial_aggregations.values()]
     e_functions = [f for f in experiment_aggregations.values()]
-    data = e_agg.aggregate_across_experiments(experiments, t_functions, e_functions)
+    data = e_agg.aggregate_across_experiments(
+        experiments, t_functions, e_functions)
     for e_name, e_data in zip(experiment_aggregations.keys(), data):
         results[e_name] = {}
         for t_name, t_data in zip(trial_aggregations.keys(), e_data):
-            results[e_name][t_name] = t_data 
+            results[e_name][t_name] = t_data
 
     plot_params = [
-        {'name': 'early_stopping', 'x': ('0th', 'sparsity'), 'func': gp.plot_early_stopping},
-        {'name': 'final_positive_percent', 'x': ('0th', 'sparsity'), 'func': gp.plot_sign_proportion},
-        {'name': 'initial_positive_percent', 'x': ('0th', 'sparsity'), 'func': gp.plot_sign_proportion},
-        {'name': 'final_avg_mag', 'x': ('0th', 'sparsity'), 'func': gp.plot_magnitude},
-        {'name': 'initial_avg_mag', 'x': ('0th', 'sparsity'), 'func': gp.plot_magnitude},
+        {'name': 'early_stopping', 'x': (
+            '0th', 'sparsity'), 'func': gp.plot_early_stopping},
+        {'name': 'final_positive_percent', 'x': (
+            '0th', 'sparsity'), 'func': gp.plot_sign_proportion},
+        {'name': 'initial_positive_percent', 'x': (
+            '0th', 'sparsity'), 'func': gp.plot_sign_proportion},
+        {'name': 'final_avg_mag', 'x': (
+            '0th', 'sparsity'), 'func': gp.plot_magnitude},
+        {'name': 'initial_avg_mag', 'x': (
+            '0th', 'sparsity'), 'func': gp.plot_magnitude},
         {'name': 'best_val_acc', 'x': ('0th', 'sparsity'), 'func': gp.plot_accuracy,
             'kwargs': {
                 'title': 'Best Validation Accuracy at Early Stopping',
-            },
+        },
         },
         {'name': 'loss_before_training', 'x': ('0th', 'sparsity'), 'func': gp.plot_loss,
             'kwargs': {
                 'title': 'Loss Before Training',
-            },
+        },
         },
         {'name': 'best_val_loss', 'x': ('0th', 'sparsity'), 'func': gp.plot_loss,
             'kwargs': {
                 'title': 'Best Validation Loss',
-            },
+        },
         },
         {'name': 'acc_before_training', 'x': ('0th', 'sparsity'), 'func': gp.plot_accuracy,
             'kwargs': {
                 'title': 'Accuracy From Masked Weights Before Training',
-            },
         },
-        {'name': 'layer_pos_percent', 'x': ('0th', 'sparsity'), 'func': lp.plot_layerwise_positive_sign_proportion, 
+        },
+        {'name': 'layer_pos_percent', 'x': ('0th', 'sparsity'), 'func': lp.plot_layerwise_positive_sign_proportion,
             'kwargs': {
                 'layer_names': results['0th']['layer_names'][0]
-            },
         },
-        {'name': 'layer_avg_mag', 'x': ('0th', 'sparsity'), 'func': lp.plot_layerwise_average_magnitude, 
-             'kwargs': {
-                'layer_names': results['0th']['layer_names'][0]
-             }
         },
-    ] 
+        {'name': 'layer_avg_mag', 'x': ('0th', 'sparsity'), 'func': lp.plot_layerwise_average_magnitude,
+         'kwargs': {
+            'layer_names': results['0th']['layer_names'][0]
+        }
+        },
+    ]
 
     for params in plot_params:
         save_location = os.path.join(root, plots_dir, params['name'])
@@ -145,18 +151,18 @@ def make_plots(
         y_std = results['std'][params['name']]
         num_samples = results['num_samples'][params['name']]
         args = [x, num_samples, y_mean, y_std]
-        
+
         # Either we are plotting one line, or comparing masked vs. unmasked (or plotting layerwise)
         masked_key = 'masked_' + params['name']
         if trial_aggregations.get(masked_key) is not None:
-            masked_mean = results['mean'][masked_key] 
-            masked_std = results['std'][masked_key] 
+            masked_mean = results['mean'][masked_key]
+            masked_std = results['std'][masked_key]
             masked_samples = results['num_samples'][masked_key]
             args += [masked_mean, masked_std]
         kwargs = params.get('kwargs', {})
         kwargs['save_location'] = save_location
         params['func'](*args, **kwargs)
-         
+
     # Could parse this from path names too if it was consistent
     if seeding_rule:
         callbacks = [
@@ -190,11 +196,12 @@ def make_plots(
         ename = os.path.basename(os.path.normpath(root))
         model_name = ename.split("_")[0]
         save_location = os.path.join(
-            root, 
+            root,
             plots_dir,
             "seeded_weights_sparsity.png",
         )
-        sp.plot_seeded_vs_overall_sparsity(prop_target_remaining_2d, sparsity_2d, model_name, save_location)
+        sp.plot_seeded_vs_overall_sparsity(
+            prop_target_remaining_2d, sparsity_2d, model_name, save_location)
         save_location = os.path.join(
             root,
             plots_dir,
@@ -203,6 +210,5 @@ def make_plots(
         sparsities = sparsity_2d[0]
         with open("sparsities.txt", "w") as outfile:
             outfile.write(str(sparsities))
-        sp.plot_seeded_vs_overall_positive(prop_target_positive_2d, prop_nontarget_positive_2d, sparsities, model_name, save_location)
-            
-    
+        sp.plot_seeded_vs_overall_positive(
+            prop_target_positive_2d, prop_nontarget_positive_2d, sparsities, model_name, save_location)
