@@ -24,12 +24,13 @@ from tensorflow import keras
 from src.harness import model as mod
 from src.harness import utils
 
+
 def rewind_model_weights(
-    model: keras.Model, 
-    mask_model: keras.Model, 
+    model: keras.Model,
+    mask_model: keras.Model,
     rewind_rule: callable,
     *rewind_args,
-    ):
+):
     """
     Function which rewinds a model's weights according to a specified rewind rule and the 
     masks in the `mask_model`.
@@ -42,59 +43,37 @@ def rewind_model_weights(
         *rewind_args: Arguments to pass into the rewind rule.
     """
     rewind_rule(model, *rewind_args)
-    masked_weights = [weights * masks for weights, masks in zip(model.get_weights(), mask_model.get_weights())]
+    masked_weights = [weights * masks for weights,
+                      masks in zip(model.get_weights(), mask_model.get_weights())]
     model.set_weights(masked_weights)
-    
+
+
 def rewind_to_random_init(
     model: keras.Model,
-    seed: int, 
-    initializer: tf.keras.initializers.Initializer, 
-    ):
-    """
-    Function which rewinds a model's weight initializations using a specified random seed and initializer.
-
-    Args:
-        seed (int): Random seed to use when reinitializing weights.
-        initializer (tf.keras.initializers.Initializer): Initializer function to use which takes in a shape input.
-        model (keras.Model): Keras model to initialize weights for.
-    """
+    seed: int,
+    initializer: tf.keras.initializers.Initializer,
+):
     utils.set_seed(seed)
     for layer in model.layers:
         if layer.trainable:
             weights_shape = [w.shape for w in layer.get_weights()]
             new_weights = [initializer(shape) for shape in weights_shape]
             layer.set_weights(new_weights)
-            
-def no_rewind(*args):
-    """
-    Rewind rule which does not alter the model weights in any way.
-    Used to continue training on masked model.
 
-    Args:
-        *args: Arguments which get ignored.
-    """
+
+def no_rewind(*args):
     pass
 
+
+def rewind_to_signed_constant(model: keras.Model):
+    weights = model.get_weights()
+    model.set_weights([np.sign(w) for w in weights])
+
+
 def get_rewind_to_original_init_for(seed: int, directory: str = './') -> callable:
-    """
-    Function which returns a rewind rule that returns to original initialization
-    with a directory instantiated in it.
-
-    Args:
-        directory (str, optional): Directory to look for weights to rewind. Defaults to './'.
-
-    Returns:
-        callable: Rewind rule for a specific directory.
-    """
-
     def rewind_to_original_init(model: keras.Model):
-        """
-        Function which rewinds a model to its initial weights.
-
-        Args:
-            model (keras.Model): Keras model to rewind weights for.
-        """
-        original_model = mod.load_model(seed, initial=True, directory=directory)
+        original_model = mod.load_model(
+            seed, initial=True, directory=directory)
         model.set_weights(original_model.get_weights())
-        
+
     return rewind_to_original_init

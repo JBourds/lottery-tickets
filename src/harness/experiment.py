@@ -38,7 +38,7 @@ def run_iterative_pruning_experiment(
     sparsity_strategy: pruning.SparsityStrategy,
     pruning_rule: Callable,
     rewind_rule: Callable,
-    seeding_rule: Callable | None,
+    seeding_rule: Callable,
     global_pruning: bool = False,
     experiment_directory: str = './',
     log_level: int = logging.INFO,
@@ -58,6 +58,7 @@ def run_iterative_pruning_experiment(
             to the appropriate level to sparsify them by.
         pruning_rule (callable, optional): Function used to prune model.
         rewind_rule (callable, optional): Function used for rewinding model weights.
+        initializer (str): Initialization to use for NN layers.
         seeding_rule (callable): Optional function used to seed weights at initialization.
         global_pruning (bool, optional): Boolean flag for whether pruning is done globally
             or layerwise. Defaults to False.
@@ -147,5 +148,3 @@ def run_iterative_pruning_experiment(
         rewind.rewind_model_weights(model, mask_model, rewind_rule)
 
         pruning_step += 1
-
-    

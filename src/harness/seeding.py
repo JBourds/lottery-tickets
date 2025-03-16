@@ -23,16 +23,16 @@ WeightsTarget = Callable[
     [
         np.ndarray,
         float,
-    ], 
+    ],
     np.ndarray[int]
 ]
 InitStrategy = Callable[
     [
         np.ndarray[np.float64],
-        np.ndarray[bool], 
+        np.ndarray[bool],
         WeightsTarget,
         Callable[[Any], None],
-    ], 
+    ],
     None
 ]
 WeightsTransform = Callable[
@@ -42,6 +42,7 @@ WeightsTransform = Callable[
     ],
     None
 ]
+
 
 class Target(Enum):
     HIGH = 0
@@ -59,6 +60,7 @@ class Target(Enum):
                 return Target.RANDOM
             case _:
                 raise ValueError(f'Unsuported target: {target}')
+
 
 class Sign(Enum):
     POSITIVE = 0
@@ -90,12 +92,16 @@ class Sign(Enum):
                 raise ValueError("Invalid symbol for sign")
 
 # Usage: <lm/hm/rand><% weights to seed>,<sign target>,<scale/set><value>
+
+
 def get_seeding_rule(seeding_rule: str | None) -> Callable[[List[np.ndarray[float]]], None] | None:
     if seeding_rule is None:
         return None
-    match = re.match('^([a-zA-Z]+)(\d+),([npsfb]{1,2}),([a-zA-z]+)([-]?\d+\.*\d*)$', seeding_rule)
+    match = re.match(
+        '^([a-zA-Z]+)(\d+),([npsfb]{1,2}),([a-zA-z]+)([-]?\d+\.*\d*)$', seeding_rule)
     if match is None:
-        raise ValueError(f'Invalid seeding rule string: {seeding_rule}. Check usage.')
+        raise ValueError(
+            f'Invalid seeding rule string: {seeding_rule}. Check usage.')
     target, proportion, sign, transform, val = match.groups()
     proportion = float(str("." + proportion))
     if proportion > 1:
@@ -110,54 +116,61 @@ def get_seeding_rule(seeding_rule: str | None) -> Callable[[List[np.ndarray[floa
             transform = partial(set_to_constant, constant=val, sign=sign)
         case _:
             raise ValueError(f'Unsuported transform: {transform}')
-    
+
     # This currently sets the same param for every layer
     return partial(seed_magnitude, targets=target, proportions=proportion, transforms=transform)
 
 # Usage: <lm/hm/rand>-<% weights to seed>
 # Will ignore the transformation parameters from the training script
+
+
 def get_weight_targeting(seeding_rule: str | None) -> WeightsTarget | None:
     if seeding_rule is None:
         return None
     match = re.match('^([a-zA-Z]+)(\d+)', seeding_rule)
     if match is None:
-        raise ValueError(f'Invalid seeding rule string: {seeding_rule}. Check usage.')
+        raise ValueError(
+            f'Invalid seeding rule string: {seeding_rule}. Check usage.')
     target, proportion = match.groups()
     proportion = float(str("." + proportion))
     if proportion > 1:
         raise ValueError("Cannot have > 100% targeted.")
     target = Target.from_symbol(target)
-    
+
     # This currently sets the same param for every layer
     return partial(
         target_magnitude,
         proportion=proportion,
         target=target,
     )
-    
+
+
 def init_seed(
     model: keras.Model,
     layer_proportions: List[float],
     init_strategies: List[InitStrategy],
 ) -> List[np.ndarray[bool]]:
     if len(layer_proportions) != len(init_strategies):
-        raise ValueError("Lists of proportions and strategies must be the same length")
+        raise ValueError(
+            "Lists of proportions and strategies must be the same length")
     elif len(model.get_weights()) != len(layer_proportions):
-        raise ValueError("Length of lists passed in must match number of model layers with weights")
+        raise ValueError(
+            "Length of lists passed in must match number of model layers with weights")
     elif any(map(lambda p: p > 1 or p < 0, layer_proportions)):
         raise ValueError("All proportions must be between 0 and 1")
-    
+
     new_weights = model.get_weights()
     mask = [
-        init(w, p) for init, w, p 
+        init(w, p) for init, w, p
         in zip(init_strategies, new_weights, layer_proportions)
     ]
     model.set_weights(new_weights)
     return mask
 
+
 def init_callback(
-    model: keras.Model, 
-    mask: List[np.ndarray[bool]], 
+    model: keras.Model,
+    mask: List[np.ndarray[bool]],
     metrics: List[Callable[[Tuple[str, np.ndarray[bool]]], Any]],
 ) -> Dict:
     return {
@@ -166,6 +179,8 @@ def init_callback(
     }
 
 # Target rules for selecting weights
+
+
 def target_magnitude(
     weights: np.ndarray[float],
     proportion: float,
@@ -189,8 +204,8 @@ def target_magnitude(
         np.random.shuffle(mask)
         mag_weights = np.reshape(mask, abs_weights.shape)
     return mag_weights
-    
-    
+
+
 def scale_magnitude(
     weights: np.ndarray[float],
     mask: np.ndarray[bool],
@@ -216,7 +231,8 @@ def scale_magnitude(
             weights[mask & (weights < 0)] *= factor
         case _:
             raise ValueError(f"Invalid sign: {sign}")
-    
+
+
 def set_to_constant(
     weights: np.ndarray[float],
     mask: np.ndarray[bool],
@@ -242,8 +258,10 @@ def set_to_constant(
             weights[mask & (weights < 0)] = constant
         case _:
             raise ValueError(f"Invalid sign: {sign}")
-    
+
 # Init strategies to modify weights in place
+
+
 def seed_magnitude(
     weights: List[np.ndarray[float]],
     proportions: List[float] | float,
@@ -256,9 +274,8 @@ def seed_magnitude(
         targets = [targets] * len(weights)
     if type(transforms) != list:
         transforms = [transforms] * len(weights)
-        
+
     for weights, prop, target, transform in zip(weights, proportions, targets, transforms):
         mask = target_magnitude(weights, prop, target)
         if transform is not None:
             transform(weights, mask)
-     

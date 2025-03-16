@@ -23,7 +23,7 @@ from tensorflow import keras
 from src.harness import constants as C
 from src.harness import dataset as ds
 
-Adam = tf.keras.optimizers.legacy.Adam if platform == 'darwin' else tf.keras.optimizers.Adam
+Adam = tf.keras.optimizers.legacy.Adam if platform == "darwin" else tf.keras.optimizers.Adam
 
 
 @dataclass
@@ -50,77 +50,77 @@ class Architectures(Enum):
     Class representing the supported architectures, along with the functions
     to use in building and training them.
     """
-    LENET = 'lenet'
-    CONV_2 = 'conv2'
-    CONV_4 = 'conv4'
-    CONV_6 = 'conv6'
+    LENET = "lenet"
+    CONV_2 = "conv2"
+    CONV_4 = "conv4"
+    CONV_6 = "conv6"
 
     # --------------- Hyperparameters ---------------
     def lenet_300_100_hyperparameters(**kwargs) -> Hyperparameters:
         return Hyperparameters(
-            patience=kwargs.get('patience', 5),
-            minimum_delta=kwargs.get('minimum_delta', 0.001),
-            learning_rate=kwargs.get('learning_rate', 1.2e-3),
-            optimizer=kwargs.get('optimizer', Adam),
+            patience=kwargs.get("patience", 5),
+            minimum_delta=kwargs.get("minimum_delta", 0.001),
+            learning_rate=kwargs.get("learning_rate", 1.2e-3),
+            optimizer=kwargs.get("optimizer", Adam),
             loss_function=kwargs.get(
-                'loss', tf.keras.losses.CategoricalCrossentropy),
+                "loss", tf.keras.losses.CategoricalCrossentropy),
             accuracy_metric=kwargs.get(
-                'accuracy', tf.keras.metrics.CategoricalAccuracy),
-            epochs=kwargs.get('epochs', 60),
-            batch_size=kwargs.get('batch_size', 60),
-            eval_freq=kwargs.get('eval_freq', 100),
-            early_stopping=kwargs.get('early_stopping', False),
+                "accuracy", tf.keras.metrics.CategoricalAccuracy),
+            epochs=kwargs.get("epochs", 60),
+            batch_size=kwargs.get("batch_size", 60),
+            eval_freq=kwargs.get("eval_freq", 100),
+            early_stopping=kwargs.get("early_stopping", False),
         )
 
     @staticmethod
     def conv2_hyperparameters(**kwargs) -> Hyperparameters:
         return Hyperparameters(
-            patience=kwargs.get('patience', 5),
-            minimum_delta=kwargs.get('minimum_delta', 0.001),
-            learning_rate=kwargs.get('learning_rate', 2e-4),
-            optimizer=kwargs.get('optimizer', Adam),
+            patience=kwargs.get("patience", 5),
+            minimum_delta=kwargs.get("minimum_delta", 0.001),
+            learning_rate=kwargs.get("learning_rate", 2e-4),
+            optimizer=kwargs.get("optimizer", Adam),
             loss_function=kwargs.get(
-                'loss', tf.keras.losses.CategoricalCrossentropy),
+                "loss", tf.keras.losses.CategoricalCrossentropy),
             accuracy_metric=kwargs.get(
-                'accuracy', tf.keras.metrics.CategoricalAccuracy),
-            epochs=kwargs.get('epochs', 60),
-            batch_size=kwargs.get('batch_size', 60),
-            eval_freq=kwargs.get('eval_freq', 100),
-            early_stopping=kwargs.get('early_stopping', False),
+                "accuracy", tf.keras.metrics.CategoricalAccuracy),
+            epochs=kwargs.get("epochs", 60),
+            batch_size=kwargs.get("batch_size", 60),
+            eval_freq=kwargs.get("eval_freq", 100),
+            early_stopping=kwargs.get("early_stopping", False),
         )
 
     @staticmethod
     def conv4_hyperparameters(**kwargs) -> Hyperparameters:
         return Hyperparameters(
-            patience=kwargs.get('patience', 5),
-            minimum_delta=kwargs.get('minimum_delta', 0.001),
-            learning_rate=kwargs.get('learning_rate', 3e-4),
-            optimizer=kwargs.get('optimizer', Adam),
+            patience=kwargs.get("patience", 5),
+            minimum_delta=kwargs.get("minimum_delta", 0.001),
+            learning_rate=kwargs.get("learning_rate", 3e-4),
+            optimizer=kwargs.get("optimizer", Adam),
             loss_function=kwargs.get(
-                'loss', tf.keras.losses.CategoricalCrossentropy),
+                "loss", tf.keras.losses.CategoricalCrossentropy),
             accuracy_metric=kwargs.get(
-                'accuracy', tf.keras.metrics.CategoricalAccuracy),
-            epochs=kwargs.get('epochs', 60),
-            batch_size=kwargs.get('batch_size', 60),
-            eval_freq=kwargs.get('eval_freq', 100),
-            early_stopping=kwargs.get('early_stopping', False),
+                "accuracy", tf.keras.metrics.CategoricalAccuracy),
+            epochs=kwargs.get("epochs", 60),
+            batch_size=kwargs.get("batch_size", 60),
+            eval_freq=kwargs.get("eval_freq", 100),
+            early_stopping=kwargs.get("early_stopping", False),
         )
 
     @staticmethod
     def conv6_hyperparameters(**kwargs) -> Hyperparameters:
         return Hyperparameters(
-            patience=kwargs.get('patience', 5),
-            minimum_delta=kwargs.get('minimum_delta', 0.001),
-            learning_rate=kwargs.get('learning_rate', 3e-4),
-            optimizer=kwargs.get('optimizer', Adam),
+            patience=kwargs.get("patience", 5),
+            minimum_delta=kwargs.get("minimum_delta", 0.001),
+            learning_rate=kwargs.get("learning_rate", 3e-4),
+            optimizer=kwargs.get("optimizer", Adam),
             loss_function=kwargs.get(
-                'loss', tf.keras.losses.CategoricalCrossentropy),
+                "loss", tf.keras.losses.CategoricalCrossentropy),
             accuracy_metric=kwargs.get(
-                'accuracy', tf.keras.metrics.CategoricalAccuracy),
-            epochs=kwargs.get('epochs', 60),
-            batch_size=kwargs.get('batch_size', 60),
-            eval_freq=kwargs.get('eval_freq', 100),
-            early_stopping=kwargs.get('early_stopping', False),
+                "accuracy", tf.keras.metrics.CategoricalAccuracy),
+            epochs=kwargs.get("epochs", 60),
+            batch_size=kwargs.get("batch_size", 60),
+            eval_freq=kwargs.get("eval_freq", 100),
+            early_stopping=kwargs.get("early_stopping", False),
         )
 
   # --------------- Constructors ---------------
@@ -129,6 +129,7 @@ class Architectures(Enum):
     def create_lenet_300_100(
         input_shape: Tuple[int, ...],
         num_classes: int,
+        initializer: str,
     ) -> keras.Model:
         """
         Function for creating LeNet-300-100 model.
@@ -140,13 +141,14 @@ class Architectures(Enum):
         """
         model = Sequential([
             Input(input_shape),
-            Dense(300, activation='relu'),
-            Dense(100, activation='relu'),
-            Dense(num_classes, activation='softmax'),
+            Dense(300, activation="relu", kernel_initializer=initializer),
+            Dense(100, activation="relu", kernel_initializer=initializer),
+            Dense(num_classes, activation="softmax",
+                  kernel_initializer=initializer),
         ], name="lenet")
 
         # Explicitly build the model to initialize weights
-        if platform == 'darwin':
+        if platform == "darwin":
             model.build(input_shape=input_shape)
         return model
 
@@ -154,22 +156,24 @@ class Architectures(Enum):
     def create_conv2(
         input_shape: Tuple[int, ...],
         num_classes: int,
+        initializer: str,
     ) -> keras.Model:
         model = Sequential([
             Input(input_shape),
             Conv2D(filters=64, kernel_size=(3, 3),
-                   padding="same", activation="relu"),
+                   padding="same", activation="relu", kernel_initializer=initializer),
             Conv2D(filters=64, kernel_size=(3, 3),
-                   padding="same", activation="relu"),
+                   padding="same", activation="relu", kernel_initializer=initializer),
             MaxPooling2D(pool_size=(2, 2), strides=(2, 2)),
             Flatten(),
-            Dense(4086, activation='relu'),
-            Dense(4086, activation='relu'),
-            Dense(num_classes, activation='softmax'),
+            Dense(4086, activation="relu", kernel_initializer=initializer),
+            Dense(4086, activation="relu", kernel_initializer=initializer),
+            Dense(num_classes, activation="softmax",
+                  kernel_initializer=initializer),
         ], name="conv2")
 
         # Explicitly build the model to initialize weights
-        if platform == 'darwin':
+        if platform == "darwin":
             model.build(input_shape=input_shape)
         return model
 
@@ -177,28 +181,30 @@ class Architectures(Enum):
     def create_conv4(
         input_shape: Tuple[int, ...],
         num_classes: int,
+        initializer: str,
     ) -> keras.Model:
         model = Sequential([
             Input(input_shape),
             Conv2D(filters=64, kernel_size=(3, 3),
-                   padding="same", activation="relu"),
+                   padding="same", activation="relu", kernel_initializer=initializer),
             Conv2D(filters=64, kernel_size=(3, 3),
-                   padding="same", activation="relu"),
+                   padding="same", activation="relu", kernel_initializer=initializer),
             MaxPooling2D(pool_size=(2, 2), strides=(2, 2)),
             Conv2D(filters=128, kernel_size=(3, 3),
-                   padding="same", activation="relu"),
+                   padding="same", activation="relu", kernel_initializer=initializer),
             Conv2D(filters=128, kernel_size=(3, 3),
-                   padding="same", activation="relu"),
+                   padding="same", activation="relu", kernel_initializer=initializer),
             MaxPooling2D(pool_size=(2, 2), strides=(2, 2)),
             Flatten(),
-            Dense(4086, activation='relu'),
-            Dense(4086, activation='relu'),
-            Dense(num_classes, activation='softmax'),
+            Dense(4086, activation="relu", kernel_initializer=initializer),
+            Dense(4086, activation="relu", kernel_initializer=initializer),
+            Dense(num_classes, activation="softmax",
+                  kernel_initializer=initializer),
 
         ], name="conv4")
 
         # Explicitly build the model to initialize weights
-        if platform == 'darwin':
+        if platform == "darwin":
             model.build(input_shape=input_shape)
         return model
 
@@ -206,32 +212,34 @@ class Architectures(Enum):
     def create_conv6(
         input_shape: Tuple[int, ...],
         num_classes: int,
+        initializer: str,
     ) -> keras.Model:
         model = Sequential([
             Input(input_shape),
             Conv2D(filters=64, kernel_size=(3, 3),
-                   padding="same", activation="relu"),
+                   padding="same", activation="relu", kernel_initializer=initializer),
             Conv2D(filters=64, kernel_size=(3, 3),
-                   padding="same", activation="relu"),
+                   padding="same", activation="relu", kernel_initializer=initializer),
             MaxPooling2D(pool_size=(2, 2), strides=(2, 2)),
             Conv2D(filters=128, kernel_size=(3, 3),
-                   padding="same", activation="relu"),
+                   padding="same", activation="relu", kernel_initializer=initializer),
             Conv2D(filters=128, kernel_size=(3, 3),
-                   padding="same", activation="relu"),
+                   padding="same", activation="relu", kernel_initializer=initializer),
             MaxPooling2D(pool_size=(2, 2), strides=(2, 2)),
             Conv2D(filters=256, kernel_size=(3, 3),
-                   padding="same", activation="relu"),
+                   padding="same", activation="relu", kernel_initializer=initializer),
             Conv2D(filters=256, kernel_size=(3, 3),
-                   padding="same", activation="relu"),
+                   padding="same", activation="relu", kernel_initializer=initializer),
             MaxPooling2D(pool_size=(2, 2), strides=(2, 2)),
             Flatten(),
-            Dense(4086, activation='relu'),
-            Dense(4086, activation='relu'),
-            Dense(num_classes, activation='softmax'),
+            Dense(4086, activation="relu", kernel_initializer=initializer),
+            Dense(4086, activation="relu", kernel_initializer=initializer),
+            Dense(num_classes, activation="softmax",
+                  kernel_initializer=initializer),
         ], name="conv6")
 
         # Explicitly build the model to initialize weights
-        if platform == 'darwin':
+        if platform == "darwin":
             model.build(input_shape=input_shape)
         return model
 
@@ -289,12 +297,13 @@ class Architecture:
         ],
     }
 
-    def __init__(self, architecture: str, dataset: str):
+    def __init__(self, architecture: str, dataset: str, initializer: str = "glorot_uniform"):
         self.architecture = Architectures(architecture.lower())
         if not self._supported(self.architecture):
             raise ValueError(
-                f"'{self.architecture}' is not a supported architecture")
+                f"\"{self.architecture}\" is not a supported architecture")
         self.dataset = ds.Dataset(dataset, flatten=not self.convolutional())
+        self.initializer = initializer
 
     @property
     def layer_names(self) -> List[str]:
@@ -319,15 +328,15 @@ class Architecture:
         hyperparameters = self.HYPERPARAMETERS.get(self.architecture)
         if hyperparameters is None:
             raise NotImplementedError(
-                f"'{self.architecture}' not implemented in Architecture class")
+                f"\"{self.architecture}\" not implemented in Architecture class")
         return hyperparameters(**kwargs)
 
     def get_model_constructor(self) -> Callable[[], keras.models.Model]:
         constructor_function = self.CONSTRUCTORS.get(self.architecture)
         if constructor_function is None:
             raise NotImplementedError(
-                f"'{self.architecture}' not implemented in Architecture class")
-        return functools.partial(constructor_function, self.dataset.input_shape, self.dataset.num_classes)
+                f"\"{self.architecture}\" not implemented in Architecture class")
+        return functools.partial(constructor_function, self.dataset.input_shape, self.dataset.num_classes, self.initializer)
 
     @staticmethod
     def get_model_layers(architecture: str) -> List[str]:
@@ -335,7 +344,7 @@ class Architecture:
         layers = Architecture.LAYERS.get(architecture)
         if layers is None:
             raise NotImplementedError(
-                f"'{architecture}' not implemented in Architecture class")
+                f"\"{architecture}\" not implemented in Architecture class")
         return layers
 
     @staticmethod

@@ -35,6 +35,34 @@ PruningRule = Callable[[List[Layer], List[Layer], float, Tuple[Any]], None]
 SparsityStrategy = Callable[[str], float]
 
 
+def fast_pruning(layer_name: str) -> float:
+    mapping = {
+        ('conv.*', 0.15),
+        ('dense', 0.3),
+    }
+
+    for pattern, pruning in mapping:
+        match = re.match(pattern, layer_name, flags=re.IGNORECASE)
+        if match:
+            return pruning
+
+    return 0
+
+
+def slow_pruning(layer_name: str) -> float:
+    mapping = {
+        ('conv.*', 0.05),
+        ('dense', 0.1),
+    }
+
+    for pattern, pruning in mapping:
+        match = re.match(pattern, layer_name, flags=re.IGNORECASE)
+        if match:
+            return pruning
+
+    return 0
+
+
 def default_sparsity_strategy(layer_name: str) -> float:
     """
     Default sparsity map which is used for determining pruning rates of layers.
