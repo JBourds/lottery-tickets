@@ -22,6 +22,7 @@ from src.harness import constants as C
 from src.harness import mixins
 from src.harness import utils
 
+
 @dataclass
 class TrialData(mixins.PickleMixin, mixins.TimerMixin):
     """
@@ -34,7 +35,7 @@ class TrialData(mixins.PickleMixin, mixins.TimerMixin):
     pruning_step: int
     architecture: str
     dataset: str
-    # seed_weights: Callable
+    seed_weights: Callable
 
     # Model parameters
     final_weights: List[np.ndarray[np.float64]]
@@ -47,7 +48,7 @@ class TrialData(mixins.PickleMixin, mixins.TimerMixin):
     train_accuracies: np.array
     validation_losses: np.array
     validation_accuracies: np.array
-    
+
     @property
     def initial_weights(self) -> List[np.ndarray]:
         """
@@ -62,6 +63,7 @@ class TrialData(mixins.PickleMixin, mixins.TimerMixin):
             self.seed_weights(weights)
         return weights
 
+
 def get_trials(
     epath: str,
     tprefix: str = C.TRIAL_PREFIX,
@@ -70,7 +72,7 @@ def get_trials(
     """
     Function which returns the loaded pieces of trial data in order from an
     experiment directory as a generator function.
-    
+
     Assumes everything after the trial prefix is a number specifying the order.
     """
     trial_paths = [
@@ -78,28 +80,27 @@ def get_trials(
         if path.startswith(tprefix)
         and tdatafile in os.listdir(os.path.join(epath, path))
     ]
-    
-    for tpath in sorted(trial_paths, 
-        key=lambda path: int(os.path.dirname(os.path.normpath(path)).split(tprefix)[-1])):
+
+    for tpath in sorted(trial_paths,
+                        key=lambda path: int(os.path.dirname(os.path.normpath(path)).split(tprefix)[-1])):
         yield TrialData.load_from(tpath)
 
 
 def get_experiments(
     root: str,
-    models_dir: str = C.MODELS_DIRECTORY, 
-    eprefix: str = C.EXPERIMENT_PREFIX, 
-    tprefix: str = C.TRIAL_PREFIX, 
+    models_dir: str = C.MODELS_DIRECTORY,
+    eprefix: str = C.EXPERIMENT_PREFIX,
+    tprefix: str = C.TRIAL_PREFIX,
     tdatafile: str = C.TRIAL_DATAFILE,
-) -> List[Generator[TrialData, None, None]]: 
+) -> List[Generator[TrialData, None, None]]:
     """
     Function which gets all the experiments run in a directory, which returns
     a list of generators for the trials in each experiment.
     """
-        
+
     models_directory = os.path.join(root, models_dir)
     experiment_paths = [
         os.path.join(models_directory, path) for path in os.listdir(models_directory)
         if path.startswith(eprefix)
     ]
     return [partial(get_trials, epath, tprefix=tprefix, tdatafile=tdatafile)() for epath in experiment_paths]
-
