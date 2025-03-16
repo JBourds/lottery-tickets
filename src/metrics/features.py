@@ -148,7 +148,7 @@ def build_weight_df_with_training(
         previous_masks = masks
 
     # Duplicate features for initial vs. final weights
-    for layer, (tw, m, pm) in tqdm(enumerate(zip(trained, masks, previous_masks))):
+    for layer, (tw, iw, m, pm) in tqdm(enumerate(zip(trained, weights, masks, previous_masks))):
         print(f"Layer {layer}")
         mask = m.numpy().astype(bool).ravel()
         num_params = len(mask)
@@ -181,6 +181,7 @@ def build_weight_df_with_training(
             f"wt{n}_perc": t_perc.astype(np.float32),
             f"wt{n}_std": t_norm_std.astype(np.float32),
             f"wt{n}_synflow": t_synflow[layer].numpy().flatten(),
+            "mag_change": t_mag - np.abs(iw.ravel()),
         }
         if training:
             layer_weight_features["keep"] = pm.flatten()
@@ -195,9 +196,8 @@ def build_weight_df_with_training(
         keys)[f"wt{n}_mag"].transform(normalize)
     weight_df[f"norm_wt{n}_synflow"] = weight_df.groupby(
         keys)[f"wt{n}_synflow"].transform(normalize)
-    if training:
-        weight_df = weight_df[weight_df["keep"] == 1]
-        weight_df.drop(columns=["keep"], inplace=True)
+    weight_df["norm_mag_change"] = weight_df.groupby(
+        keys)["mag_change"].transform(normalize)
     weight_df.fillna(0, inplace=True)
 
     return weight_df
@@ -286,6 +286,8 @@ def build_weight_df(
         if training:
             # Label is whether a weight got pruned (mask changed to 0)
             layer_weight_features["label"] = (mask ^ 1)
+            layer_weight_features["w_mask"] = mask
+            # Use this column to clean data later
             layer_weight_features["keep"] = pm.flatten()
 
         weight_features_list.append(pd.DataFrame(layer_weight_features))
@@ -298,9 +300,6 @@ def build_weight_df(
         keys)["wi_mag"].transform(normalize)
     weight_df["norm_wi_synflow"] = weight_df.groupby(
         keys)["wi_synflow"].transform(normalize)
-    if training:
-        weight_df = weight_df[weight_df["keep"] == 1]
-        weight_df.drop(columns=["keep"], inplace=True)
     weight_df.fillna(0, inplace=True)
 
     return weight_df
@@ -345,7 +344,6 @@ def build_trial_dfs(
         layer_df, architecture, trial.initial_weights, trial.final_weights, trial.masks, previous_masks)
 
     # Correct the class imbalance- merge with trained weights later
-    weight_df = correct_class_imbalance(weight_df)
     add_labels(weight_df)
 
     if train_steps > 0:
@@ -378,10 +376,8 @@ def build_exp_dfs(
     print(f"Building dataframes for experiment {e_num}")
     previous_masks = []
     for t_num, t in tqdm(enumerate(exp)):
-        # Skip the first iteration since it is all 1s for the mask
         if t_num == 0:
             previous_masks = t.masks
-            continue
 
         print(f"Trial {t_num}")
         # Dummy line
@@ -463,7 +459,8 @@ def correct_class_imbalance(wdf: pd.DataFrame) -> pd.DataFrame:
         smallest_group_size = min(wdf["label"].value_counts())
         dfs = []
         for _, group in wdf.groupby("label"):
-            dfs.append(group.sample(smallest_group_size, replace=False))
+            dfs.append(group.sample(smallest_group_size,
+                       replace=False, random_state=42))
         return pd.concat(dfs)
     else:
         return wdf
