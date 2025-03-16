@@ -47,5 +47,6 @@ if __name__ == "__main__":
         args.epath, train_steps=args.steps, batch_size=args.batch)
     merged_df = f.merge_dfs(trials_df, layers_df,
                             weights_df, trained_weights_df)
-    output_path = f"merged_{args.steps}_steps.pkl" if args.output is None else args.output
+    output_path = os.path.join(
+        "data", f"merged_{args.steps}_steps.pkl") if args.output is None else args.output
     merged_df.to_pickle(output_path)
