@@ -50,14 +50,14 @@ def build_layer_df(
         layer_features["li_mag_mean"].append(np.mean(iw_mag))
         layer_features["li_mag_std"].append(np.std(iw_mag))
         layer_features["li_prop_positive"].append(
-            np.mean(iw_filtered >= 0))
+            np.mean(iw_filtered > 0))
         if include_final:
             fw_filtered = fw[mask]
             fw_mag = np.abs(fw_filtered)
             layer_features["lf_mag_mean"].append(np.mean(fw_mag))
             layer_features["lf_mag_std"].append(np.std(fw_mag))
             layer_features["lf_prop_positive"].append(
-                np.mean(fw_filtered >= 0))
+                np.mean(fw_filtered > 0))
     layer_ohe = arch.Architecture.ohe_layer_types(architecture)
     for index, name in enumerate(arch.Architecture.LAYER_TYPES):
         layer_features[name] = [ohe[index] for ohe in layer_ohe]
