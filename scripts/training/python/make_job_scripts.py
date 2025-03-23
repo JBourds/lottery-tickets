@@ -11,7 +11,7 @@ datasets = ['mnist', 'fashion_mnist', 'cifar']
 # initializers = ["glorot_uniform", "glorot_normal",
 #                 "random_normal", "random_uniform", "he_normal", "he_uniform"]
 initializers = ["glorot_uniform", "glorot_normal"]
-rewind_rules = ["oi", "sc", "no"]
+rewind_rules = ["oi", "sc"]
 pruning_rules = ["lm", "hm"]
 sparsity_strategies = ["default", "slow", "fast"]
 
