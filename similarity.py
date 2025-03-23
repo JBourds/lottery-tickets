@@ -108,68 +108,76 @@ trained_weight_similarities = model_cos_similarity(
 pprint(trained_weight_similarities)
 
 epath = "/users/j/b/jbourde2/lottery-tickets/11-04-2024/lenet_mnist_0_seed_5_experiments_1_batches_0.025_default_sparsity_lm_pruning_20241102-111614"
-experiments = hist.get_experiments(epath)
-trials = list(map(list, experiments))
-for t in trials:
-    for x in t:
-        x.seed_weights = lambda x: x
 
-row_similarities = []
-col_similarities = []
-for (trials_0, trials_1) in combinations(trials, 2):
-    for t0, t1 in zip(trials_0, trials_1):
-        t0_weights = [w * m for w, m in zip(t0.initial_weights, t0.masks)]
-        t1_weights = [w * m for w, m in zip(t1.initial_weights, t1.masks)]
-        row_similarities.append(model_cos_similarity(t0_weights, t1_weights))
-        col_similarities.append(model_cos_similarity(
-            [w.T for w in t0_weights], [w.T for w in t1_weights]))
+
+# This can take a really long time to run since it does every pairwise
+# comparison (20 mins on lenet with 5 experiments and 18 rounds)
+def plot_cosine_similarities(epath: str, output: str):
+    experiments = hist.get_experiments(epath)
+    trials = list(map(list, experiments))
+    for t in trials:
+        for x in t:
+            x.seed_weights = lambda x: x
+
+    row_similarities = defaultdict(list)
+    col_similarities = defaultdict(list)
+    for (trials_0, trials_1) in combinations(trials, 2):
+        for index, (t0, t1) in enumerate(zip(trials_0, trials_1)):
+            t0_weights = [w * m for w, m in zip(t0.initial_weights, t0.masks)]
+            t1_weights = [w * m for w, m in zip(t1.initial_weights, t1.masks)]
+            row_similarities[index].append(
+                model_cos_similarity(t0_weights, t1_weights))
+            col_similarities[index].append(model_cos_similarity(
+                [w.T for w in t0_weights], [w.T for w in t1_weights]))
 
 # Build up plot DF
-row_dict = defaultdict(list)
-for step_num, step in enumerate(row_similarities):
-    # Remove bias layers
-    for layer, values in enumerate(step["values"]):
-        row_dict["layer"].extend([layer] * len(values))
-        row_dict["step"].extend([step_num] * len(values))
-        row_dict["values"].extend(values)
-row_df = pd.DataFrame(row_dict)
-col_dict = defaultdict(list)
-for step_num, step in enumerate(col_similarities):
-    # Remove bias layers
-    for layer, values in enumerate(step["values"]):
-        col_dict["layer"].extend([layer] * len(values))
-        col_dict["step"].extend([step_num] * len(values))
-        col_dict["values"].extend(values)
-col_df = pd.DataFrame(col_dict)
+    row_dict = defaultdict(list)
+    for step_num, steps in row_similarities.items():
+        for step in steps:
+            for layer, values in enumerate(step["values"]):
+                row_dict["layer"].extend([layer] * len(values))
+                row_dict["step"].extend([step_num] * len(values))
+                row_dict["values"].extend(values)
+    row_df = pd.DataFrame(row_dict)
+    col_dict = defaultdict(list)
+    for step_num, step in col_similarities.items():
+        for step in steps:
+            for layer, values in enumerate(step["values"]):
+                col_dict["layer"].extend([layer] * len(values))
+                col_dict["step"].extend([step_num] * len(values))
+                col_dict["values"].extend(values)
+    col_df = pd.DataFrame(col_dict)
 
-row_plot_df = row_df[(row_df.step == 0) | (row_df.step == row_df.step.max())]
-col_plot_df = col_df[(col_df.step == 0) | (col_df.step == col_df.step.max())]
-n_layers = len(m1.get_weights()) // 2
-fig, axes = plt.subplots(
-    nrows=n_layers, sharex=True, ncols=2, figsize=(8, 6))
-for layer in range(n_layers):
-    # Rows
-    row_layer_df = row_plot_df[row_plot_df.layer == layer]
-    ax = axes[layer, 0]
-    sns.histplot(data=row_layer_df, x="values", hue="step",
-                 ax=ax)
-    ax.get_legend().set_title("Pruning Step")
-    ax.set_title(f"Layer {layer} Rows")
-    ax.set_xlabel("Cosine Similarity")
-    ax.set_ylabel("Counts")
-    ax.set_yscale("log")
-    # Columns
-    col_layer_df = col_plot_df[col_plot_df.layer == layer]
-    ax = axes[layer, 1]
-    sns.histplot(data=col_layer_df, x="values", hue="step",
-                 ax=ax)
-    ax.get_legend().set_title("Pruning Step")
-    ax.set_title(f"Layer {layer} Cols")
-    ax.set_xlabel("Cosine Similarity")
-    ax.set_ylabel("Counts")
-    ax.set_yscale("log")
-fig.tight_layout()
-fig.savefig("cosine_similarity.png")
+    row_plot_df = row_df[(row_df.step == 0) | (
+        row_df.step == row_df.step.max())]
+    col_plot_df = col_df[(col_df.step == 0) | (
+        col_df.step == col_df.step.max())]
+    n_layers = len(m1.get_weights()) // 2
+    fig, axes = plt.subplots(
+        nrows=n_layers, sharex=True, ncols=2, figsize=(8, 6))
+    for layer in range(n_layers):
+        # Rows
+        row_layer_df = row_plot_df[row_plot_df.layer == layer]
+        ax = axes[layer, 0]
+        sns.histplot(data=row_layer_df, x="values", hue="step",
+                     ax=ax)
+        ax.get_legend().set_title("Pruning Step")
+        ax.set_title(f"Layer {layer} Rows")
+        ax.set_xlabel("Cosine Similarity")
+        ax.set_ylabel("Counts")
+        ax.set_yscale("log")
+        # Columns
+        col_layer_df = col_plot_df[col_plot_df.layer == layer]
+        ax = axes[layer, 1]
+        sns.histplot(data=col_layer_df, x="values", hue="step",
+                     ax=ax)
+        ax.get_legend().set_title("Pruning Step")
+        ax.set_title(f"Layer {layer} Cols")
+        ax.set_xlabel("Cosine Similarity")
+        ax.set_ylabel("Counts")
+        ax.set_yscale("log")
+    fig.tight_layout()
+    fig.savefig(output)
 
 
 def should_skip(key1: Tuple[int], key2: Tuple[int]) -> bool:
