@@ -1,4 +1,6 @@
+from src.plotting import base_plots as bp
 import cka.cca_core
+import math
 from cka.CKA import linear_CKA, kernel_CKA
 from keras.models import Model
 import json
@@ -43,16 +45,6 @@ def df_path(steps: int) -> str:
     )
 
 
-reload(arch)
-
-epath = "/users/j/b/jbourde2/lottery-tickets/11-04-2024/lenet_mnist_0_seed_5_experiments_1_batches_0.025_default_sparsity_lm_pruning_20241102-111614"
-epath2 = "/users/j/b/jbourde2/lottery-tickets/11-04-2024/lenet_fashion_mnist_0_seed_5_experiments_1_batches_0.025_default_sparsity_lm_pruning_20241102-111614"
-architecture = "lenet"
-dataset = "mnist"
-a = arch.Architecture(architecture, dataset)
-X_train, X_test, Y_train, Y_test = a.load_data()
-
-
 def get_activations_model(a: arch.Architecture) -> Model:
     m = a.get_model_constructor()()
     activation_model = Model(inputs=m.inputs, outputs=[
@@ -60,18 +52,75 @@ def get_activations_model(a: arch.Architecture) -> Model:
     return activation_model
 
 
-np.random.seed(0)
-m0 = get_activations_model(a)
-m0_outputs = [np.squeeze(t.numpy(), axis=1) for t in m0(X_train)]
+def get_cka(epath: str, inputs: npt.NDArray, a: arch.Architecture, use_initial: bool = True) -> npt.NDArray:
+    experiments = hist.get_experiments(epath)
+    trials = list(map(list, experiments))
+    for t in trials:
+        for x in t:
+            x.seed_weights = lambda x: x
+    activations = get_activations_model(a)
+    # Pairwise comparison of CKAs between every model as they get sparser
+    linear_ckas = []
+    for index, (trials_0, trials_1) in enumerate(combinations(trials, 2)):
+        print(
+            f"Combination {index + 1} / {math.factorial(len(trials)) / (2 * math.factorial(len(trials) - 2))}")
+        lin_ckas = []
+        for index, (t0, t1) in enumerate(zip(trials_0, trials_1)):
+            print(f"Trial {index + 1}")
+            t0_weights = [
+                w * m for w, m in zip(t0.initial_weights, t0.masks)
+            ] if use_initial else t0.final_weights
+            activations.set_weights(t0_weights)
+            t0_outputs = [np.squeeze(t.numpy(), axis=1)
+                          for t in activations(inputs)]
 
-np.random.seed(1)
-m1 = get_activations_model(a)
-m1_outputs = [np.squeeze(t.numpy(), axis=1) for t in m1(X_train)]
+            t1_weights = [
+                w * m for w, m in zip(t1.initial_weights, t1.masks)
+            ] if use_initial else t1.final_weights
+            activations.set_weights(t1_weights)
+            t1_outputs = [np.squeeze(t.numpy(), axis=1)
+                          for t in activations(inputs)]
 
-for m0_act, m1_act in zip(m0_outputs, m1_outputs):
-    print(
-        f"M0 Activation Shape: {m0_act.shape}, M1 Activation Shape: {m1_act.shape}")
+            lin_ckas.append([linear_CKA(m0_act, m1_act)
+                             for m0_act, m1_act in zip(t0_outputs, t1_outputs)])
+        linear_ckas.append(lin_ckas)
+    # Shape: (n_combinations, n_steps, n_layers)
+    return np.array(linear_ckas)
 
-linear_ckas = [linear_CKA(m0_act, m1_act)
-               for m0_act, m1_act in zip(m0_outputs, m1_outputs)]
-linear_ckas
+
+def plot_ckas(ckas: npt.NDArray, output: str):
+    mean_ckas = np.mean(ckas, axis=0)
+    std_ckas = np.std(ckas, axis=0)
+    pruning_steps = np.arange(mean_ckas.shape[0])
+    plt.figure()
+    plt.title("CKA Score Over Time (Initial Weights)")
+    for layer_num in range(mean_ckas.shape[1]):
+        bp.plot_aggregated_summary_ci(
+            pruning_steps,
+            mean_ckas[:, layer_num],
+            std_ckas[:, layer_num],
+            init_linear_ckas.shape[0],
+            legend=f"Layer {layer_num}",
+            show_ci_legend=False,
+            invert_x=False,
+        )
+    plt.legend()
+    plt.xlabel("Pruning Step")
+    plt.ylabel("CKA Score")
+    plt.savefig(output)
+
+
+reload(arch)
+
+epath = "/users/j/b/jbourde2/lottery-tickets/11-04-2024/lenet_mnist_0_seed_5_experiments_1_batches_0.025_default_sparsity_lm_pruning_20241102-111614"
+architecture = "lenet"
+dataset = "mnist"
+a = arch.Architecture(architecture, dataset)
+X_train, X_test, Y_train, Y_test = a.load_data()
+
+
+inputs = X_test[:1000]
+init_linear_ckas = get_cka(epath, inputs, a, use_initial=True)
+plot_ckas(init_linear_ckas, "initial_cka_lenet_mnist.png")
+final_linear_ckas = get_cka(epath, inputs, a, use_initial=True)
+plot_ckas(final_linear_ckas, "final_cka_lenet_mnist.png")
