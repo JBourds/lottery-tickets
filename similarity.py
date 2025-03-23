@@ -1,6 +1,6 @@
 import json
 import time
-from itertools import combinations
+from itertools import chain, combinations
 from collections import defaultdict
 import seaborn as sns
 from src.metrics.synflow import compute_synflow_per_weight
@@ -40,6 +40,11 @@ def df_path(steps: int) -> str:
     )
 
 
+def output_path(epath: str, filename: str) -> str:
+    output_dir = os.path.join(epath, "plots")
+    os.makedirs(output_dir, exist_ok=True)
+    return os.path.join(output_dir, filename)
+
 # ['e_num', 't_num', 'seed', 'step', 'sparsity', 'size', 'l_num', 'l_size',
 #  'l_rel_size', 'l_sparsity', 'li_mag_mean', 'li_mag_std',
 #  'li_prop_positive', 'lf_mag_mean', 'lf_mag_std', 'lf_prop_positive',
@@ -49,14 +54,6 @@ def df_path(steps: int) -> str:
 #  'norm_wi_synflow', 'wt10_sign', 'wt10_val', 'wt10_mag', 'wt10_perc',
 #  'wt10_std', 'wt10_synflow', 'norm_wt10_mag', 'norm_wt10_synflow',
 #  'arch_lenet', 'dataset_mnist', 'mag_change', 'norm_mag_change']
-
-reload(meta)
-reload(f)
-architecture = "lenet"
-dataset = "mnist"
-a = arch.Architecture(architecture, dataset)
-steps = 10
-batch_size = 256
 
 
 def model_cos_similarity(weights_0: List[npt.NDArray], weights_1: List[npt.NDArray]) -> List[List[float]]:
@@ -71,93 +68,103 @@ def model_cos_similarity(weights_0: List[npt.NDArray], weights_1: List[npt.NDArr
     return weight_similarities
 
 
-X_train, X_test, Y_train, Y_test = a.load_data()
-np.random.seed(0)
-m1 = a.get_model_constructor()()
-np.random.seed(1)
-m2 = a.get_model_constructor()()
+# architecture = "lenet"
+# dataset = "mnist"
+# a = arch.Architecture(architecture, dataset)
+# nlayers = len(arch.Architecture.get_model_layers(architecture))
+# steps = 10
+# batch_size = 256
 
-untrained_weight_similarities = model_cos_similarity(
-    m1.get_weights(), m2.get_weights())
-pprint(untrained_weight_similarities)
+# X_train, X_test, Y_train, Y_test = a.load_data()
+# np.random.seed(0)
+# m1 = a.get_model_constructor()()
+# np.random.seed(1)
+# m2 = a.get_model_constructor()()
+#
+# untrained_weight_similarities = model_cos_similarity(
+#     m1.get_weights(), m2.get_weights())
+# pprint(untrained_weight_similarities)
+#
+#
+# def mask_overlap(masks_0: List[npt.NDArray], masks_1: List[npt.NDArray]) -> List[List[float]]:
+#     overlaps = []
+#     for m0, m1 in zip(masks_0, masks_1):
+#         overlap = np.sum(m0 == m1)
+#         overlaps.append(overlap / m0.size)
+#     return overlaps
+#
+#
+# masked_m1 = [w * m for w, m in zip(m1.get_weights(), mask_1)]
+# masked_m2 = [w * m for w, m in zip(m2.get_weights(), mask_2)]
+# masked_weight_similarities = model_cos_similarity(
+#     masked_m1, masked_m2)
+# pprint(masked_weight_similarities)
+#
+# m1.compile(optimizer="adam", loss=tf.keras.losses.CategoricalCrossentropy())
+# m1.fit(X_train, Y_train, epochs=5)
+# m2.compile(optimizer="adam", loss=tf.keras.losses.CategoricalCrossentropy())
+# m2.fit(X_train, Y_train, epochs=5)
+# trained_m1 = m1
+# trained_m2 = m2
+#
+# trained_weight_similarities = model_cos_similarity(
+#     m1.get_weights(), m2.get_weights())
+# pprint(trained_weight_similarities)
 
+def diff_datasets_cos_sim(epath1: str, epath2: str, output: str, nlayers: int, use_initial: bool = True):
+    exp1 = hist.get_experiments(epath1)
+    exp2 = hist.get_experiments(epath2)
+    trials1 = list(map(list, exp1))
+    trials2 = list(map(list, exp2))
+    pairings = []
+    # Create all groupings of a set of trials here
+    for t1 in trials1:
+        for t2 in trials2:
+            pairings.append((t1, t2))
 
-def mask_overlap(masks_0: List[npt.NDArray], masks_1: List[npt.NDArray]) -> List[List[float]]:
-    overlaps = []
-    for m0, m1 in zip(masks_0, masks_1):
-        overlap = np.sum(m0 == m1)
-        overlaps.append(overlap / m0.size)
-    return overlaps
-
-
-masked_m1 = [w * m for w, m in zip(m1.get_weights(), mask_1)]
-masked_m2 = [w * m for w, m in zip(m2.get_weights(), mask_2)]
-masked_weight_similarities = model_cos_similarity(
-    masked_m1, masked_m2)
-pprint(masked_weight_similarities)
-
-m1.compile(optimizer="adam", loss=tf.keras.losses.CategoricalCrossentropy())
-m1.fit(X_train, Y_train, epochs=5)
-m2.compile(optimizer="adam", loss=tf.keras.losses.CategoricalCrossentropy())
-m2.fit(X_train, Y_train, epochs=5)
-trained_m1 = m1
-trained_m2 = m2
-
-trained_weight_similarities = model_cos_similarity(
-    m1.get_weights(), m2.get_weights())
-pprint(trained_weight_similarities)
-
-epath = "/users/j/b/jbourde2/lottery-tickets/11-04-2024/lenet_mnist_0_seed_5_experiments_1_batches_0.025_default_sparsity_lm_pruning_20241102-111614"
-
-
-# This can take a really long time to run since it does every pairwise
-# comparison (20 mins on lenet with 5 experiments and 18 rounds)
-def plot_cosine_similarities(epath: str, output: str):
-    experiments = hist.get_experiments(epath)
-    trials = list(map(list, experiments))
-    for t in trials:
+    for t in chain(trials1, trials2):
         for x in t:
             x.seed_weights = lambda x: x
 
     row_similarities = defaultdict(list)
     col_similarities = defaultdict(list)
-    for (trials_0, trials_1) in combinations(trials, 2):
-        for index, (t0, t1) in enumerate(zip(trials_0, trials_1)):
+    # Compare a single trial for now
+    for index, (t0, t1) in enumerate(pairings):
+        if use_initial:
             t0_weights = [w * m for w, m in zip(t0.initial_weights, t0.masks)]
             t1_weights = [w * m for w, m in zip(t1.initial_weights, t1.masks)]
-            row_similarities[index].append(
-                model_cos_similarity(t0_weights, t1_weights))
-            col_similarities[index].append(model_cos_similarity(
-                [w.T for w in t0_weights], [w.T for w in t1_weights]))
+        else:
+            t0_weights = [w * m for w, m in zip(t0.final_weights, t0.masks)]
+            t1_weights = [w * m for w, m in zip(t1.final_weights, t1.masks)]
+        row_similarities[index].append(
+            model_cos_similarity(t0_weights, t1_weights))
+        col_similarities[index].append(model_cos_similarity(
+            [w.T for w in t0_weights], [w.T for w in t1_weights]))
 
-# Build up plot DF
-    row_dict = defaultdict(list)
-    for step_num, steps in row_similarities.items():
-        for step in steps:
-            for layer, values in enumerate(step["values"]):
-                row_dict["layer"].extend([layer] * len(values))
-                row_dict["step"].extend([step_num] * len(values))
-                row_dict["values"].extend(values)
-    row_df = pd.DataFrame(row_dict)
-    col_dict = defaultdict(list)
-    for step_num, step in col_similarities.items():
-        for step in steps:
-            for layer, values in enumerate(step["values"]):
-                col_dict["layer"].extend([layer] * len(values))
-                col_dict["step"].extend([step_num] * len(values))
-                col_dict["values"].extend(values)
-    col_df = pd.DataFrame(col_dict)
+    def make_df(similarities: Dict[int, List]) -> pd.DataFrame:
+        data_dict = defaultdict(list)
+        for step_num, steps in similarities.items():
+            for step in steps:
+                for layer, values in enumerate(step["values"]):
+                    data_dict["layer"].extend([layer] * len(values))
+                    data_dict["step"].extend([step_num] * len(values))
+                    data_dict["values"].extend(values)
+        df = pd.DataFrame(data_dict)
+        return df
+
+    row_df = make_df(row_similarities)
+    col_df = make_df(col_similarities)
 
     row_plot_df = row_df[(row_df.step == 0) | (
         row_df.step == row_df.step.max())]
     col_plot_df = col_df[(col_df.step == 0) | (
         col_df.step == col_df.step.max())]
-    n_layers = len(m1.get_weights()) // 2
     fig, axes = plt.subplots(
-        nrows=n_layers, sharex=True, ncols=2, figsize=(8, 6))
-    for layer in range(n_layers):
+        nrows=nlayers, sharex=True, ncols=2, figsize=(8, 6))
+    for layer in range(nlayers):
         # Rows
         row_layer_df = row_plot_df[row_plot_df.layer == layer]
+        print("Row Layer Shape:", row_layer_df.shape)
         ax = axes[layer, 0]
         sns.histplot(data=row_layer_df, x="values", hue="step",
                      ax=ax)
@@ -168,6 +175,83 @@ def plot_cosine_similarities(epath: str, output: str):
         ax.set_yscale("log")
         # Columns
         col_layer_df = col_plot_df[col_plot_df.layer == layer]
+        print("Col Layer Shape:", col_layer_df.shape)
+        ax = axes[layer, 1]
+        sns.histplot(data=col_layer_df, x="values", hue="step",
+                     ax=ax)
+        ax.get_legend().set_title("Pruning Step")
+        ax.set_title(f"Layer {layer} Cols")
+        ax.set_xlabel("Cosine Similarity")
+        ax.set_ylabel("Counts")
+        ax.set_yscale("log")
+    fig.tight_layout()
+    fig.savefig("diff_" + output)
+
+# This can take a really long time to run since it does every pairwise
+# comparison (20 mins on lenet with 5 experiments and 18 rounds)
+
+
+def plot_cosine_similarities(epath: str, output: str, nlayers: int, use_initial: bool = True):
+    experiments = hist.get_experiments(epath)
+    trials = list(map(list, experiments))
+    for t in trials:
+        for x in t:
+            x.seed_weights = lambda x: x
+
+    row_similarities = defaultdict(list)
+    col_similarities = defaultdict(list)
+    for (trials_0, trials_1) in combinations(trials, 2):
+        for index, (t0, t1) in enumerate(zip(trials_0, trials_1)):
+            if use_initial:
+                t0_weights = [w * m for w,
+                              m in zip(t0.initial_weights, t0.masks)]
+                t1_weights = [w * m for w,
+                              m in zip(t1.initial_weights, t1.masks)]
+            else:
+                t0_weights = [w * m for w,
+                              m in zip(t0.final_weights, t0.masks)]
+                t1_weights = [w * m for w,
+                              m in zip(t1.final_weights, t1.masks)]
+            row_similarities[index].append(
+                model_cos_similarity(t0_weights, t1_weights))
+            col_similarities[index].append(model_cos_similarity(
+                [w.T for w in t0_weights], [w.T for w in t1_weights]))
+
+    def make_df(similarities: Dict[int, List]) -> pd.DataFrame:
+        data_dict = defaultdict(list)
+        for step_num, steps in similarities.items():
+            for step in steps:
+                for layer, values in enumerate(step["values"]):
+                    data_dict["layer"].extend([layer] * len(values))
+                    data_dict["step"].extend([step_num] * len(values))
+                    data_dict["values"].extend(values)
+        df = pd.DataFrame(data_dict)
+        return df
+
+    row_df = make_df(row_similarities)
+    col_df = make_df(col_similarities)
+
+    row_plot_df = row_df[(row_df.step == 0) | (
+        row_df.step == row_df.step.max())]
+    col_plot_df = col_df[(col_df.step == 0) | (
+        col_df.step == col_df.step.max())]
+    fig, axes = plt.subplots(
+        nrows=nlayers, sharex=True, ncols=2, figsize=(8, 6))
+    for layer in range(nlayers):
+        # Rows
+        row_layer_df = row_plot_df[row_plot_df.layer == layer]
+        print("Row Layer Shape:", row_layer_df.shape)
+        ax = axes[layer, 0]
+        sns.histplot(data=row_layer_df, x="values", hue="step",
+                     ax=ax)
+        ax.get_legend().set_title("Pruning Step")
+        ax.set_title(f"Layer {layer} Rows")
+        ax.set_xlabel("Cosine Similarity")
+        ax.set_ylabel("Counts")
+        ax.set_yscale("log")
+        # Columns
+        col_layer_df = col_plot_df[col_plot_df.layer == layer]
+        print("Col Layer Shape:", col_layer_df.shape)
         ax = axes[layer, 1]
         sns.histplot(data=col_layer_df, x="values", hue="step",
                      ax=ax)
@@ -180,29 +264,78 @@ def plot_cosine_similarities(epath: str, output: str):
     fig.savefig(output)
 
 
-def should_skip(key1: Tuple[int], key2: Tuple[int]) -> bool:
-    e1, t1, l1 = key1
-    e2, t2, l2 = key2
-    duplicate = key1 == key2 or (key1, key2) in pairwise_similarites or (
-        key2, key1) in pairwise_similarites
-    incompatible = l1 != l2
-    return duplicate or incompatible
+# def should_skip(key1: Tuple[int], key2: Tuple[int]) -> bool:
+#     e1, t1, l1 = key1
+#     e2, t2, l2 = key2
+#     duplicate = key1 == key2 or (key1, key2) in pairwise_similarites or (
+#         key2, key1) in pairwise_similarites
+#     incompatible = l1 != l2
+#     return duplicate or incompatible
+#
+#
+# merged_df = pd.read_pickle(df_path(steps))
+# keys = ["e_num", "t_num"]
+# merged_df.sort_values(["w_num"], inplace=True)
+# layer_dimensions = {layer: shape for layer, shape in enumerate(
+#     map(np.shape, a.get_model_constructor()().get_weights()))}
+#
+# # Are the flattened, masked arrays similar to each other?
+# for key1, group1 in merged_df.groupby(keys):
+#     for key2, group2 in merged_df.groupby(keys):
+#         if should_skip(key1, key2):
+#             continue
+#         print(key1, key2)
+#         x = [np.reshape(g["wf_val"], layer_dimensions[l])
+#              for l, g in group1.groupby("l_num")]
+#         y = [np.reshape(g["wf_val"], layer_dimensions[l])
+#              for l, g in group2.groupby("l_num")]
+#         pairwise_similarites[(key1, key2)] = model_cos_similarity(x, y)
 
+if __name__ == "__main__":
+    epath = "/users/j/b/jbourde2/lottery-tickets/11-04-2024/lenet_mnist_0_seed_5_experiments_1_batches_0.025_default_sparsity_lm_pruning_20241102-111614"
+    epath2 = "/users/j/b/jbourde2/lottery-tickets/11-04-2024/lenet_fashion_mnist_0_seed_5_experiments_1_batches_0.025_default_sparsity_lm_pruning_20241102-111614"
+    architecture = "lenet"
+    dataset = "mnist"
+    a = arch.Architecture(architecture, dataset)
+    nlayers = len(arch.Architecture.get_model_layers(architecture)) // 2
+    steps = 10
+    batch_size = 256
+    plot_cosine_similarities(
+        epath, "lenet_initial_cosine_similarity.png", nlayers, use_initial=True)
+    plot_cosine_similarities(
+        epath, "lenet_final_cosine_similarity.png", nlayers, use_initial=False)
 
-merged_df = pd.read_pickle(df_path(steps))
-keys = ["e_num", "t_num"]
-merged_df.sort_values(["w_num"], inplace=True)
-layer_dimensions = {layer: shape for layer, shape in enumerate(
-    map(np.shape, a.get_model_constructor()().get_weights()))}
+    diff_datasets_cos_sim(
+        epath, epath2, "lenet_initial_cosine_similarity.png", nlayers, use_initial=True)
+    diff_datasets_cos_sim(
+        epath, epath2, "lenet_final_cosine_similarity.png", nlayers, use_initial=False)
 
-# Are the flattened, masked arrays similar to each other?
-for key1, group1 in merged_df.groupby(keys):
-    for key2, group2 in merged_df.groupby(keys):
-        if should_skip(key1, key2):
-            continue
-        print(key1, key2)
-        x = [np.reshape(g["wf_val"], layer_dimensions[l])
-             for l, g in group1.groupby("l_num")]
-        y = [np.reshape(g["wf_val"], layer_dimensions[l])
-             for l, g in group2.groupby("l_num")]
-        pairwise_similarites[(key1, key2)] = model_cos_similarity(x, y)
+    epath = "/users/j/b/jbourde2/lottery-tickets/11-04-2024/conv2_mnist_0_seed_5_experiments_1_batches_0.025_default_sparsity_lm_pruning_20241102-111614/"
+    epath2 = "/users/j/b/jbourde2/lottery-tickets/11-04-2024/conv2_fashion_mnist_0_seed_5_experiments_1_batches_0.025_default_sparsity_lm_pruning_20241102-111614"
+    architecture = "conv2"
+    dataset = "mnist"
+    a = arch.Architecture(architecture, dataset)
+    nlayers = len(arch.Architecture.get_model_layers(architecture)) // 2
+    steps = 10
+    batch_size = 256
+    plot_cosine_similarities(
+        epath, "conv2_mnist_initial_cosine_similarity.png", nlayers, use_initial=True)
+    plot_cosine_similarities(
+        epath, "conv2_mnist_final_cosine_similarity.png", nlayers, use_initial=False)
+
+    diff_datasets_cos_sim(
+        epath, epath2, "conv2_mnist_initial_cosine_similarity.png", nlayers, use_initial=True)
+    diff_datasets_cos_sim(
+        epath, epath2, "conv2_mnist_final_cosine_similarity.png", nlayers, use_initial=False)
+
+    epath = "/users/j/b/jbourde2/lottery-tickets/11-04-2024/conv2_cifar_0_seed_5_experiments_1_batches_0.025_default_sparsity_lm_pruning_20241102-111614"
+    architecture = "conv2"
+    dataset = "cifar10"
+    a = arch.Architecture(architecture, dataset)
+    nlayers = len(arch.Architecture.get_model_layers(architecture)) // 2
+    steps = 10
+    batch_size = 256
+    plot_cosine_similarities(
+        epath, "conv2_cifar_initial_cosine_similarity.png", nlayers, use_initial=True)
+    plot_cosine_similarities(
+        epath, "conv2_cifar_final_cosine_similarity.png", nlayers, use_initial=False)
