@@ -45,16 +45,6 @@ def output_path(epath: str, filename: str) -> str:
     os.makedirs(output_dir, exist_ok=True)
     return os.path.join(output_dir, filename)
 
-# ['e_num', 't_num', 'seed', 'step', 'sparsity', 'size', 'l_num', 'l_size',
-#  'l_rel_size', 'l_sparsity', 'li_mag_mean', 'li_mag_std',
-#  'li_prop_positive', 'lf_mag_mean', 'lf_mag_std', 'lf_prop_positive',
-#  'dense', 'bias', 'conv', 'output', 'w_num', 'wi_sign', 'wi_val',
-#  'wi_mag', 'wi_perc', 'wi_std', 'wi_synflow', 'wf_sign', 'wf_val',
-#  'wf_mag', 'wf_perc', 'wf_std', 'wf_synflow', 'label', 'norm_wi_mag',
-#  'norm_wi_synflow', 'wt10_sign', 'wt10_val', 'wt10_mag', 'wt10_perc',
-#  'wt10_std', 'wt10_synflow', 'norm_wt10_mag', 'norm_wt10_synflow',
-#  'arch_lenet', 'dataset_mnist', 'mag_change', 'norm_mag_change']
-
 
 def model_cos_similarity(weights_0: List[npt.NDArray], weights_1: List[npt.NDArray]) -> List[List[float]]:
     weight_similarities = {"mean": [], "values": []}
@@ -67,49 +57,6 @@ def model_cos_similarity(weights_0: List[npt.NDArray], weights_1: List[npt.NDArr
         weight_similarities["values"].append(sim)
     return weight_similarities
 
-
-# architecture = "lenet"
-# dataset = "mnist"
-# a = arch.Architecture(architecture, dataset)
-# nlayers = len(arch.Architecture.get_model_layers(architecture))
-# steps = 10
-# batch_size = 256
-
-# X_train, X_test, Y_train, Y_test = a.load_data()
-# np.random.seed(0)
-# m1 = a.get_model_constructor()()
-# np.random.seed(1)
-# m2 = a.get_model_constructor()()
-#
-# untrained_weight_similarities = model_cos_similarity(
-#     m1.get_weights(), m2.get_weights())
-# pprint(untrained_weight_similarities)
-#
-#
-# def mask_overlap(masks_0: List[npt.NDArray], masks_1: List[npt.NDArray]) -> List[List[float]]:
-#     overlaps = []
-#     for m0, m1 in zip(masks_0, masks_1):
-#         overlap = np.sum(m0 == m1)
-#         overlaps.append(overlap / m0.size)
-#     return overlaps
-#
-#
-# masked_m1 = [w * m for w, m in zip(m1.get_weights(), mask_1)]
-# masked_m2 = [w * m for w, m in zip(m2.get_weights(), mask_2)]
-# masked_weight_similarities = model_cos_similarity(
-#     masked_m1, masked_m2)
-# pprint(masked_weight_similarities)
-#
-# m1.compile(optimizer="adam", loss=tf.keras.losses.CategoricalCrossentropy())
-# m1.fit(X_train, Y_train, epochs=5)
-# m2.compile(optimizer="adam", loss=tf.keras.losses.CategoricalCrossentropy())
-# m2.fit(X_train, Y_train, epochs=5)
-# trained_m1 = m1
-# trained_m2 = m2
-#
-# trained_weight_similarities = model_cos_similarity(
-#     m1.get_weights(), m2.get_weights())
-# pprint(trained_weight_similarities)
 
 def diff_datasets_cos_sim(epath1: str, epath2: str, output: str, nlayers: int, use_initial: bool = True):
     exp1 = hist.get_experiments(epath1)
@@ -187,9 +134,6 @@ def diff_datasets_cos_sim(epath1: str, epath2: str, output: str, nlayers: int, u
     fig.tight_layout()
     fig.savefig("diff_" + output)
 
-# This can take a really long time to run since it does every pairwise
-# comparison (20 mins on lenet with 5 experiments and 18 rounds)
-
 
 def plot_cosine_similarities(epath: str, output: str, nlayers: int, use_initial: bool = True):
     experiments = hist.get_experiments(epath)
@@ -263,33 +207,6 @@ def plot_cosine_similarities(epath: str, output: str, nlayers: int, use_initial:
     fig.tight_layout()
     fig.savefig(output)
 
-
-# def should_skip(key1: Tuple[int], key2: Tuple[int]) -> bool:
-#     e1, t1, l1 = key1
-#     e2, t2, l2 = key2
-#     duplicate = key1 == key2 or (key1, key2) in pairwise_similarites or (
-#         key2, key1) in pairwise_similarites
-#     incompatible = l1 != l2
-#     return duplicate or incompatible
-#
-#
-# merged_df = pd.read_pickle(df_path(steps))
-# keys = ["e_num", "t_num"]
-# merged_df.sort_values(["w_num"], inplace=True)
-# layer_dimensions = {layer: shape for layer, shape in enumerate(
-#     map(np.shape, a.get_model_constructor()().get_weights()))}
-#
-# # Are the flattened, masked arrays similar to each other?
-# for key1, group1 in merged_df.groupby(keys):
-#     for key2, group2 in merged_df.groupby(keys):
-#         if should_skip(key1, key2):
-#             continue
-#         print(key1, key2)
-#         x = [np.reshape(g["wf_val"], layer_dimensions[l])
-#              for l, g in group1.groupby("l_num")]
-#         y = [np.reshape(g["wf_val"], layer_dimensions[l])
-#              for l, g in group2.groupby("l_num")]
-#         pairwise_similarites[(key1, key2)] = model_cos_similarity(x, y)
 
 if __name__ == "__main__":
     epath = "/users/j/b/jbourde2/lottery-tickets/11-04-2024/lenet_mnist_0_seed_5_experiments_1_batches_0.025_default_sparsity_lm_pruning_20241102-111614"
