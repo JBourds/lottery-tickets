@@ -150,13 +150,12 @@ def make_x(
     weight_df = f.build_weight_df(
         layer_df, architecture, model.get_weights(), [], masks, [], training=False)
     trained_weight_df = f.build_weight_df_with_training(
-        layer_df, architecture, model.get_weights(), masks, [], train_steps, batch_size, training=False) if train_steps > 0 else None
+        layer_df, architecture, model.get_weights(), masks, train_steps, batch_size, training=False) if train_steps > 0 else None
 
     df = pd.merge(layer_df, weight_df, on=["l_num"], how="inner")
     if trained_weight_df is not None:
         df = pd.merge(df, trained_weight_df, on=[
                       "l_num", "w_num"], how="inner")
-    print(df.columns)
     X = df[features].to_numpy()
 
     return X
