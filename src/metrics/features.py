@@ -101,7 +101,6 @@ def build_weight_df_with_training(
     architecture: arch.Architecture,
     weights: List[npt.NDArray[np.float32]],
     masks: List[npt.NDArray[np.float32]],
-    previous_masks: List[npt.NDArray[np.float32]],
     n: int,
     batch_size: int,
     optimizer: Optional[keras.optimizers.Optimizer] = None,
@@ -143,12 +142,9 @@ def build_weight_df_with_training(
     weight_features_list = []
     print("Making weight features with training")
     t_synflow = compute_synflow_per_weight(model)
-    # Preserve shape for for loop below
-    if not training:
-        previous_masks = masks
 
     # Duplicate features for initial vs. final weights
-    for layer, (tw, iw, m, pm) in tqdm(enumerate(zip(trained, weights, masks, previous_masks))):
+    for layer, (tw, iw, m) in tqdm(enumerate(zip(trained, weights, masks))):
         print(f"Layer {layer}")
         mask = m.numpy().astype(bool).ravel()
         num_params = len(mask)
@@ -184,7 +180,7 @@ def build_weight_df_with_training(
             "mag_change": t_mag - np.abs(iw.ravel()),
         }
         if training:
-            layer_weight_features["keep"] = pm.flatten()
+            layer_weight_features["w_mask"] = mask
 
         weight_features_list.append(pd.DataFrame(layer_weight_features))
 
@@ -198,6 +194,8 @@ def build_weight_df_with_training(
         keys)[f"wt{n}_synflow"].transform(normalize)
     weight_df["norm_mag_change"] = weight_df.groupby(
         keys)["mag_change"].transform(normalize)
+    if training:
+        weight_df = weight_df[weight_df["w_mask"] == 1]
     weight_df.fillna(0, inplace=True)
 
     return weight_df
@@ -212,7 +210,7 @@ def build_weight_df(
     masks: List[npt.NDArray],
     # Previous masks are used to filter out data points from dataset
     # since we are only interested in the weights which were newly masked
-    previous_masks: List[npt.NDArray] = [],
+    next_masks: List[npt.NDArray] = [],
     training: bool = True,
 ) -> pd.DataFrame:
     # Prepare weight features: No need for large weight_features array, use a list of dicts
@@ -232,12 +230,13 @@ def build_weight_df(
     # Just reuse the shape so the for loop below iterates fine
     if not training:
         final = initial
-        previous_masks = masks
+        next_masks = masks
 
     # Duplicate features for initial vs. final weights
-    for layer, (iw, fw, m, pm) in tqdm(enumerate(zip(initial, final, masks, previous_masks))):
+    for layer, (iw, fw, m, nm) in tqdm(enumerate(zip(initial, final, masks, next_masks))):
         print(f"Layer {layer}")
         mask = m.astype(bool).ravel()
+        next_mask = nm.astype(bool).ravel()
         num_params = len(mask)
         num_nonzero = np.count_nonzero(mask)
         num_zero = num_params - num_nonzero
@@ -284,11 +283,13 @@ def build_weight_df(
             layer_weight_features["wf_synflow"] = f_synflow[layer].numpy(
             ).flatten()
         if training:
-            # Label is whether a weight got pruned (mask changed to 0)
-            layer_weight_features["label"] = (mask ^ 1)
+            # 1 = weight got pruned in the next step
+            # 0 = weight is still masked in next step
+            # Later on, drop all the weights which have an active mask of 0,
+            # since we do not care about data points that have already been
+            # masked.
+            layer_weight_features["label"] = next_mask ^ 1
             layer_weight_features["w_mask"] = mask
-            # Use this column to clean data later
-            layer_weight_features["keep"] = pm.flatten()
 
         weight_features_list.append(pd.DataFrame(layer_weight_features))
 
@@ -300,6 +301,9 @@ def build_weight_df(
         keys)["wi_mag"].transform(normalize)
     weight_df["norm_wi_synflow"] = weight_df.groupby(
         keys)["wi_synflow"].transform(normalize)
+    # We only want to keep datapoints which are in the current mask
+    if training:
+        weight_df = weight_df[weight_df["w_mask"] == 1]
     weight_df.fillna(0, inplace=True)
 
     return weight_df
@@ -307,7 +311,7 @@ def build_weight_df(
 
 def build_trial_dfs(
     trial: hist.TrialData,
-    previous_masks: List[npt.NDArray[int]],
+    next_masks: List[npt.NDArray[int]],
     t_num: int,
     e_num: int,
     train_steps: int,
@@ -341,7 +345,7 @@ def build_trial_dfs(
 
     architecture = arch.Architecture(trial.architecture, trial.dataset)
     weight_df = build_weight_df(
-        layer_df, architecture, trial.initial_weights, trial.final_weights, trial.masks, previous_masks)
+        layer_df, architecture, trial.initial_weights, trial.final_weights, trial.masks, next_masks)
 
     # Correct the class imbalance- merge with trained weights later
     add_labels(weight_df)
@@ -352,7 +356,6 @@ def build_trial_dfs(
             architecture,
             trial.initial_weights,
             trial.masks,
-            previous_masks,
             train_steps,
             batch_size,
         )
@@ -374,17 +377,18 @@ def build_exp_dfs(
     weights = []
     trained_weights = []
     print(f"Building dataframes for experiment {e_num}")
-    previous_masks = []
-    for t_num, t in tqdm(enumerate(exp)):
-        if t_num == 0:
-            previous_masks = t.masks
+    exp_trials = list(exp)
+    next_masks = []
+    for t_num, t in tqdm(enumerate(exp_trials[:-1])):
+        next_t = exp_trials[t_num + 1]
+        next_masks = next_t.masks
 
         print(f"Trial {t_num}")
         # Dummy line
         t.seed_weights = lambda x: x
         t_df, l_df, w_df, tw_df = build_trial_dfs(
             t,
-            previous_masks,
+            next_masks,
             t_num=t_num,
             e_num=e_num,
             train_steps=train_steps,
@@ -395,8 +399,6 @@ def build_exp_dfs(
         weights.append(w_df)
         if tw_df is not None:
             trained_weights.append(tw_df)
-        # Update previous mask to know which weights got pruned between rounds
-        previous_masks = t.masks
 
     trials_df = pd.concat(trials, axis=0, ignore_index=True)
     layers_df = pd.concat(layers, axis=0, ignore_index=True)
