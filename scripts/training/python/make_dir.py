@@ -70,11 +70,12 @@ if __name__ == '__main__':
 
     # Construct the full experiment directory path
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    path = f"{args.model}_{args.dataset}_{args.seed}_seed" \
-        + f"_{args.experiments}_experiments_{args.batches}" \
-        + f"_{args.sparsity_strategy}_sparsity_{args.pruning_rule}_pruning" \
-        + f"_{args.initializer}" \
-        + f"_{timestamp}"
+    path = f"{args.model}_{args.dataset}" \
+        + f"_{args.experiments}_exp" \
+        + f"_{args.sparsity_strategy}_sparsity" \
+        + f"_{args.pruning_rule}_pruning" \
+        + f"_{args.initializer}_init" \
+        + f"_{args.rewind_rule}_rewind"
     path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(
             os.path.dirname(os.path.realpath(__file__))))),
