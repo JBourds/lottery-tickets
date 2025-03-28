@@ -26,6 +26,7 @@ def get_layer_names(trial: history.TrialData) -> List[str]:
         arch = "conv2"
     return architecture.Architecture.get_model_layers(arch)
 
+
 def get_dataset(trial: history.TrialData) -> str:
     # Temporary for use with TrialData objects that didn't have this
     try:
@@ -202,9 +203,10 @@ def _get_average_parameter_magnitude(weights: List[np.ndarray], masks: List[np.n
                   ), 'Weights and masks must all be the same shape'
 
     unmasked_weights = [w[mask] for w, mask in zip(weights, masks)]
-    unmasked_weight_sum_magnitude = np.sum([np.sum(np.abs(w)) for w in unmasked_weights])
+    unmasked_weight_sum_magnitude = np.sum(
+        [np.sum(np.abs(w)) for w in unmasked_weights])
     unmasked_weight_count: int = np.sum([np.sum(w) for w in masks])
-    
+
     if unmasked_weight_count == 0:
         return 0
 
@@ -223,14 +225,14 @@ def get_global_percent_negative_weights(
         float: Negative percent of the unpruned weights stored across layers in the network.
     """
     return 100 - get_global_percent_positive_weights(
-        trial=trial, 
+        trial=trial,
         use_initial_weights=use_initial_weights,
         use_masked_weights=use_masked_weights,
     )
 
 
 def get_global_percent_positive_weights(
-    trial: history.TrialData, 
+    trial: history.TrialData,
     use_initial_weights: bool = False,
     use_masked_weights: bool = False,
 ) -> float:
@@ -239,41 +241,41 @@ def get_global_percent_positive_weights(
         float: Positive percent of the unpruned weights stored across layers in the network.
     """
     return 100 * _get_positive_weight_ratio(
-        trial=trial, 
-        layerwise=False, 
+        trial=trial,
+        layerwise=False,
         use_initial_weights=use_initial_weights,
         use_masked_weights=use_masked_weights,
     )
 
 
 def get_layerwise_percent_negative_weights(
-	trial: history.TrialData,
-	use_initial_weights: bool = False,
-	use_masked_weights: bool = False,
+        trial: history.TrialData,
+        use_initial_weights: bool = False,
+        use_masked_weights: bool = False,
 ) -> np.ndarray[float]:
     """
     Returns:
         np.ndarray[float]: Negative percent of the unpruned weights stored by layer in the network.
     """
     return 100 - get_layerwise_percent_positive_weights(
-        trial=trial, 
+        trial=trial,
         use_initial_weights=use_initial_weights,
         use_masked_weights=use_masked_weights,
     )
 
 
 def get_layerwise_percent_positive_weights(
-	trial: history.TrialData,
-	use_initial_weights: bool = False,
-	use_masked_weights: bool = False,
+        trial: history.TrialData,
+        use_initial_weights: bool = False,
+        use_masked_weights: bool = False,
 ) -> np.ndarray[float]:
     """
     Returns:
         np.ndarray[float]: Positive percent of the unpruned weights stored by layer in the network.
     """
     return 100 * _get_positive_weight_ratio(
-        trial=trial, 
-        layerwise=True, 
+        trial=trial,
+        layerwise=True,
         use_initial_weights=use_initial_weights,
         use_masked_weights=use_masked_weights,
     )
@@ -301,6 +303,7 @@ def _get_positive_weight_ratio(
         use_masked_weights=use_masked_weights,
     )
 
+
 def _get_ratio_of_unmasked_positive_weights(weights: List[np.ndarray], masks: List[np.ndarray]) -> float:
     """
     Private function which computes the proportion of unmasked positive weights.
@@ -323,7 +326,7 @@ def _get_ratio_of_unmasked_positive_weights(weights: List[np.ndarray], masks: Li
         [np.sum(w[mask] >= 0) for w, mask in zip(weights, masks)])
     total_nonzero: float = np.sum([np.size(w[mask])
                                   for w, mask in zip(weights, masks)])
-    
+
     if total_nonzero == 0:
         return 1
 
@@ -387,13 +390,14 @@ def _perform_operation_globally_or_layerwise(
         any: Returns type depends on the operation.
     """
     # Convert masks into boolean Numpy array for indexing, and convert weights into Numpy array as well
-    masks = [np.logical_not(mask) if use_masked_weights else mask.astype(bool) for mask in trial.masks]
+    masks = [np.logical_not(mask) if use_masked_weights else mask.astype(
+        bool) for mask in trial.masks]
     weights = trial.initial_weights if use_initial_weights else trial.final_weights
-    weights = [w for w in weights]
 
     if layerwise:
         # Since the private method expects a list, just make each entry into a list of 1 element
-        masks = [[np.logical_not(mask) if use_masked_weights else mask.astype(bool)] for mask in masks]
+        masks = [[np.logical_not(mask) if use_masked_weights else mask.astype(
+            bool)] for mask in masks]
         weights = [[w] for w in weights]
         return np.array([operation(w, m) for w, m in zip(weights, masks)])
 
