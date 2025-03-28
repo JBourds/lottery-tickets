@@ -8,11 +8,13 @@ Author: Jordan Bourdeau
 """
 
 import functools
+from itertools import chain
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import numpy as np
+import numpy.typing as npt
 import os
-from typing import Generator, List
+from typing import Generator, List, Tuple
 
 from src.harness import constants as C
 from src.harness import history
@@ -23,6 +25,12 @@ from src.plotting import base_plots as bp
 
 from . import save_plot
 
+
+def remove_bias_layers(names: List[str], *args) -> Tuple:
+    indices = [i for i, n in enumerate(names) if "bias" not in n.lower()]
+    return [[arg[i] for i in indices] for arg in itertools.chain([names], args)]
+
+
 def plot_layerwise_average_magnitude(
     x: np.ndarray,
     num_samples: int,
@@ -31,7 +39,6 @@ def plot_layerwise_average_magnitude(
     layer_names: List[str],
     save_location: str = None,
 ):
-    
     _plot_over_layers(
         x=x,
         layer_means=layer_means,
@@ -42,11 +49,12 @@ def plot_layerwise_average_magnitude(
         x_label="Percent % Sparsity",
         y_label="Average Magnitude",
         invert_x=True,
-    ) 
+    )
 
     plt.gca().xaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}%'))
 
     save_plot(save_location)
+
 
 def plot_layerwise_positive_sign_proportion(
     x: np.ndarray,
@@ -56,7 +64,7 @@ def plot_layerwise_positive_sign_proportion(
     layer_names: List[str],
     save_location: str = None,
 ):
-    
+
     _plot_over_layers(
         x=x,
         layer_means=layer_means,
@@ -67,12 +75,13 @@ def plot_layerwise_positive_sign_proportion(
         x_label="Percent % Sparsity",
         y_label="Percent % Weights",
         invert_x=True,
-    ) 
+    )
 
     plt.gca().yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}%'))
     plt.gca().xaxis.set_major_formatter(mtick.StrMethodFormatter('{x:0.2f}%'))
 
     save_plot(save_location)
+
 
 def _plot_over_layers(
     x: np.ndarray,
@@ -86,6 +95,8 @@ def _plot_over_layers(
     caption: str = None,
     invert_x: bool = True,
 ):
+    layer_names, layer_means, layer_std = remove_bias_layers(
+        layer_names, layer_means, layer_std)
     plt.figure(figsize=(8, 6))
     for index, name in enumerate(layer_names):
         is_last_line = index == len(layer_names) - 1
@@ -96,12 +107,15 @@ def _plot_over_layers(
             num_samples=num_samples,
             legend=name,
             show_ci_legend=is_last_line,
-            invert_x=is_last_line if invert_x else False
+            invert_x=False
         )
+    if invert_x:
+        plt.gca().invert_xaxis()
     plt.gca().set_title(title)
     plt.gca().set_ylabel(y_label)
     plt.gca().set_xlabel(x_label)
     plt.gca().legend()
     plt.gca().grid()
     if caption is not None:
-        plt.figtext(0.1, 0.1, caption, wrap=True, horizontalalignment='center', fontsize=12)
+        plt.figtext(0.1, 0.1, caption, wrap=True,
+                    horizontalalignment='center', fontsize=12)
