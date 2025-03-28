@@ -19,6 +19,7 @@ from src.metrics import trial_aggregations as t_agg
 
 # ------------------------- Public Base Plotting Functions -------------------------
 
+
 def plot_aggregated_summary_ci(
     x: np.ndarray,
     y_mean: np.ndarray,
@@ -54,28 +55,28 @@ def plot_aggregated_summary_ci(
     Raises:
         ValueError: Confidence interval cannot be >= 1 or < 0.
     """
-    
+
     if confidence >= 1 or confidence < 0:
-      raise ValueError('Confidence must be between 0 and 1')
-    
+        raise ValueError('Confidence must be between 0 and 1')
+
     # Make sure these are all Numpy arrays
     y_std = np.array(y_std)
     y_mean = np.array(y_mean)
     x = np.array(x)
-    
+
     # Calculate Z-score and standard error to make confidence interval
     z_score = norm.ppf((1 + confidence) / 2)
-    confidence_interval: np.array = z_score * y_std  / np.sqrt(num_samples)
-    
+    confidence_interval = z_score * y_std / np.sqrt(num_samples)
+
     plt.plot(x, y_mean, label=legend)
     if invert_x:
         plt.gca().invert_xaxis()
-    
+
     if show_max_point:
         _annotate_extreme_points(x, y_mean, use_max=True)
     if show_min_point:
         _annotate_extreme_points(x, y_mean, use_max=False)
-        
+
     plt.fill_between(
         x,
         y_mean - confidence_interval,
@@ -83,13 +84,13 @@ def plot_aggregated_summary_ci(
         alpha=0.3,
         label=f'{confidence * 100:.2f}% CI' if show_ci_legend else None,
     )
-    
-    
+
+
 def _annotate_extreme_points(
-    x: np.array, 
-    y: np.array, 
+    x: np.array,
+    y: np.array,
     use_max: bool = True,
-    ):
+):
     """
     Annotates the maximum or minimum points in a plot.
 
@@ -100,11 +101,14 @@ def _annotate_extreme_points(
             minimum point. Defaults to True and annotates the max.
     """
     if use_max:
-        ymax: float = np.max(y)
-        xmax: float = x[np.argmax(y)]  # Find the x-coordinate corresponding to ymax
-        plt.axvline(x=xmax, color='r', linestyle='--', label=f'Max: ({xmax:.2f}, {ymax:.2f})')
+        ymax = np.max(y)
+        # Find the x-coordinate corresponding to ymax
+        xmax = x[np.argmax(y)]
+        plt.axvline(x=xmax, color='r', linestyle='--',
+                    label=f'Max: ({xmax:.2f}, {ymax:.2f})')
     else:
-        ymin: float = np.min(y)
-        xmin: float = x[np.argmin(y)]  # Find the x-coordinate corresponding to ymin
-        plt.axvline(x=xmin, color='b', linestyle='--', label=f'Min: ({xmin:.2f}, {ymin:.2f})')
-
+        ymin = np.min(y)
+        # Find the x-coordinate corresponding to ymin
+        xmin = x[np.argmin(y)]
+        plt.axvline(x=xmin, color='b', linestyle='--',
+                    label=f'Min: ({xmin:.2f}, {ymin:.2f})')
